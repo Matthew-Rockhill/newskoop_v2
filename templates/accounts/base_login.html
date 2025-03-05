@@ -6,16 +6,85 @@
   <title>{% block title %}Newskoop Login{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  {% block extra_css %}{% endblock %}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary)); }
-    .login-container { background-color: var(--color-background); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-lg); max-width: 400px; width: 100%; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);  /* Soft blue-gray gradient */
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .logo {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    
+    .logo-img {
+      width: 70%;
+      transition: transform 0.3s ease;
+    }
+    
+    .logo-img:hover {
+      transform: scale(1.05);
+    }
   </style>
+  {% block extra_css %}{% endblock %}
 </head>
-<body class="flex items-center justify-center min-h-screen">
-  {% block content %}{% endblock %}
-  <script src="{% static 'js/main.js' %}"></script>
+<body>
+  <div class="login-container">
+    <div class="logo">
+      <img src="{% static 'images/logo.svg' %}" alt="Newskoop Logo" class="logo-img"> 
+    </div>
+    
+    {% if messages %}
+      <div class="alerts mb-6">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="alert-close" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    {% block content %}{% endblock %}
+    
+    <p class="text-center text-sm text-gray-500 mt-6">
+      &copy; {% now "Y" %} Newskoop. All rights reserved.
+    </p>
+  </div>
+  
+  <script>
+    // Alert dismissal
+    document.querySelectorAll('.alert-dismissible .alert-close').forEach(button => {
+      button.addEventListener('click', function() {
+        const alert = this.closest('.alert');
+        alert.style.opacity = '0';
+        setTimeout(() => { alert.style.display = 'none'; }, 300);
+      });
+    });
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

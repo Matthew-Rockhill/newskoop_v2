@@ -2,81 +2,261 @@
 {% block title %}Users - Newskoop{% endblock %}
 {% block page_title %}Users{% endblock %}
 {% block page_actions %}
-<div class="flex space-x-2">
-  <a href="{% url 'accounts:create_staff_user' %}" class="btn btn-primary">Add Staff User</a>
-  <a href="{% url 'accounts:create_radio_user' %}" class="btn btn-outline">Add Radio User</a>
+<div class="flex space-x-3">
+  <a href="{% url 'accounts:create_staff_user' %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+    </svg>
+    Add Staff User
+  </a>
+  <a href="{% url 'accounts:create_radio_user' %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    Add Radio User
+  </a>
 </div>
 {% endblock %}
+
 {% block content %}
-<div class="user-list p-6">
-  <form method="get" class="mb-6 flex flex-wrap gap-4">
-    <input type="hidden" name="user_type" value="{{ user_type }}">
-    <input type="text" name="q" placeholder="Search users..." value="{{ search_query }}" class="form-control w-1/3">
-    {% if user_type == "STAFF" %}
-      <select name="role" class="form-control w-1/4">
-        <option value="">All Roles</option>
-        {% for code, name in staff_roles %}
-        <option value="{{ code }}" {% if role_filter == code %}selected{% endif %}>{{ name }}</option>
-        {% endfor %}
+<div class="space-y-6">
+  <!-- User Type Tabs -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="sm:hidden">
+      <label for="user-type-tabs" class="sr-only">Select User Type</label>
+      <select id="user-type-tabs" name="user_type" class="form-control" onchange="location = '{% url 'accounts:user_list' %}?user_type=' + this.value;">
+        <option value="STAFF" {% if user_type == 'STAFF' %}selected{% endif %}>Staff Users</option>
+        <option value="RADIO" {% if user_type == 'RADIO' %}selected{% endif %}>Radio Users</option>
       </select>
-    {% else %}
-      <select name="station" class="form-control w-1/4">
-        <option value="">All Stations</option>
-        {% for station in stations %}
-        <option value="{{ station.id }}" {% if station_filter == station.id|stringformat:"s" %}selected{% endif %}>{{ station.name }}</option>
-        {% endfor %}
-      </select>
-    {% endif %}
-    <select name="status" class="form-control w-1/4">
-      <option value="">All Statuses</option>
-      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-    </select>
-    <button type="submit" class="btn btn-primary">Search</button>
-  </form>
-  <table class="table w-full">
-    <thead>
-      <tr>
-        <th class="px-4 py-2">Name</th>
-        <th class="px-4 py-2">Email</th>
+    </div>
+    <div class="hidden sm:block">
+      <div class="border-b border-gray-200">
+        <nav class="flex -mb-px" aria-label="Tabs">
+          <a href="{% url 'accounts:user_list' %}?user_type=STAFF" class="py-4 px-6 {% if user_type == 'STAFF' %}border-b-2 border-primary text-primary{% else %}text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} font-medium text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Staff Users
+          </a>
+          <a href="{% url 'accounts:user_list' %}?user_type=RADIO" class="py-4 px-6 {% if user_type == 'RADIO' %}border-b-2 border-primary text-primary{% else %}text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} font-medium text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            Radio Users
+          </a>
+        </nav>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Search and Filters -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Search & Filters</h2>
+    </div>
+    <div class="p-6">
+      <form method="get" class="space-y-4 md:space-y-0 md:flex md:flex-wrap md:items-end md:gap-4">
+        <input type="hidden" name="user_type" value="{{ user_type }}">
+        <div class="flex-1 min-w-0">
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <div class="relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input type="text" name="q" id="search" class="form-control pl-10" placeholder="Search by name or email..." value="{{ search_query }}">
+          </div>
+        </div>
+        
         {% if user_type == "STAFF" %}
-          <th class="px-4 py-2">Role</th>
+        <div class="w-full md:w-1/4">
+          <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+          <select name="role" id="role" class="form-control">
+            <option value="">All Roles</option>
+            {% for code, name in staff_roles %}
+            <option value="{{ code }}" {% if role_filter == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
         {% else %}
-          <th class="px-4 py-2">Station</th>
+        <div class="w-full md:w-1/4">
+          <label for="station" class="block text-sm font-medium text-gray-700 mb-1">Station</label>
+          <select name="station" id="station" class="form-control">
+            <option value="">All Stations</option>
+            {% for station in stations %}
+            <option value="{{ station.id }}" {% if station_filter == station.id|stringformat:"s" %}selected{% endif %}>{{ station.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
         {% endif %}
-        <th class="px-4 py-2">Status</th>
-        <th class="px-4 py-2">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in users %}
-      <tr class="border-b">
-        <td class="px-4 py-2">{{ user.get_full_name }}</td>
-        <td class="px-4 py-2">{{ user.email }}</td>
-        {% if user_type == "STAFF" %}
-          <td class="px-4 py-2">{{ user.get_staff_role_display }}</td>
-        {% else %}
-          <td class="px-4 py-2">
-            {% if user.radio_station %}
-              <a href="{% url 'accounts:station_detail' station_id=user.radio_station.id %}" class="text-primary hover:underline">{{ user.radio_station.name }}</a>
+        
+        <div class="w-full md:w-1/5">
+          <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select name="status" id="status" class="form-control">
+            <option value="">All Statuses</option>
+            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+        
+        <div class="md:pb-1">
+          <button type="submit" class="btn btn-primary w-full md:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filter
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Users List -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <h2 class="text-lg font-semibold text-gray-800">{{ user_type|lower|capfirst }} Users</h2>
+      <span class="text-sm text-gray-500">{{ users|length }} users found</span>
+    </div>
+    
+    {% if users %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              User
+            </th>
+            {% if user_type == "STAFF" %}
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Role
+            </th>
             {% else %}
-              N/A
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Station
+            </th>
             {% endif %}
-          </td>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for user in users %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary">
+                  {{ user.first_name|first|default:""|upper }}{{ user.last_name|first|default:""|upper }}
+                  {% if not user.first_name and not user.last_name %}
+                    {{ user.email|first|upper }}
+                  {% endif %}
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ user.get_full_name }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    {{ user.email }}
+                  </div>
+                </div>
+              </div>
+            </td>
+            {% if user_type == "STAFF" %}
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary">
+                {{ user.get_staff_role_display }}
+              </span>
+            </td>
+            {% else %}
+            <td class="px-6 py-4 whitespace-nowrap">
+              {% if user.radio_station %}
+                <a href="{% url 'accounts:station_detail' station_id=user.radio_station.id %}" class="text-sm text-primary hover:underline">
+                  {{ user.radio_station.name }}
+                </a>
+                {% if user.is_primary_contact %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary ml-2">
+                    Primary
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="text-sm text-gray-500">No station</span>
+              {% endif %}
+            </td>
+            {% endif %}
+            <td class="px-6 py-4 whitespace-nowrap">
+              {% if user.is_active %}
+                <span class="status-badge status-active">
+                  <span class="status-dot status-dot-active"></span>
+                  Active
+                </span>
+              {% else %}
+                <span class="status-badge status-inactive">
+                  <span class="status-dot status-dot-inactive"></span>
+                  Inactive
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div class="flex justify-end space-x-2">
+                <a href="{% url 'accounts:edit_user' user_id=user.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </a>
+                <a href="{% url 'accounts:reset_password' user_id=user.id %}" class="text-gray-600 hover:text-primary" title="Reset Password">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </a>
+                <a href="{% url 'accounts:delete_user_confirm' user_id=user.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    {% else %}
+    <div class="px-6 py-12 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900">No users found</h3>
+      <p class="mt-2 text-sm text-gray-500">
+        {% if search_query or role_filter or station_filter or status_filter %}
+          Try adjusting your search or filter criteria.
+        {% else %}
+          Get started by adding your first {{ user_type|lower }} user.
         {% endif %}
-        <td class="px-4 py-2">{% if user.is_active %}Active{% else %}Inactive{% endif %}</td>
-        <td class="px-4 py-2 space-x-2">
-          <a href="{% url 'accounts:edit_user' user_id=user.id %}" class="btn btn-sm btn-outline">Edit</a>
-          <a href="{% url 'accounts:reset_password' user_id=user.id %}" class="btn btn-sm btn-outline">Reset Password</a>
-          <a href="{% url 'accounts:delete_user_confirm' user_id=user.id %}" class="btn btn-sm btn-outline">Delete</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="text-center py-4">No users found.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </p>
+      <div class="mt-6">
+        {% if user_type == "STAFF" %}
+        <a href="{% url 'accounts:create_staff_user' %}" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Staff User
+        </a>
+        {% else %}
+        <a href="{% url 'accounts:create_radio_user' %}" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Radio User
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

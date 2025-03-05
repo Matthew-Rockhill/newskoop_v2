@@ -3,29 +3,197 @@
 {% block title %}My Profile - Newskoop{% endblock %}
 {% block page_title %}My Profile{% endblock %}
 {% block page_actions %}
-<button type="submit" form="profile-form" class="btn btn-primary">Save Changes</button>
+<button type="submit" form="profile-form" class="btn btn-primary">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+    <polyline points="7 3 7 8 15 8"></polyline>
+  </svg>
+  Save Changes
+</button>
 {% endblock %}
+
 {% block content %}
-<div class="profile-container max-w-3xl mx-auto p-6">
-  <form id="profile-form" action="{% url 'accounts:profile' %}" method="post" class="space-y-4">
-    {% csrf_token %}
-    {{ form|crispy }}
-  </form>
-  <div class="account-info mt-6 space-y-2">
-    <h2 class="text-xl font-semibold">Account Information</h2>
-    <p><strong>Email:</strong> {{ user.email }}</p>
-    <p><strong>Account Type:</strong> {{ user.get_user_type_display }}</p>
-    {% if user.user_type == 'STAFF' %}
-      <p><strong>Staff Role:</strong> {{ user.get_staff_role_display }}</p>
-    {% elif user.user_type == 'RADIO' and user.radio_station %}
-      <p><strong>Radio Station:</strong> {{ user.radio_station.name }}</p>
-      <p><strong>Primary Contact:</strong> {% if user.is_primary_contact %}Yes{% else %}No{% endif %}</p>
-    {% endif %}
-    <p><strong>Status:</strong> {% if user.is_active %}Active{% else %}Inactive{% endif %}</p>
-    <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <!-- Left column - User profile -->
+  <div class="md:col-span-1">
+    <div class="bg-primary-50 rounded-lg p-6 text-center">
+      <div class="avatar avatar-lg bg-white text-primary mx-auto mb-4" style="width: 5rem; height: 5rem; font-size: 2rem;">
+        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+      </div>
+      
+      <h2 class="text-xl font-bold text-gray-800">{{ user.get_full_name }}</h2>
+      <p class="text-gray-600 mb-4">{{ user.email }}</p>
+      
+      <div class="inline-flex status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %} mb-6">
+        <span class="status-dot {% if user.is_active %}status-dot-active{% else %}status-dot-inactive{% endif %}"></span>
+        {% if user.is_active %}Active Account{% else %}Inactive Account{% endif %}
+      </div>
+      
+      <div class="border-t border-primary-100 pt-4 pb-2">
+        <h3 class="font-semibold text-left mb-3">Account Information</h3>
+        
+        <div class="space-y-2 text-left">
+          <div class="flex justify-between items-center py-1">
+            <span class="text-gray-600">Account Type</span>
+            <span class="font-medium">{{ user.get_user_type_display }}</span>
+          </div>
+          
+          {% if user.user_type == 'STAFF' %}
+            <div class="flex justify-between items-center py-1">
+              <span class="text-gray-600">Staff Role</span>
+              <span class="font-medium">{{ user.get_staff_role_display }}</span>
+            </div>
+          {% elif user.user_type == 'RADIO' and user.radio_station %}
+            <div class="flex justify-between items-center py-1">
+              <span class="text-gray-600">Radio Station</span>
+              <span class="font-medium">{{ user.radio_station.name }}</span>
+            </div>
+            <div class="flex justify-between items-center py-1">
+              <span class="text-gray-600">Primary Contact</span>
+              <span class="font-medium">{% if user.is_primary_contact %}Yes{% else %}No{% endif %}</span>
+            </div>
+          {% endif %}
+          
+          <div class="flex justify-between items-center py-1">
+            <span class="text-gray-600">Date Joined</span>
+            <span class="font-medium">{{ user.date_joined|date:"M j, Y" }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6">
+        <a href="{% url 'accounts:change_password' %}" class="btn btn-outline w-full">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Change Password
+        </a>
+      </div>
+    </div>
   </div>
-  <div class="change-password mt-6">
-    <a href="{% url 'accounts:change_password' %}" class="btn btn-outline">Change Password</a>
+  
+  <!-- Right column - Edit profile form -->
+  <div class="md:col-span-2">
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center mb-6">
+        <div class="rounded-full bg-primary-100 p-2 mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold text-gray-800">Personal Information</h2>
+          <p class="text-gray-600">Update your personal details and contact information</p>
+        </div>
+      </div>
+      
+      <form id="profile-form" action="{% url 'accounts:profile' %}" method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <input type="text" name="{{ form.first_name.name }}" id="{{ form.first_name.id_for_label }}" 
+                    value="{{ form.first_name.value|default:'' }}" class="form-control pl-10">
+            </div>
+            {% if form.first_name.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.first_name.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <input type="text" name="{{ form.last_name.name }}" id="{{ form.last_name.id_for_label }}" 
+                    value="{{ form.last_name.value|default:'' }}" class="form-control pl-10">
+            </div>
+            {% if form.last_name.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.last_name.errors|first }}</div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="{{ form.mobile_number.id_for_label }}" class="form-label">Mobile Number</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+            </div>
+            <input type="text" name="{{ form.mobile_number.name }}" id="{{ form.mobile_number.id_for_label }}" 
+                  value="{{ form.mobile_number.value|default:'' }}" class="form-control pl-10">
+          </div>
+          {% if form.mobile_number.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.mobile_number.errors|first }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="bg-gray-50 rounded-md p-4 border-l-4 border-info text-gray-700">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-info">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-gray-700">Email Address</h3>
+              <p class="text-sm">To change your email address, please contact a system administrator.</p>
+            </div>
+          </div>
+        </div>
+      </form>
+      
+      <div class="rounded-md bg-primary-50 mt-8 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-primary">Profile Completeness</h3>
+            <div class="mt-2">
+              <div class="bg-white rounded-full h-2.5 overflow-hidden">
+                {% with completed=user.first_name|length|add:user.last_name|length|add:user.mobile_number|length %}
+                  {% if completed > 10 %}
+                    <div class="bg-primary h-full" style="width: 100%"></div>
+                  {% elif completed > 5 %}
+                    <div class="bg-primary h-full" style="width: 70%"></div>
+                  {% elif completed > 0 %}
+                    <div class="bg-primary h-full" style="width: 40%"></div>
+                  {% else %}
+                    <div class="bg-primary h-full" style="width: 10%"></div>
+                  {% endif %}
+                {% endwith %}
+              </div>
+              <p class="text-sm mt-1">Complete your profile information to improve your experience.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

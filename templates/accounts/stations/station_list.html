@@ -2,70 +2,195 @@
 {% block title %}Radio Stations - Newskoop{% endblock %}
 {% block page_title %}Radio Stations{% endblock %}
 {% block page_actions %}
-<a href="{% url 'accounts:station_create' %}" class="btn btn-primary">Add Station</a>
+<a href="{% url 'accounts:station_create' %}" class="btn btn-primary">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+  </svg>
+  Add Station
+</a>
 {% endblock %}
+
 {% block content %}
-<div class="station-list p-6">
-  <form method="get" class="mb-6 flex flex-wrap gap-4">
-    <input type="text" name="q" placeholder="Search stations..." value="{{ search_query }}" class="form-control w-2/5">
-    <select name="province" class="form-control w-1/4">
-      <option value="">All Provinces</option>
-      {% for code, name in provinces %}
-      <option value="{{ code }}" {% if province_filter == code %}selected{% endif %}>{{ name }}</option>
-      {% endfor %}
-    </select>
-    <select name="status" class="form-control w-1/4">
-      <option value="">All Statuses</option>
-      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-    </select>
-    <button type="submit" class="btn btn-primary">Search</button>
-  </form>
-  <table class="table w-full">
-    <thead>
-      <tr>
-        <th class="px-4 py-2">Name</th>
-        <th class="px-4 py-2">Province</th>
-        <th class="px-4 py-2">Contact</th>
-        <th class="px-4 py-2">Status</th>
-        <th class="px-4 py-2">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for station in stations %}
-      <tr class="border-b">
-        <td class="px-4 py-2">
-          <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="text-primary hover:underline">{{ station.name }}</a>
-        </td>
-        <td class="px-4 py-2">{{ station.get_province_display }}</td>
-        <td class="px-4 py-2">
-          {% if station.contact_email %}
-            <a href="mailto:{{ station.contact_email }}" class="hover:underline">{{ station.contact_email }}</a>
-          {% elif station.contact_number %}
-            {{ station.contact_number }}
-          {% else %}
-            N/A
-          {% endif %}
-        </td>
-        <td class="px-4 py-2">
-          {% if station.is_active %}
-            <span class="text-green-600 font-semibold">Active</span>
-          {% else %}
-            <span class="text-red-600 font-semibold">Inactive</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-2 space-x-2">
-          <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="btn btn-sm btn-outline">View</a>
-          <a href="{% url 'accounts:station_edit' station_id=station.id %}" class="btn btn-sm btn-outline">Edit</a>
-          <a href="{% url 'accounts:station_delete_confirm' station_id=station.id %}" class="btn btn-sm btn-outline">Delete</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="text-center py-4">No stations found.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="space-y-6">
+  <!-- Search and Filters -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Search & Filters</h2>
+    </div>
+    <div class="p-6">
+      <form method="get" class="space-y-4 md:space-y-0 md:flex md:flex-wrap md:items-end md:gap-4">
+        <div class="flex-1 min-w-0">
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <div class="relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input type="text" name="q" id="search" class="form-control pl-10" placeholder="Search stations..." value="{{ search_query }}">
+          </div>
+        </div>
+        
+        <div class="w-full md:w-1/4">
+          <label for="province" class="block text-sm font-medium text-gray-700 mb-1">Province</label>
+          <select name="province" id="province" class="form-control">
+            <option value="">All Provinces</option>
+            {% for code, name in provinces %}
+            <option value="{{ code }}" {% if province_filter == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="w-full md:w-1/5">
+          <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select name="status" id="status" class="form-control">
+            <option value="">All Statuses</option>
+            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+        
+        <div class="md:pb-1">
+          <button type="submit" class="btn btn-primary w-full md:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filter
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Stations List -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <h2 class="text-lg font-semibold text-gray-800">All Stations</h2>
+      <span class="text-sm text-gray-500">{{ stations|length }} stations found</span>
+    </div>
+    
+    {% if stations %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Station
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Province
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Contact
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for station in stations %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary">
+                  {{ station.name|first|upper }}
+                </div>
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="hover:text-primary hover:underline">
+                      {{ station.name }}
+                    </a>
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    {{ station.users.all.count }} users
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-900">{{ station.get_province_display }}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              {% if station.contact_email %}
+                <div class="text-sm text-gray-900">
+                  <a href="mailto:{{ station.contact_email }}" class="text-primary hover:underline">
+                    {{ station.contact_email }}
+                  </a>
+                </div>
+              {% endif %}
+              {% if station.contact_number %}
+                <div class="text-sm text-gray-500">{{ station.contact_number }}</div>
+              {% endif %}
+              {% if not station.contact_email and not station.contact_number %}
+                <div class="text-sm text-gray-500">No contact info</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              {% if station.is_active %}
+                <span class="status-badge status-active">
+                  <span class="status-dot status-dot-active"></span>
+                  Active
+                </span>
+              {% else %}
+                <span class="status-badge status-inactive">
+                  <span class="status-dot status-dot-inactive"></span>
+                  Inactive
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div class="flex justify-end space-x-2">
+                <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="text-gray-600 hover:text-primary" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </a>
+                <a href="{% url 'accounts:station_edit' station_id=station.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </a>
+                <a href="{% url 'accounts:station_delete_confirm' station_id=station.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    {% else %}
+    <div class="px-6 py-12 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900">No stations found</h3>
+      <p class="mt-2 text-sm text-gray-500">
+        {% if search_query or province_filter or status_filter %}
+          Try adjusting your search or filter criteria.
+        {% else %}
+          Get started by adding your first radio station.
+        {% endif %}
+      </p>
+      <div class="mt-6">
+        <a href="{% url 'accounts:station_create' %}" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Station
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
