@@ -24,12 +24,17 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'django_filters',
-    'django_quill',  # using django-quill-editor
+    'django_quill',  
+    'tailwind',
+    'theme',
     
     # Local apps
     'accounts',
     # add other local apps here
 ]
+
+NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+TAILWIND_APP_NAME = 'theme'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 

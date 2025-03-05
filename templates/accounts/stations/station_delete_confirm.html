@@ -1,15 +1,87 @@
 {% extends "accounts/base.html" %}
 {% block title %}Delete {{ station.name }} - Newskoop{% endblock %}
-{% block page_title %}Delete {{ station.name }}{% endblock %}
+{% block page_title %}Delete Station{% endblock %}
+{% block page_actions %}
+<a href="{% url 'accounts:station_detail' station_id=station.id %}" class="btn btn-outline">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+  </svg>
+  Cancel
+</a>
+{% endblock %}
+
 {% block content %}
-<div class="delete-container max-w-md mx-auto p-6">
-  <h2 class="text-xl font-bold mb-4">Delete Confirmation</h2>
-  <p>Are you sure you want to delete the station "<strong>{{ station.name }}</strong>"?</p>
-  <p class="mt-4">This action cannot be undone. Please type the station name to confirm.</p>
-  <form method="post" class="mt-4">
-    {% csrf_token %}
-    <input type="text" name="confirmation" class="form-control mb-4" placeholder="Type station name to confirm">
-    <button type="submit" class="w-full btn btn-danger">Delete Station</button>
-  </form>
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-lg shadow-lg overflow-hidden border-l-4 border-danger">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-bold text-danger flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Confirm Deletion
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="bg-danger-light rounded-lg p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-danger">Warning</h3>
+            <div class="mt-2 text-sm text-danger">
+              <p>You are about to permanently delete the radio station <strong>{{ station.name }}</strong> and all associated users. This action cannot be undone.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Station Details</h3>
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-gray-500">Name</p>
+              <p class="font-medium">{{ station.name }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Province</p>
+              <p class="font-medium">{{ station.get_province_display }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Associated Users</p>
+              <p class="font-medium">{{ station.users.count }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Created</p>
+              <p class="font-medium">{{ station.created_at|date:"F j, Y" }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        
+        <div class="space-y-2">
+          <label for="confirmation" class="block text-sm font-medium text-gray-700">
+            To confirm, type <span class="font-bold text-danger">{{ station.name }}</span> below:
+          </label>
+          <input type="text" name="confirmation" id="confirmation" class="form-control" required>
+        </div>
+        
+        <div class="pt-4">
+          <button type="submit" class="btn btn-danger w-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Permanently Delete This Station
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

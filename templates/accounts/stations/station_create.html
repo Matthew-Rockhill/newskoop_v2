@@ -3,35 +3,200 @@
 {% block title %}Add Radio Station - Newskoop{% endblock %}
 {% block page_title %}Add Radio Station{% endblock %}
 {% block page_actions %}
-<button type="submit" form="station-form" class="btn btn-primary">Save Station</button>
+<div class="flex space-x-3">
+  <button type="submit" form="station-form" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+    </svg>
+    Save Station
+  </button>
+  <a href="{% url 'accounts:station_list' %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Cancel
+  </a>
+</div>
 {% endblock %}
+
 {% block content %}
-<div class="station-form-container max-w-lg mx-auto p-6">
+<div class="space-y-6">
   <form id="station-form" method="post" class="space-y-6">
     {% csrf_token %}
-    {{ form|crispy }}
-    <hr class="my-6">
-    <h3 class="text-xl font-semibold">Primary Contact Details</h3>
-    <div class="space-y-4">
-      <div class="form-group">
-        <label for="primary_contact_email" class="form-label">Email</label>
-        <input type="email" id="primary_contact_email" name="primary_contact_email" class="form-control" required>
+    
+    <!-- Station Information -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Station Information</h2>
       </div>
-      <div class="form-group">
-        <label for="primary_contact_password" class="form-label">Password</label>
-        <input type="password" id="primary_contact_password" name="primary_contact_password" class="form-control" required>
+      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Left column -->
+        <div class="space-y-6">
+          <div class="form-group">
+            <label for="{{ form.name.id_for_label }}" class="form-label">Station Name <span class="text-danger">*</span></label>
+            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" required>
+            {% if form.name.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.name.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.province.id_for_label }}" class="form-label">Province <span class="text-danger">*</span></label>
+            <select name="{{ form.province.name }}" id="{{ form.province.id_for_label }}" class="form-control {% if form.province.errors %}is-invalid{% endif %}">
+              {% for choice in form.province.field.choices %}
+                <option value="{{ choice.0 }}" {% if form.province.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+              {% endfor %}
+            </select>
+            {% if form.province.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.province.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.contact_email.id_for_label }}" class="form-label">Contact Email</label>
+            <input type="email" name="{{ form.contact_email.name }}" id="{{ form.contact_email.id_for_label }}" class="form-control {% if form.contact_email.errors %}is-invalid{% endif %}" value="{{ form.contact_email.value|default:'' }}">
+            {% if form.contact_email.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.contact_email.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.contact_number.id_for_label }}" class="form-label">Contact Number</label>
+            <input type="text" name="{{ form.contact_number.name }}" id="{{ form.contact_number.id_for_label }}" class="form-control {% if form.contact_number.errors %}is-invalid{% endif %}" value="{{ form.contact_number.value|default:'' }}">
+            {% if form.contact_number.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.contact_number.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+            <input type="url" name="{{ form.website.name }}" id="{{ form.website.id_for_label }}" class="form-control {% if form.website.errors %}is-invalid{% endif %}" value="{{ form.website.value|default:'' }}" placeholder="https://...">
+            {% if form.website.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.website.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <div class="flex items-center">
+              <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" class="form-check-input mr-2" {% if form.is_active.value %}checked{% endif %}>
+              <label for="{{ form.is_active.id_for_label }}" class="form-check-label">Active Station</label>
+            </div>
+            {% if form.is_active.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.is_active.errors|first }}</div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <!-- Right column -->
+        <div class="space-y-6">
+          <div class="form-group">
+            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="form-control {% if form.description.errors %}is-invalid{% endif %}">{{ form.description.value|default:'' }}</textarea>
+            {% if form.description.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.religion_access.id_for_label }}" class="form-label">Religious Content Access</label>
+            <select name="{{ form.religion_access.name }}" id="{{ form.religion_access.id_for_label }}" class="form-control {% if form.religion_access.errors %}is-invalid{% endif %}">
+              {% for choice in form.religion_access.field.choices %}
+                <option value="{{ choice.0 }}" {% if form.religion_access.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+              {% endfor %}
+            </select>
+            {% if form.religion_access.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.religion_access.errors|first }}</div>
+            {% endif %}
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="primary_contact_first_name" class="form-label">First Name</label>
-        <input type="text" id="primary_contact_first_name" name="primary_contact_first_name" class="form-control">
+    </div>
+    
+    <!-- Access Permissions -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Access Permissions</h2>
       </div>
-      <div class="form-group">
-        <label for="primary_contact_last_name" class="form-label">Last Name</label>
-        <input type="text" id="primary_contact_last_name" name="primary_contact_last_name" class="form-control">
+      <div class="p-6">
+        <h3 class="text-md font-medium text-gray-800 mb-4">Languages</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_english.name }}" id="{{ form.access_english.id_for_label }}" class="form-check-input mr-2" {% if form.access_english.value %}checked{% endif %}>
+            <label for="{{ form.access_english.id_for_label }}" class="form-check-label">English</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_afrikaans.name }}" id="{{ form.access_afrikaans.id_for_label }}" class="form-check-input mr-2" {% if form.access_afrikaans.value %}checked{% endif %}>
+            <label for="{{ form.access_afrikaans.id_for_label }}" class="form-check-label">Afrikaans</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_xhosa.name }}" id="{{ form.access_xhosa.id_for_label }}" class="form-check-input mr-2" {% if form.access_xhosa.value %}checked{% endif %}>
+            <label for="{{ form.access_xhosa.id_for_label }}" class="form-check-label">Xhosa</label>
+          </div>
+        </div>
+        
+        <h3 class="text-md font-medium text-gray-800 mb-4">Content Types</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_news_stories.name }}" id="{{ form.access_news_stories.id_for_label }}" class="form-check-input mr-2" {% if form.access_news_stories.value %}checked{% endif %}>
+            <label for="{{ form.access_news_stories.id_for_label }}" class="form-check-label">News Stories</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_news_bulletins.name }}" id="{{ form.access_news_bulletins.id_for_label }}" class="form-check-input mr-2" {% if form.access_news_bulletins.value %}checked{% endif %}>
+            <label for="{{ form.access_news_bulletins.id_for_label }}" class="form-check-label">News Bulletins</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_sport.name }}" id="{{ form.access_sport.id_for_label }}" class="form-check-input mr-2" {% if form.access_sport.value %}checked{% endif %}>
+            <label for="{{ form.access_sport.id_for_label }}" class="form-check-label">Sport</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_finance.name }}" id="{{ form.access_finance.id_for_label }}" class="form-check-input mr-2" {% if form.access_finance.value %}checked{% endif %}>
+            <label for="{{ form.access_finance.id_for_label }}" class="form-check-label">Finance</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ form.access_specialty.name }}" id="{{ form.access_specialty.id_for_label }}" class="form-check-input mr-2" {% if form.access_specialty.value %}checked{% endif %}>
+            <label for="{{ form.access_specialty.id_for_label }}" class="form-check-label">Specialty</label>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="primary_contact_mobile" class="form-label">Mobile Number</label>
-        <input type="text" id="primary_contact_mobile" name="primary_contact_mobile" class="form-control">
+    </div>
+    
+    <!-- Primary Contact -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Primary Contact</h2>
+        <p class="text-sm text-gray-500 mt-1">This user will be created as the main administrator for this station.</p>
+      </div>
+      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Left column -->
+        <div class="space-y-6">
+          <div class="form-group">
+            <label for="primary_contact_email" class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="primary_contact_email" id="primary_contact_email" class="form-control" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="primary_contact_password" class="form-label">Password <span class="text-danger">*</span></label>
+            <input type="password" name="primary_contact_password" id="primary_contact_password" class="form-control" required>
+          </div>
+        </div>
+        
+        <!-- Right column -->
+        <div class="space-y-6">
+          <div class="form-group">
+            <label for="primary_contact_first_name" class="form-label">First Name</label>
+            <input type="text" name="primary_contact_first_name" id="primary_contact_first_name" class="form-control">
+          </div>
+          
+          <div class="form-group">
+            <label for="primary_contact_last_name" class="form-label">Last Name</label>
+            <input type="text" name="primary_contact_last_name" id="primary_contact_last_name" class="form-control">
+          </div>
+          
+          <div class="form-group">
+            <label for="primary_contact_mobile" class="form-label">Mobile Number</label>
+            <input type="text" name="primary_contact_mobile" id="primary_contact_mobile" class="form-control">
+          </div>
+        </div>
       </div>
     </div>
   </form>

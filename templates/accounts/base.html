@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <title>{% block title %}Newskoop{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   {% block extra_css %}{% endblock %}
@@ -26,6 +27,13 @@
         <!-- Logo -->
         <a href="{% url 'accounts:dashboard' %}" class="top-nav-logo">
           <img src="{% static 'images/logo.svg' %}" alt="Newskoop Logo" style="width: 150px;">
+        </a>
+      </div>
+      
+      <!-- Top navigation links (visible on larger screens) -->
+      <div class="hidden md:flex items-center space-x-6 mr-6">
+        <a href="{% url 'accounts:profile' %}" class="text-gray-700 hover:text-primary font-medium {% if request.resolver_match.url_name == 'profile' %}text-primary{% endif %}">
+          My Profile
         </a>
       </div>
       
@@ -93,7 +101,9 @@
                 Dashboard
               </a>
             </li>
-            <li>
+            
+            <!-- Mobile-only profile link (hidden on larger screens) -->
+            <li class="md:hidden">
               <a href="{% url 'accounts:profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -102,6 +112,7 @@
                 My Profile
               </a>
             </li>
+            
             {% if user.is_authenticated and user.user_type == 'STAFF' %}
             <li>
               <a href="{% url 'accounts:station_list' %}" class="{% if 'station' in request.resolver_match.url_name %}active{% endif %}">
