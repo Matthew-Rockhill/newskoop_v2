@@ -1,0 +1,82 @@
+{% extends "accounts/base.html" %}
+{% block title %}Users - Newskoop{% endblock %}
+{% block page_title %}Users{% endblock %}
+{% block page_actions %}
+<div class="flex space-x-2">
+  <a href="{% url 'accounts:create_staff_user' %}" class="btn btn-primary">Add Staff User</a>
+  <a href="{% url 'accounts:create_radio_user' %}" class="btn btn-outline">Add Radio User</a>
+</div>
+{% endblock %}
+{% block content %}
+<div class="user-list p-6">
+  <form method="get" class="mb-6 flex flex-wrap gap-4">
+    <input type="hidden" name="user_type" value="{{ user_type }}">
+    <input type="text" name="q" placeholder="Search users..." value="{{ search_query }}" class="form-control w-1/3">
+    {% if user_type == "STAFF" %}
+      <select name="role" class="form-control w-1/4">
+        <option value="">All Roles</option>
+        {% for code, name in staff_roles %}
+        <option value="{{ code }}" {% if role_filter == code %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <select name="station" class="form-control w-1/4">
+        <option value="">All Stations</option>
+        {% for station in stations %}
+        <option value="{{ station.id }}" {% if station_filter == station.id|stringformat:"s" %}selected{% endif %}>{{ station.name }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+    <select name="status" class="form-control w-1/4">
+      <option value="">All Statuses</option>
+      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+  <table class="table w-full">
+    <thead>
+      <tr>
+        <th class="px-4 py-2">Name</th>
+        <th class="px-4 py-2">Email</th>
+        {% if user_type == "STAFF" %}
+          <th class="px-4 py-2">Role</th>
+        {% else %}
+          <th class="px-4 py-2">Station</th>
+        {% endif %}
+        <th class="px-4 py-2">Status</th>
+        <th class="px-4 py-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr class="border-b">
+        <td class="px-4 py-2">{{ user.get_full_name }}</td>
+        <td class="px-4 py-2">{{ user.email }}</td>
+        {% if user_type == "STAFF" %}
+          <td class="px-4 py-2">{{ user.get_staff_role_display }}</td>
+        {% else %}
+          <td class="px-4 py-2">
+            {% if user.radio_station %}
+              <a href="{% url 'accounts:station_detail' station_id=user.radio_station.id %}" class="text-primary hover:underline">{{ user.radio_station.name }}</a>
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+        {% endif %}
+        <td class="px-4 py-2">{% if user.is_active %}Active{% else %}Inactive{% endif %}</td>
+        <td class="px-4 py-2 space-x-2">
+          <a href="{% url 'accounts:edit_user' user_id=user.id %}" class="btn btn-sm btn-outline">Edit</a>
+          <a href="{% url 'accounts:reset_password' user_id=user.id %}" class="btn btn-sm btn-outline">Reset Password</a>
+          <a href="{% url 'accounts:delete_user_confirm' user_id=user.id %}" class="btn btn-sm btn-outline">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center py-4">No users found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

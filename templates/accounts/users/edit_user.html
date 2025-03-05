@@ -1,0 +1,20 @@
+{% extends "accounts/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Edit User - Newskoop{% endblock %}
+{% block page_title %}Edit User{% endblock %}
+{% block page_actions %}
+<button type="submit" form="user-form" class="btn btn-primary">Save Changes</button>
+{% endblock %}
+{% block content %}
+<div class="user-form-container max-w-lg mx-auto p-6">
+  <form id="user-form" method="post" class="space-y-6">
+    {% csrf_token %}
+    {{ form|crispy }}
+  </form>
+</div>
+<div class="danger-zone mt-6 p-4 border border-red-500 bg-red-100 rounded">
+  <h3 class="text-lg font-semibold text-red-700">Danger Zone</h3>
+  <p class="text-red-600">Deleting a user is irreversible.</p>
+  <a href="{% url 'accounts:delete_user_confirm' user_id=user_obj.id %}" class="btn btn-danger mt-4 block text-center">Delete User</a>
+</div>
+{% endblock %}

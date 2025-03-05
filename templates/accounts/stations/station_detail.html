@@ -1,0 +1,39 @@
+{% extends "accounts/base.html" %}
+{% block title %}{{ station.name }} - Newskoop{% endblock %}
+{% block page_title %}{{ station.name }}{% endblock %}
+{% block page_actions %}
+<a href="{% url 'accounts:station_edit' station_id=station.id %}" class="btn btn-primary">Edit Station</a>
+{% endblock %}
+{% block content %}
+<div class="station-detail max-w-3xl mx-auto p-6">
+  <h2 class="text-2xl font-bold mb-4">Station Information</h2>
+  <p><strong>Name:</strong> {{ station.name }}</p>
+  <p><strong>Province:</strong> {{ station.get_province_display }}</p>
+  <p><strong>Description:</strong> {{ station.description|default:"N/A" }}</p>
+  <p><strong>Contact Email:</strong> {{ station.contact_email|default:"N/A" }}</p>
+  <p><strong>Contact Number:</strong> {{ station.contact_number|default:"N/A" }}</p>
+  <p><strong>Website:</strong> {% if station.website %}<a href="{{ station.website }}" target="_blank" class="text-primary hover:underline">{{ station.website }}</a>{% else %}N/A{% endif %}</p>
+  <p><strong>Status:</strong> {% if station.is_active %}<span class="text-green-600 font-semibold">Active</span>{% else %}<span class="text-red-600 font-semibold">Inactive</span>{% endif %}</p>
+  <h3 class="text-xl font-semibold mt-6">Users</h3>
+  <table class="table w-full mt-4">
+    <thead>
+      <tr>
+        <th class="px-4 py-2">Email</th>
+        <th class="px-4 py-2">Primary Contact</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr class="border-b">
+        <td class="px-4 py-2">{{ user.email }}</td>
+        <td class="px-4 py-2">{% if user.is_primary_contact %}Yes{% else %}No{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2" class="text-center py-4">No users assigned.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

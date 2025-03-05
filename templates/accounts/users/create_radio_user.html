@@ -1,0 +1,15 @@
+{% extends "accounts/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Add Radio User - Newskoop{% endblock %}
+{% block page_title %}Add Radio User{% endblock %}
+{% block page_actions %}
+<button type="submit" form="user-form" class="btn btn-primary">Save User</button>
+{% endblock %}
+{% block content %}
+<div class="user-form-container max-w-lg mx-auto p-6">
+  <form id="user-form" method="post" class="space-y-6">
+    {% csrf_token %}
+    {{ form|crispy }}
+  </form>
+</div>
+{% endblock %}

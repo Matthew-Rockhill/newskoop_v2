@@ -1,0 +1,71 @@
+{% extends "accounts/base.html" %}
+{% block title %}Radio Stations - Newskoop{% endblock %}
+{% block page_title %}Radio Stations{% endblock %}
+{% block page_actions %}
+<a href="{% url 'accounts:station_create' %}" class="btn btn-primary">Add Station</a>
+{% endblock %}
+{% block content %}
+<div class="station-list p-6">
+  <form method="get" class="mb-6 flex flex-wrap gap-4">
+    <input type="text" name="q" placeholder="Search stations..." value="{{ search_query }}" class="form-control w-2/5">
+    <select name="province" class="form-control w-1/4">
+      <option value="">All Provinces</option>
+      {% for code, name in provinces %}
+      <option value="{{ code }}" {% if province_filter == code %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="form-control w-1/4">
+      <option value="">All Statuses</option>
+      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+  <table class="table w-full">
+    <thead>
+      <tr>
+        <th class="px-4 py-2">Name</th>
+        <th class="px-4 py-2">Province</th>
+        <th class="px-4 py-2">Contact</th>
+        <th class="px-4 py-2">Status</th>
+        <th class="px-4 py-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for station in stations %}
+      <tr class="border-b">
+        <td class="px-4 py-2">
+          <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="text-primary hover:underline">{{ station.name }}</a>
+        </td>
+        <td class="px-4 py-2">{{ station.get_province_display }}</td>
+        <td class="px-4 py-2">
+          {% if station.contact_email %}
+            <a href="mailto:{{ station.contact_email }}" class="hover:underline">{{ station.contact_email }}</a>
+          {% elif station.contact_number %}
+            {{ station.contact_number }}
+          {% else %}
+            N/A
+          {% endif %}
+        </td>
+        <td class="px-4 py-2">
+          {% if station.is_active %}
+            <span class="text-green-600 font-semibold">Active</span>
+          {% else %}
+            <span class="text-red-600 font-semibold">Inactive</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 space-x-2">
+          <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="btn btn-sm btn-outline">View</a>
+          <a href="{% url 'accounts:station_edit' station_id=station.id %}" class="btn btn-sm btn-outline">Edit</a>
+          <a href="{% url 'accounts:station_delete_confirm' station_id=station.id %}" class="btn btn-sm btn-outline">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center py-4">No stations found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

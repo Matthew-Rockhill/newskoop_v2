@@ -1,0 +1,31 @@
+{% extends "accounts/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}My Profile - Newskoop{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block page_actions %}
+<button type="submit" form="profile-form" class="btn btn-primary">Save Changes</button>
+{% endblock %}
+{% block content %}
+<div class="profile-container max-w-3xl mx-auto p-6">
+  <form id="profile-form" action="{% url 'accounts:profile' %}" method="post" class="space-y-4">
+    {% csrf_token %}
+    {{ form|crispy }}
+  </form>
+  <div class="account-info mt-6 space-y-2">
+    <h2 class="text-xl font-semibold">Account Information</h2>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Account Type:</strong> {{ user.get_user_type_display }}</p>
+    {% if user.user_type == 'STAFF' %}
+      <p><strong>Staff Role:</strong> {{ user.get_staff_role_display }}</p>
+    {% elif user.user_type == 'RADIO' and user.radio_station %}
+      <p><strong>Radio Station:</strong> {{ user.radio_station.name }}</p>
+      <p><strong>Primary Contact:</strong> {% if user.is_primary_contact %}Yes{% else %}No{% endif %}</p>
+    {% endif %}
+    <p><strong>Status:</strong> {% if user.is_active %}Active{% else %}Inactive{% endif %}</p>
+    <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+  </div>
+  <div class="change-password mt-6">
+    <a href="{% url 'accounts:change_password' %}" class="btn btn-outline">Change Password</a>
+  </div>
+</div>
+{% endblock %}

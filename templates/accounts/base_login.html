@@ -1,0 +1,21 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Newskoop Login{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  {% block extra_css %}{% endblock %}
+  <style>
+    body { background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary)); }
+    .login-container { background-color: var(--color-background); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-lg); max-width: 400px; width: 100%; }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+  {% block content %}{% endblock %}
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

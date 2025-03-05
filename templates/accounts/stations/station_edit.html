@@ -1,0 +1,15 @@
+{% extends "accounts/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Edit Radio Station - Newskoop{% endblock %}
+{% block page_title %}Edit Radio Station{% endblock %}
+{% block page_actions %}
+<button type="submit" form="station-form" class="btn btn-primary">Save Changes</button>
+{% endblock %}
+{% block content %}
+<div class="station-form-container max-w-lg mx-auto p-6">
+  <form id="station-form" method="post" class="space-y-6">
+    {% csrf_token %}
+    {{ form|crispy }}
+  </form>
+</div>
+{% endblock %}

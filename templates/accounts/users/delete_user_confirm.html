@@ -1,0 +1,15 @@
+{% extends "accounts/base.html" %}
+{% block title %}Delete User - Newskoop{% endblock %}
+{% block page_title %}Delete User{% endblock %}
+{% block content %}
+<div class="delete-container max-w-md mx-auto p-6">
+  <h2 class="text-xl font-bold mb-4">Delete Confirmation</h2>
+  <p>Are you sure you want to delete the user "<strong>{{ user_obj.get_full_name }}</strong>" ({{ user_obj.email }})?</p>
+  <p class="mt-4">This action cannot be undone. Please type the user's email to confirm.</p>
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    <input type="text" name="confirmation" class="form-control mb-4" placeholder="Type user email to confirm">
+    <button type="submit" class="w-full btn btn-danger">Delete User</button>
+  </form>
+</div>
+{% endblock %}
