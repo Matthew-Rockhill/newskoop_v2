@@ -1,0 +1,183 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Delete Audio - {{ audio_clip.title }} - Newsroom{% endblock %}
+{% block page_title %}Delete Audio Clip{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <form method="post" id="audio-delete-form">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      Confirm Delete
+    </button>
+  </form>
+  
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Cancel
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 gap-6">
+  <!-- Left Column -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-danger-light">
+      <div class="flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-danger mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h2 class="text-lg font-semibold text-danger-600">Warning: You are about to delete an audio clip</h2>
+      </div>
+    </div>
+    
+    <div class="p-6">
+      <div class="bg-danger-50 border border-danger-100 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-danger mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <p class="text-danger-700">This action <strong>cannot be undone</strong>. This will permanently delete the audio file from the server.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <h3 class="font-medium text-gray-900 mb-3">Audio Clip Details</h3>
+          
+          <div class="space-y-3 text-sm">
+            <div>
+              <span class="text-gray-500">Title:</span>
+              <span class="ml-1 font-medium">{{ audio_clip.title }}</span>
+            </div>
+            
+            {% if audio_clip.description %}
+            <div>
+              <span class="text-gray-500">Description:</span>
+              <p class="mt-1 text-gray-700">{{ audio_clip.description }}</p>
+            </div>
+            {% endif %}
+            
+            <div>
+              <span class="text-gray-500">Uploaded by:</span>
+              <span class="ml-1">{{ audio_clip.uploaded_by.get_full_name }}</span>
+            </div>
+            
+            <div>
+              <span class="text-gray-500">Upload date:</span>
+              <span class="ml-1">{{ audio_clip.created_at|date:"F j, Y, g:i a" }}</span>
+            </div>
+            
+            {% if audio_clip.duration %}
+            <div>
+              <span class="text-gray-500">Duration:</span>
+              <span class="ml-1">{{ audio_clip.duration }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="mt-6 border-t border-gray-200 pt-6">
+          <form method="post" id="audio-delete-form-bottom">
+            {% csrf_token %}
+            <p class="mb-4">Please confirm that you want to delete this audio clip.</p>
+            <button type="submit" class="btn btn-danger">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Audio Clip Permanently
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Right Column -->
+  <div class="space-y-6">
+    <!-- Audio Preview -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Audio Preview</h3>
+      </div>
+      
+      <div class="p-6">
+        <div class="bg-gray-50 border rounded-md p-4">
+          <audio src="{{ audio_clip.audio_file.url }}" controls class="audio-player w-full"></audio>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Associated Story -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Associated Story</h3>
+      </div>
+      
+      <div class="p-6">
+        <div class="text-sm space-y-2">
+          <div class="font-medium text-lg mb-1">{{ story.title }}</div>
+          <div class="flex space-x-4 text-gray-500">
+            <span class="story-status-badge story-status-{{ story.status|lower }}">
+              {{ story.get_status_display }}
+            </span>
+            <span>{{ story.get_language_display }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500">Category:</span>
+            <span class="ml-1">
+              {% if story.category.parent %}
+                {{ story.category.parent.name }} > 
+              {% endif %}
+              {{ story.category.name }}
+            </span>
+          </div>
+          <div>
+            <span class="text-gray-500">Author:</span>
+            <span class="ml-1">{{ story.author.get_full_name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Warning Information -->
+    <div class="bg-warning-light rounded-lg p-6">
+      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Important Information
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Radio stations will no longer have access to this audio</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>The audio file will be permanently removed from the server</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>This action cannot be undone</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

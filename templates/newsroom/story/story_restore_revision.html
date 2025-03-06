@@ -1,0 +1,216 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Restore Revision #{{ revision.revision_number }} - {{ story.title }} - Newsroom{% endblock %}
+{% block page_title %}Restore to Revision #{{ revision.revision_number }}{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <form method="post" id="restore-form">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Confirm Restore
+    </button>
+  </form>
+  
+  <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Back to Revision
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 gap-6">
+  <!-- Left Column -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-info-light">
+      <div class="flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h2 class="text-lg font-semibold text-info-600">You are about to restore this story to an earlier version</h2>
+      </div>
+    </div>
+    
+    <div class="p-6">
+      <div class="bg-info-50 border border-info-100 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p class="text-info-700">This action will replace the current content of the story with the content from revision #{{ revision.revision_number }}. A new revision will be created to track this change.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="space-y-6">
+        <div>
+          <h3 class="font-medium text-gray-900 mb-3">Revision Details</h3>
+          
+          <dl class="grid grid-cols-1 gap-4">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Revision Number</dt>
+              <dd class="mt-1 font-medium">{{ revision.revision_number }}</dd>
+            </div>
+            
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created By</dt>
+              <dd class="mt-1">{{ revision.created_by.get_full_name }}</dd>
+            </div>
+            
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created On</dt>
+              <dd class="mt-1">{{ revision.created_at|date:"F j, Y, g:i a" }}</dd>
+            </div>
+          </dl>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded-lg">
+          <h4 class="font-medium text-gray-700 mb-2">What will happen</h4>
+          <ul class="space-y-2">
+            <li class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>The story content will be reverted to this revision</span>
+            </li>
+            <li class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>A new revision (#{{ latest_revision_number|add:"1" }}) will be created</span>
+            </li>
+            <li class="flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>You will be recorded as the creator of the new revision</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="mt-6 border-t border-gray-200 pt-6">
+          <form method="post" id="restore-form-bottom">
+            {% csrf_token %}
+            <p class="mb-4">Please confirm that you want to restore the story to this revision.</p>
+            <button type="submit" class="btn btn-success">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Restore to Revision #{{ revision.revision_number }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Right Column -->
+  <div class="space-y-6">
+    <!-- Story Details -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Story Details</h3>
+      </div>
+      
+      <div class="p-6">
+        <dl class="grid grid-cols-1 gap-4">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Title</dt>
+            <dd class="mt-1 font-medium">{{ story.title }}</dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Status</dt>
+            <dd class="mt-1">
+              <span class="story-status-badge story-status-{{ story.status|lower }}">
+                {{ story.get_status_display }}
+              </span>
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Category</dt>
+            <dd class="mt-1">
+              {% if story.category.parent %}
+                {{ story.category.parent.name }} > 
+              {% endif %}
+              {{ story.category.name }}
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Author</dt>
+            <dd class="mt-1">{{ story.author.get_full_name }}</dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Current Revision</dt>
+            <dd class="mt-1 font-medium">{{ latest_revision_number }}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+    
+    <!-- Content Preview -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Content Preview</h3>
+      </div>
+      
+      <div class="p-6">
+        <div class="border rounded-md overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h4 class="font-medium text-gray-700">Content from Revision #{{ revision.revision_number }}</h4>
+          </div>
+          <div class="p-4 max-h-80 overflow-y-auto">
+            <div class="prose prose-sm max-w-none story-content">
+              {{ revision.content|safe|truncatewords_html:200 }}
+              {% if revision.content|wordcount > 200 %}
+                <span class="text-gray-500">...</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Warning Information -->
+    <div class="bg-warning-light rounded-lg p-6">
+      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Important Information
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>This will not affect the story's metadata, only its content</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>If this is a published story, the changes will be visible to all users</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>All revisions remain accessible in the story history</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

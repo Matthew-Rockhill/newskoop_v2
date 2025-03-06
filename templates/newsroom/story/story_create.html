@@ -1,0 +1,294 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}{% if is_new %}Create Story{% else %}Edit Story{% endif %} - Newsroom{% endblock %}
+{% block page_title %}{% if is_new %}Create Story{% else %}Edit: {{ story.title }}{% endif %}{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <button type="submit" form="story-form" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+    </svg>
+    {% if is_new %}Create Story{% else %}Save Changes{% endif %}
+  </button>
+  
+  {% if not is_new %}
+    {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' and story.status != 'PUBLISHED' %}
+      <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="btn btn-success">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Publish
+      </a>
+    {% endif %}
+  
+    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Cancel
+    </a>
+  {% else %}
+    <a href="{% url 'newsroom:story_list' %}" class="btn btn-outline">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Cancel
+    </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-3 gap-6">
+  <!-- Left Column (2/3 width) - Story Content -->
+  <div class="col-span-2">
+    <div class="bg-white rounded-lg shadow">
+      {% if not is_new and story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+        <div class="bg-warning-light px-6 py-4 border-b border-warning text-warning-600">
+          <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span class="font-medium">Note:</span>
+            <span class="ml-1">This story has been published. Only editors can make changes to published stories.</span>
+          </div>
+        </div>
+      {% endif %}
+      
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Story Content</h2>
+      </div>
+      
+      <div class="p-6">
+        <form id="story-form" method="post" class="space-y-6">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="{{ form.title.id_for_label }}" class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control {% if form.title.errors %}is-invalid{% endif %}" value="{{ form.title.value|default:'' }}" required {% if not is_new and story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}readonly{% endif %}>
+            {% if form.title.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="form-group">
+            <label for="{{ form.slug.id_for_label }}" class="form-label">Slug</label>
+            <input type="text" name="{{ form.slug.name }}" id="{{ form.slug.id_for_label }}" class="form-control {% if form.slug.errors %}is-invalid{% endif %}" value="{{ form.slug.value|default:'' }}" placeholder="auto-generated-from-title" {% if not is_new and story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}readonly{% endif %}>
+            {% if form.slug.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.slug.errors|first }}</div>
+            {% endif %}
+            <div class="form-text">
+              Leave blank to auto-generate from title
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="content-editor" class="form-label">Content <span class="text-danger">*</span></label>
+            <div id="content-editor" class="quill-editor" data-field="content"></div>
+            <input type="hidden" name="content" id="id_content" value="{{ form.content.value|default:'' }}">
+            {% if form.content.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.content.errors|first }}</div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    {% if not is_new %}
+    <div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="btn btn-sm btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Audio
+        </a>
+      </div>
+      
+      <div class="p-6">
+        {% if story.audio_clips.exists %}
+          <div class="grid grid-cols-1 gap-4">
+            {% for clip in story.audio_clips.all %}
+              <div class="border rounded-md p-4">
+                <div class="flex justify-between">
+                  <h3 class="font-medium">{{ clip.title }}</h3>
+                  <form method="post" action="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-danger hover:text-danger-600" onclick="return confirm('Are you sure you want to delete this audio clip?')">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+                {% if clip.description %}
+                  <p class="text-sm text-gray-500 mt-1">{{ clip.description }}</p>
+                {% endif %}
+                <div class="mt-2">
+                  <audio src="{{ clip.audio_file.url }}" controls class="audio-player"></audio>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Uploaded by {{ clip.uploaded_by.get_full_name }} on {{ clip.created_at|date:"M d, Y" }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
+            </svg>
+            <p class="mt-2 text-gray-500">No audio clips attached to this story</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Right Column (1/3 width) - Metadata and Classification -->
+  <div class="col-span-1 space-y-6">
+    <!-- Status and Classification -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+      </div>
+      
+      <div class="p-6 space-y-4">
+        {% if not is_new %}
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <div class="p-2 rounded-md story-status-{{ story.status|lower }}">
+              {{ story.get_status_display }}
+            </div>
+          </div>
+        {% endif %}
+        
+        <div class="form-group">
+          <label for="{{ form.category.id_for_label }}" class="form-label">Category <span class="text-danger">*</span></label>
+          <select name="{{ form.category.name }}" form="story-form" id="{{ form.category.id_for_label }}" class="form-control {% if form.category.errors %}is-invalid{% endif %}" {% if form.category.field.disabled %}disabled{% endif %}>
+            <option value="">Select a category</option>
+            {% for category in form.category.field.queryset %}
+              <option value="{{ category.id }}" {% if form.category.value|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
+                {% if category.parent %}
+                  {{ category.parent.name }} > {{ category.name }}
+                {% else %}
+                  {{ category.name }}
+                {% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if form.category.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.category.errors|first }}</div>
+          {% endif %}
+          {% if form.category.help_text %}
+            <div class="form-text text-warning">{{ form.category.help_text }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="form-group">
+          <label for="{{ form.language.id_for_label }}" class="form-label">Language <span class="text-danger">*</span></label>
+          <select name="{{ form.language.name }}" form="story-form" id="{{ form.language.id_for_label }}" class="form-control {% if form.language.errors %}is-invalid{% endif %}">
+            {% for value, text in form.language.field.choices %}
+              <option value="{{ value }}" {% if form.language.value == value %}selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+          </select>
+          {% if form.language.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.language.errors|first }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="form-group">
+          <label for="{{ form.religion_classification.id_for_label }}" class="form-label">Religious Classification</label>
+          <select name="{{ form.religion_classification.name }}" form="story-form" id="{{ form.religion_classification.id_for_label }}" class="form-control {% if form.religion_classification.errors %}is-invalid{% endif %}">
+            {% for value, text in form.religion_classification.field.choices %}
+              <option value="{{ value }}" {% if form.religion_classification.value == value %}selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+          </select>
+          {% if form.religion_classification.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.religion_classification.errors|first }}</div>
+          {% endif %}
+          <div class="form-text">
+            This affects which radio stations can access this content
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Author Information -->
+    {% if not is_new %}
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Author Information</h2>
+      </div>
+      
+      <div class="p-6">
+        <dl class="grid grid-cols-1 gap-4">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Author</dt>
+            <dd class="mt-1">{{ story.author.get_full_name }}</dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Created</dt>
+            <dd class="mt-1">{{ story.created_at|date:"F j, Y" }}</dd>
+          </div>
+          
+          {% if story.published_at %}
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Published</dt>
+            <dd class="mt-1">{{ story.published_at|date:"F j, Y" }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Guidelines -->
+    <div class="bg-info-light rounded-lg p-6">
+      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Story Guidelines
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Keep titles concise and descriptive</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Use proper paragraph structure in content</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Include relevant details but avoid unnecessary information</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Check facts and sources before submitting</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Submit for review when ready for editorial approval</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Create Task - Newsroom{% endblock %}
+{% block page_title %}Create New Task{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <button type="submit" form="task-form" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+    </svg>
+    Create Task
+  </button>
+  
+  <a href="{% url 'newsroom:task_list' %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Cancel
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Task Details</h2>
+    </div>
+    
+    <div class="p-6">
+      <form id="task-form" method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="md:col-span-2">
+            <div class="form-group">
+              <label for="{{ form.title.id_for_label }}" class="form-label">Title <span class="text-danger">*</span></label>
+              <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control {% if form.title.errors %}is-invalid{% endif %}" value="{{ form.title.value|default:'' }}" required>
+              {% if form.title.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="md:col-span-2">
+            <div class="form-group">
+              <label for="{{ form.description.id_for_label }}" class="form-label">Description <span class="text-danger">*</span></label>
+              <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="form-control {% if form.description.errors %}is-invalid{% endif %}" required>{{ form.description.value|default:'' }}</textarea>
+              {% if form.description.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assign To <span class="text-danger">*</span></label>
+              <select name="{{ form.assigned_to.name }}" id="{{ form.assigned_to.id_for_label }}" class="form-control {% if form.assigned_to.errors %}is-invalid{% endif %}" required>
+                <option value="">Select a user</option>
+                {% for user in form.assigned_to.field.queryset %}
+                  <option value="{{ user.id }}" {% if form.assigned_to.value|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
+                    {{ user.get_full_name }} ({{ user.get_staff_role_display }})
+                  </option>
+                {% endfor %}
+              </select>
+              {% if form.assigned_to.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.assigned_to.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.related_story.id_for_label }}" class="form-label">Related Story</label>
+              <select name="{{ form.related_story.name }}" id="{{ form.related_story.id_for_label }}" class="form-control {% if form.related_story.errors %}is-invalid{% endif %}">
+                <option value="">None</option>
+                {% for story in form.related_story.field.queryset %}
+                  <option value="{{ story.id }}" {% if form.related_story.value|stringformat:"s" == story.id|stringformat:"s" %}selected{% endif %}>
+                    {{ story.title }} ({{ story.get_status_display }})
+                  </option>
+                {% endfor %}
+              </select>
+              {% if form.related_story.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.related_story.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.task_type.id_for_label }}" class="form-label">Task Type <span class="text-danger">*</span></label>
+              <select name="{{ form.task_type.name }}" id="{{ form.task_type.id_for_label }}" class="form-control {% if form.task_type.errors %}is-invalid{% endif %}" required>
+                {% for value, text in form.task_type.field.choices %}
+                  <option value="{{ value }}" {% if form.task_type.value == value %}selected{% endif %}>{{ text }}</option>
+                {% endfor %}
+              </select>
+              {% if form.task_type.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.task_type.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.priority.id_for_label }}" class="form-label">Priority <span class="text-danger">*</span></label>
+              <select name="{{ form.priority.name }}" id="{{ form.priority.id_for_label }}" class="form-control {% if form.priority.errors %}is-invalid{% endif %}" required>
+                {% for value, text in form.priority.field.choices %}
+                  <option value="{{ value }}" {% if form.priority.value == value %}selected{% endif %}>{{ text }}</option>
+                {% endfor %}
+              </select>
+              {% if form.priority.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.priority.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.status.id_for_label }}" class="form-label">Status <span class="text-danger">*</span></label>
+              <select name="{{ form.status.name }}" id="{{ form.status.id_for_label }}" class="form-control {% if form.status.errors %}is-invalid{% endif %}" required>
+                {% for value, text in form.status.field.choices %}
+                  <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ text }}</option>
+                {% endfor %}
+              </select>
+              {% if form.status.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.status.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div>
+            <div class="form-group">
+              <label for="{{ form.due_date.id_for_label }}" class="form-label">Due Date</label>
+              <input type="date" name="{{ form.due_date.name }}" id="{{ form.due_date.id_for_label }}" class="form-control {% if form.due_date.errors %}is-invalid{% endif %}" value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}">
+              {% if form.due_date.errors %}
+                <div class="text-danger text-sm mt-1">{{ form.due_date.errors|first }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded-lg">
+          <div class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 class="font-medium">Task Guidelines</h4>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>Provide a clear, descriptive title</li>
+                <li>Include specific details in the description</li>
+                <li>Set a realistic due date</li>
+                <li>Assign to the appropriate team member</li>
+                <li>Link to a related story if applicable</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

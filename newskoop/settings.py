@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'accounts',
+    'newsroom',
     # add other local apps here
 ]
 
