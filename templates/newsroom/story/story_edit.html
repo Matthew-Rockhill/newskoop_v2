@@ -1,18 +1,22 @@
 {% extends "newsroom/base.html" %}
 {% load static %}
 
-{% block title %}Edit: {{ story.title }} - Newsroom{% endblock %}
+{% block title %}Edit Story - {{ story.title }} - Newsroom{% endblock %}
 {% block page_title %}Edit Story{% endblock %}
 
+{% block extra_head %}
+<!-- Include Quill stylesheet -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
 {% block page_actions %}
-<div class="flex space-x-3">
+<div class="flex justify-end space-x-3">
   <button type="submit" form="story-form" class="btn btn-primary">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
     </svg>
     Save Changes
   </button>
-  
   {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' and story.status != 'PUBLISHED' %}
     <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="btn btn-success">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -21,301 +25,307 @@
       Publish
     </a>
   {% endif %}
-  
+  {% if story.author == user and story.status == 'DRAFT' %}
+    <button type="submit" form="submit-review-form" class="btn btn-warning">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+      Submit for Review
+    </button>
+  {% endif %}
   <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
     </svg>
     Cancel
   </a>
 </div>
+
+<!-- Hidden form for submit to review action -->
+<form id="submit-review-form" method="post" action="{% url 'newsroom:story_edit' story_id=story.id %}" class="hidden">
+  {% csrf_token %}
+  <input type="hidden" name="status" value="REVIEW">
+  <!-- Copy all form fields from main form using JavaScript -->
+</form>
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-3 gap-6">
-  <!-- Main Content Column (2/3 width) -->
-  <div class="col-span-2 space-y-6">
-    <!-- Story Content -->
-    <div class="bg-white rounded-lg shadow">
-      {% if story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-        <div class="bg-warning-light px-6 py-4 border-b border-warning text-warning-600">
-          <div class="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span class="font-medium">Note:</span>
-            <span class="ml-1">This story has been published. Only editors can make changes to published stories.</span>
-          </div>
+<form id="story-form" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="grid grid-cols-3 gap-6">
+    <!-- Left Column (2/3 width): Story Content & Audio Clips -->
+    <div class="col-span-2 space-y-6">
+      <!-- Story Content Section -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Story Content</h2>
+        <div class="mb-4">
+          <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium">Title <span class="text-red-500">*</span></label>
+          <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" value="{{ form.title.value|default:'' }}" required class="mt-1 block w-full border rounded-md p-2">
+          {% if form.title.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.title.errors|first }}</p>
+          {% endif %}
         </div>
-      {% endif %}
-      
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Story Content</h2>
+        <div class="mb-4">
+          <label for="content-editor" class="block text-sm font-medium">Content <span class="text-red-500">*</span></label>
+          <!-- Quill editor container -->
+          <div id="content-editor" class="mt-1" style="min-height: 300px; border-radius: 0.375rem;"></div>
+          <!-- Hidden input to store the HTML content -->
+          <input type="hidden" name="content" id="id_content" value="{{ form.content.value|default:'' }}">
+          {% if form.content.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.content.errors|first }}</p>
+          {% endif %}
+        </div>
       </div>
-      
-      <div class="p-6">
-        <form id="story-form" method="post" class="space-y-6">
-          {% csrf_token %}
-          
-          <div class="form-group">
-            <label for="{{ form.title.id_for_label }}" class="form-label">Title <span class="text-danger">*</span></label>
-            <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control {% if form.title.errors %}is-invalid{% endif %}" value="{{ form.title.value|default:'' }}" required {% if story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}readonly{% endif %}>
-            {% if form.title.errors %}
-              <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
-            {% endif %}
-          </div>
-          
-          <div class="form-group">
-            <label for="{{ form.slug.id_for_label }}" class="form-label">Slug</label>
-            <input type="text" name="{{ form.slug.name }}" id="{{ form.slug.id_for_label }}" class="form-control {% if form.slug.errors %}is-invalid{% endif %}" value="{{ form.slug.value|default:'' }}" placeholder="auto-generated-from-title" {% if story.status == 'PUBLISHED' and user.staff_role not in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}readonly{% endif %}>
-            {% if form.slug.errors %}
-              <div class="text-danger text-sm mt-1">{{ form.slug.errors|first }}</div>
-            {% endif %}
-            <div class="form-text">
-              Leave blank to auto-generate from title
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="content-editor" class="form-label">Content <span class="text-danger">*</span></label>
-            <div id="content-editor" class="quill-editor" data-field="content"></div>
-            <input type="hidden" name="content" id="id_content" value="{{ form.content.value|default:'' }}">
-            {% if form.content.errors %}
-              <div class="text-danger text-sm mt-1">{{ form.content.errors|first }}</div>
-            {% endif %}
-          </div>
-        </form>
-      </div>
-    </div>
-    
-    <!-- Audio Clips Section -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
-        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="btn btn-sm btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Add Audio
-        </a>
-      </div>
-      
-      <div class="p-6">
-        {% if story.audio_clips.exists %}
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {% for clip in story.audio_clips.all %}
-              <div class="border rounded-md p-4">
-                <div class="flex justify-between">
-                  <h3 class="font-medium">{{ clip.title }}</h3>
-                  <form method="post" action="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="text-danger hover:text-danger-600" title="Delete" onclick="return confirm('Are you sure you want to delete this audio clip?')">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </form>
-                </div>
-                {% if clip.description %}
-                  <p class="text-sm text-gray-500 mt-1">{{ clip.description }}</p>
-                {% endif %}
-                <div class="mt-2">
-                  <audio src="{{ clip.audio_file.url }}" controls class="audio-player w-full"></audio>
-                </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  Uploaded by {{ clip.uploaded_by.get_full_name }} on {{ clip.created_at|date:"M d, Y" }}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="text-center py-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
+      <!-- Audio Clips Section -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Audio Clips</h2>
+        <p class="mb-2 text-sm text-gray-600">Select additional audio files to attach (existing clips are shown below).</p>
+        <div class="flex items-center">
+          <input type="file" id="audio_files" name="audio_files" multiple accept="audio/*" class="hidden">
+          <button type="button" id="add-audio-btn" class="btn btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            <p class="mt-2 text-gray-500">No audio clips attached to this story</p>
+            Add Audio Clips
+          </button>
+        </div>
+        <div id="audio-preview" class="mt-4"></div>
+        <div class="text-xs text-gray-500 mt-2">
+          Supported formats: MP3, WAV, M4A, OGG (max 20MB per file)
+        </div>
+        
+        <!-- Existing Audio Clips -->
+        {% if story.audio_clips.exists %}
+          <div class="mt-6 border-t border-gray-200 pt-4">
+            <h3 class="font-medium text-gray-700 mb-3">Existing Audio Clips</h3>
+            <div class="space-y-3">
+              {% for clip in story.audio_clips.all %}
+                <div class="border rounded-md p-3 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <div>
+                      <div class="font-medium">{{ clip.title }}</div>
+                      <div class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</div>
+                    </div>
+                  </div>
+                  <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="text-danger hover:text-danger-600 text-sm" onclick="return confirm('Are you sure you want to delete this audio clip?');">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </a>
+                </div>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
       </div>
     </div>
-  </div>
-  
-  <!-- Sidebar Column (1/3 width) -->
-  <div class="col-span-1 space-y-6">
-    <!-- Status and Classification -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
-      </div>
-      
-      <div class="p-6 space-y-4">
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <div class="p-2 rounded-md story-status-{{ story.status|lower }}">
-            {{ story.get_status_display }}
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="{{ form.category.id_for_label }}" class="form-label">Category <span class="text-danger">*</span></label>
-          <select name="{{ form.category.name }}" form="story-form" id="{{ form.category.id_for_label }}" class="form-control {% if form.category.errors %}is-invalid{% endif %}" {% if form.category.field.disabled %}disabled{% endif %}>
+    <!-- Right Column (1/3 width): Category & Metadata -->
+    <div class="col-span-1 space-y-6">
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Story Details</h2>
+        {% if form.category %}
+        <div class="mb-4">
+          <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium">Category <span class="text-red-500">*</span></label>
+          <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="mt-1 block w-full border rounded-md p-2">
             <option value="">Select a category</option>
-            {% for category in form.category.field.queryset %}
-              <option value="{{ category.id }}" {% if form.category.value|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
-                {% if category.parent %}
-                  {{ category.parent.name }} > {{ category.name }}
-                {% else %}
-                  {{ category.name }}
-                {% endif %}
-              </option>
+            {% for cat in form.category.field.queryset %}
+              <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
             {% endfor %}
           </select>
           {% if form.category.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.category.errors|first }}</div>
-          {% endif %}
-          {% if form.category.help_text %}
-            <div class="form-text text-warning">{{ form.category.help_text }}</div>
+            <p class="text-red-500 text-sm mt-1">{{ form.category.errors|first }}</p>
           {% endif %}
         </div>
-        
-        <div class="form-group">
-          <label for="{{ form.language.id_for_label }}" class="form-label">Language <span class="text-danger">*</span></label>
-          <select name="{{ form.language.name }}" form="story-form" id="{{ form.language.id_for_label }}" class="form-control {% if form.language.errors %}is-invalid{% endif %}">
-            {% for value, text in form.language.field.choices %}
-              <option value="{{ value }}" {% if form.language.value == value %}selected{% endif %}>{{ text }}</option>
-            {% endfor %}
-          </select>
-          {% if form.language.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.language.errors|first }}</div>
-          {% endif %}
-        </div>
-        
-        <div class="form-group">
-          <label for="{{ form.religion_classification.id_for_label }}" class="form-label">Religious Classification</label>
-          <select name="{{ form.religion_classification.name }}" form="story-form" id="{{ form.religion_classification.id_for_label }}" class="form-control {% if form.religion_classification.errors %}is-invalid{% endif %}">
-            {% for value, text in form.religion_classification.field.choices %}
-              <option value="{{ value }}" {% if form.religion_classification.value == value %}selected{% endif %}>{{ text }}</option>
-            {% endfor %}
-          </select>
+        {% endif %}
+        {% if form.religion_classification %}
+        <div class="mb-4">
+          <label for="{{ form.religion_classification.id_for_label }}" class="block text-sm font-medium">Religion</label>
+          {{ form.religion_classification }}
           {% if form.religion_classification.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.religion_classification.errors|first }}</div>
+            <p class="text-red-500 text-sm mt-1">{{ form.religion_classification.errors|first }}</p>
           {% endif %}
-          <div class="form-text">
-            This affects which radio stations can access this content
-          </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Author Information -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Author Information</h2>
+        {% endif %}
+        <div class="mb-4">
+          <label for="{{ form.language.id_for_label }}" class="block text-sm font-medium">Language</label>
+          {{ form.language }}
+          {% if form.language.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.language.errors|first }}</p>
+          {% endif %}
+        </div>
       </div>
       
-      <div class="p-6">
-        <dl class="grid grid-cols-2 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Author</dt>
-            <dd class="mt-1">{{ story.author.get_full_name }}</dd>
+      <!-- Story Status Card -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="font-semibold text-gray-700 mb-3">Story Status</h2>
+        <div class="mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="story-status-badge story-status-{{ story.status|lower }}">{{ story.get_status_display }}</span>
+            {% if story.published_at %}
+              <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
+            {% endif %}
           </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Created</dt>
-            <dd class="mt-1">{{ story.created_at|date:"M d, Y" }}</dd>
+        </div>
+        
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-500">Created by:</span>
+            <span class="font-medium">{{ story.author.get_full_name }}</span>
           </div>
-          
+          <div class="flex justify-between">
+            <span class="text-gray-500">Created on:</span>
+            <span>{{ story.created_at|date:"M d, Y" }}</span>
+          </div>
           {% if story.editor %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Editor</dt>
-            <dd class="mt-1">{{ story.editor.get_full_name }}</dd>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Edited by:</span>
+            <span>{{ story.editor.get_full_name }}</span>
           </div>
           {% endif %}
-          
-          {% if story.published_at %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Published</dt>
-            <dd class="mt-1">{{ story.published_at|date:"M d, Y" }}</dd>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Last updated:</span>
+            <span>{{ story.updated_at|date:"M d, Y" }}</span>
+          </div>
+          {% if story.view_count %}
+          <div class="flex justify-between">
+            <span class="text-gray-500">Views:</span>
+            <span>{{ story.view_count }}</span>
           </div>
           {% endif %}
-        </dl>
+          {% if story.download_count %}
+          <div class="flex justify-between">
+            <span class="text-gray-500">Downloads:</span>
+            <span>{{ story.download_count }}</span>
+          </div>
+          {% endif %}
+        </div>
       </div>
-    </div>
-    
-    <!-- Guidelines -->
-    <div class="bg-info-light rounded-lg p-6">
-      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Story Guidelines
-      </h3>
-      <ul class="space-y-3">
-        <li class="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>Keep titles concise and descriptive</span>
-        </li>
-        <li class="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>Use proper paragraph structure in content</span>
-        </li>
-        <li class="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>Include relevant details but avoid unnecessary information</span>
-        </li>
-        <li class="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>Check facts and sources before submitting</span>
-        </li>
-      </ul>
-    </div>
-    
-    <!-- Revision History (Compact View) -->
-    {% if story.revisions.exists %}
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Recent Revisions</h2>
-      </div>
-      <div class="p-6">
-        <div class="grid grid-cols-1 gap-4">
-          {% for revision in story.revisions.all|slice:":3" %}
-            <div class="border rounded-md p-4">
-              <div class="flex justify-between">
-                <h3 class="font-medium">Revision #{{ revision.revision_number }}</h3>
-                <span class="text-sm">{{ revision.created_at|date:"M d, Y" }}</span>
-              </div>
-              <div class="mt-1 text-sm text-gray-500">
-                <span>By {{ revision.created_by.get_full_name }}</span>
-              </div>
-              <div class="mt-2 flex space-x-2">
-                <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="text-sm text-primary hover:underline">
-                  View
+      
+      <!-- Revision History Card -->
+      {% if story.revisions.exists %}
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="font-semibold text-gray-700 mb-3">Revision History</h2>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          {% for revision in story.revisions.all|dictsortreversed:"revision_number" %}
+            <div class="border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
+              <div class="flex items-center justify-between">
+                <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="text-primary hover:underline">
+                  Revision #{{ revision.revision_number }}
                 </a>
-                <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="text-sm text-primary hover:underline">
-                  Restore
-                </a>
+                <span class="text-xs text-gray-500">{{ revision.created_at|date:"M d, Y" }}</span>
               </div>
+              <div class="text-xs text-gray-500">By {{ revision.created_by.get_full_name }}</div>
             </div>
           {% endfor %}
         </div>
-        {% if story.revisions.count > 3 %}
-          <div class="mt-4 text-center">
-            <a href="{% url 'newsroom:story_detail' story_id=story.id %}#revisions" class="text-sm text-primary hover:underline">
-              View all {{ story.revisions.count }} revisions
-            </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<!-- Add this modal template to your story_edit.html file -->
+<!-- The modal will be hidden by default and shown via JavaScript -->
+
+<div id="audio-delete-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+  <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <!-- Background overlay -->
+    <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+      <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+    </div>
+
+    <!-- Modal panel -->
+    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="sm:flex sm:items-start">
+          <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-light sm:mx-0 sm:h-10 sm:w-10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </div>
-        {% endif %}
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+              Delete Audio Clip
+            </h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">
+                Are you sure you want to delete this audio clip? This action cannot be undone.
+              </p>
+              <div class="mt-4 p-3 bg-gray-50 rounded-md">
+                <div id="modal-audio-title" class="font-medium"></div>
+                <div id="modal-audio-info" class="text-xs text-gray-500 mt-1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <form id="delete-audio-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" id="delete-audio-id" name="audio_id" value="">
+          <button type="submit" class="btn btn-danger ml-3">
+            Delete Audio Clip
+          </button>
+        </form>
+        <button type="button" class="btn btn-outline" id="cancel-delete">
+          Cancel
+        </button>
       </div>
     </div>
-    {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Use main.js which now contains all the story editor functionality -->
+<script src="{% static 'js/main.js' %}"></script>
+<!-- Additional script for "Submit for Review" form -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // When submit-review-form is submitted, copy values from main form
+  const reviewForm = document.getElementById('submit-review-form');
+  const mainForm = document.getElementById('story-form');
+  
+  if (reviewForm && mainForm) {
+    reviewForm.addEventListener('submit', function(e) {
+      // The content copying is handled by the initStoryEditor function in main.js
+      
+      // Copy title value
+      const titleInput = document.createElement('input');
+      titleInput.type = 'hidden';
+      titleInput.name = 'title';
+      titleInput.value = document.getElementById('{{ form.title.id_for_label }}').value;
+      reviewForm.appendChild(titleInput);
+      
+      {% if form.category %}
+      // Copy category value
+      const categoryInput = document.createElement('input');
+      categoryInput.type = 'hidden';
+      categoryInput.name = 'category';
+      categoryInput.value = document.getElementById('{{ form.category.id_for_label }}').value;
+      reviewForm.appendChild(categoryInput);
+      {% endif %}
+      
+      {% if form.religion_classification %}
+      // Copy religion_classification value
+      const religionInput = document.createElement('input');
+      religionInput.type = 'hidden';
+      religionInput.name = 'religion_classification';
+      religionInput.value = document.getElementById('{{ form.religion_classification.id_for_label }}').value;
+      reviewForm.appendChild(religionInput);
+      {% endif %}
+      
+      // Copy language value
+      const languageInput = document.createElement('input');
+      languageInput.type = 'hidden';
+      languageInput.name = 'language';
+      languageInput.value = document.getElementById('{{ form.language.id_for_label }}').value;
+      reviewForm.appendChild(languageInput);
+    });
+  }
+});
+</script>
 {% endblock %}

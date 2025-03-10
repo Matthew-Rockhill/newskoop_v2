@@ -1,5 +1,6 @@
-# newsroom/views.py
+import os
 import uuid
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,7 @@ from django.http import HttpResponseForbidden, HttpResponse
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.urls import reverse
+from django.forms import inlineformset_factory
 
 from accounts.models import CustomUser
 from .models import (
@@ -24,50 +26,40 @@ from .permissions import (
     can_edit_story, can_manage_task, can_manage_categories, has_radio_access
 )
 
-# Dashboard
+# Create an inline formset for AudioClip linked to a Story.
+AudioClipFormSet = inlineformset_factory(
+    Story,
+    AudioClip,
+    form=AudioClipForm,
+    extra=1,          # Always display at least one blank form.
+    can_delete=True   # Allow deletion of existing clips.
+)
+
+# Dashboard view remains unchanged
 @login_required
 def dashboard(request):
     """Main dashboard for the newsroom app"""
     context = {}
     
     if request.user.user_type == CustomUser.UserType.STAFF:
-        # For staff users, show recent activities and stats
         context['recent_stories'] = Story.objects.order_by('-created_at')[:5]
         context['assigned_tasks'] = Task.objects.filter(
             assigned_to=request.user, 
             status__in=['PENDING', 'IN_PROGRESS', 'REVIEW']
         ).order_by('due_date')[:5]
-        
         context['story_count'] = Story.objects.count()
         context['draft_count'] = Story.objects.filter(status='DRAFT').count()
         context['published_count'] = Story.objects.filter(status='PUBLISHED').count()
         context['my_story_count'] = Story.objects.filter(author=request.user).count()
         
-        # Tasks stats
-        context['pending_tasks'] = Task.objects.filter(
-            assigned_to=request.user, 
-            status='PENDING'
-        ).count()
-        context['in_progress_tasks'] = Task.objects.filter(
-            assigned_to=request.user, 
-            status='IN_PROGRESS'
-        ).count()
-        
-        # Editorial staff sees broader stats
         if request.user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN', 'SUB_EDITOR']:
             context['awaiting_review'] = Story.objects.filter(status='REVIEW').count()
             context['all_pending_tasks'] = Task.objects.filter(status='PENDING').count()
     
     elif request.user.user_type == CustomUser.UserType.RADIO:
-        # For radio users, show accessible content
         station = request.user.radio_station
         if station:
-            accessible_content = []
-            
-            # Build query based on station permissions
             query = Q(status='PUBLISHED')
-            
-            # Language filters
             language_filter = Q()
             if station.access_english:
                 language_filter |= Q(language='ENGLISH')
@@ -75,58 +67,48 @@ def dashboard(request):
                 language_filter |= Q(language='AFRIKAANS')
             if station.access_xhosa:
                 language_filter |= Q(language='XHOSA')
-            
             if language_filter:
                 query &= language_filter
                 
-            # Category filters
             category_filter = Q()
-            
             if station.access_news_stories:
                 news_categories = Category.objects.filter(
                     Q(content_type='NEWS_STORIES') | 
                     Q(parent__content_type='NEWS_STORIES')
                 )
                 category_filter |= Q(category__in=news_categories)
-                
             if station.access_news_bulletins:
                 bulletin_categories = Category.objects.filter(
                     Q(content_type='NEWS_BULLETINS') | 
                     Q(parent__content_type='NEWS_BULLETINS')
                 )
                 category_filter |= Q(category__in=bulletin_categories)
-                
             if station.access_sport:
                 sport_categories = Category.objects.filter(
                     Q(content_type='SPORT') | 
                     Q(parent__content_type='SPORT')
                 )
                 category_filter |= Q(category__in=sport_categories)
-                
             if station.access_finance:
                 finance_categories = Category.objects.filter(
                     Q(content_type='FINANCE') | 
                     Q(parent__content_type='FINANCE')
                 )
                 category_filter |= Q(category__in=finance_categories)
-                
             if station.access_specialty:
                 specialty_categories = Category.objects.filter(
                     Q(content_type='SPECIALTY') | 
                     Q(parent__content_type='SPECIALTY')
                 )
                 category_filter |= Q(category__in=specialty_categories)
-                
             if category_filter:
                 query &= category_filter
                 
-            # Religious content filter
             religion_filter = Q(religion_classification='GENERAL')
             if station.religion_access == 'GENERAL_PLUS_CHRISTIAN':
                 religion_filter |= Q(religion_classification='CHRISTIAN')
             elif station.religion_access == 'GENERAL_PLUS_MUSLIM':
                 religion_filter |= Q(religion_classification='MUSLIM')
-                
             query &= religion_filter
             
             context['recent_stories'] = Story.objects.filter(query).order_by('-published_at')[:10]
@@ -134,20 +116,21 @@ def dashboard(request):
     
     return render(request, 'newsroom/dashboard.html', context)
 
-# Story views
 @login_required
 def story_list(request):
-    """List of stories with filtering options"""
-    # Base queryset
+    """List stories with filtering options and role-based access"""
     stories = Story.objects.all().select_related('author', 'category', 'editor')
     
-    # For radio users, only show accessible content
     if request.user.user_type == CustomUser.UserType.RADIO:
         station = request.user.radio_station
         if station:
             stories = stories.filter(status='PUBLISHED')
-            
-    # Apply filters
+    else:
+        # For interns and journalists, show only their own stories.
+        if request.user.staff_role in ['INTERN', 'JOURNALIST']:
+            stories = stories.filter(author=request.user)
+    
+    # Apply additional filters (status, category, language, search query)
     status_filter = request.GET.get('status')
     category_filter = request.GET.get('category')
     language_filter = request.GET.get('language')
@@ -155,24 +138,18 @@ def story_list(request):
     
     if status_filter:
         stories = stories.filter(status=status_filter)
-    
     if category_filter:
         try:
-            category = Category.objects.get(id=category_filter)
-            # Include subcategories if a parent category is selected
-            if category.parent is None:
-                subcategories = category.children.all()
-                stories = stories.filter(
-                    Q(category=category) | Q(category__in=subcategories)
-                )
+            cat = Category.objects.get(id=category_filter)
+            if cat.parent is None:
+                subcategories = cat.children.all()
+                stories = stories.filter(Q(category=cat) | Q(category__in=subcategories))
             else:
-                stories = stories.filter(category=category)
+                stories = stories.filter(category=cat)
         except Category.DoesNotExist:
             pass
-    
     if language_filter:
         stories = stories.filter(language=language_filter)
-    
     if search_query:
         stories = stories.filter(
             Q(title__icontains=search_query) | 
@@ -181,17 +158,12 @@ def story_list(request):
             Q(author__last_name__icontains=search_query)
         )
     
-    # Pagination
     paginator = Paginator(stories.order_by('-created_at'), 15)
     page_number = request.GET.get('page')
     stories_page = paginator.get_page(page_number)
     
-    # Get all categories for filter dropdown
-    categories = Category.objects.all().order_by('name')
-    
     context = {
         'stories': stories_page,
-        'categories': categories,
         'status_filter': status_filter,
         'category_filter': category_filter,
         'language_filter': language_filter,
@@ -204,43 +176,53 @@ def story_list(request):
 def story_detail(request, story_id):
     """Show details of a story"""
     story = get_object_or_404(Story, id=story_id)
-    
-    # For radio users, check access permissions
     if request.user.user_type == CustomUser.UserType.RADIO:
         if not has_radio_access(request.user, story):
             return HttpResponseForbidden("You don't have access to this content")
-    
-    # Get related audio clips
     audio_clips = story.audio_clips.all()
-    
-    # Get related tasks
     tasks = None
     if request.user.user_type == CustomUser.UserType.STAFF:
         tasks = Task.objects.filter(related_story=story)
-    
-    # For staff, show story revisions
     revisions = None
     if request.user.user_type == CustomUser.UserType.STAFF:
         revisions = story.revisions.all().order_by('-revision_number')
-    
     context = {
         'story': story,
         'audio_clips': audio_clips,
         'tasks': tasks,
         'revisions': revisions,
     }
-    
     return render(request, 'newsroom/story/story_detail.html', context)
 
 @staff_required
 def story_create(request):
-    """Create a new story"""
+    """Create a new story with drag-and-drop audio upload"""
     if request.method == 'POST':
-        form = StoryForm(request.POST, user=request.user, is_new=True)
-        if form.is_valid():
-            story = form.save(commit=False)
+        story_form = StoryForm(request.POST, user=request.user, is_new=True)
+        if story_form.is_valid():
+            story = story_form.save(commit=False)
             story.author = request.user
             story.save()
+            
+            # Process individual audio files
+            # Find all file inputs with names starting with 'audio_file_'
+            audio_files = []
+            for key in request.FILES:
+                if key.startswith('audio_file_'):
+                    audio_files.append(request.FILES[key])
+            
+            # Process each audio file
+            for file in audio_files:
+                # Generate a title from the filename (strip extension)
+                title = os.path.splitext(file.name)[0]
+                
+                # Create the audio clip
+                AudioClip.objects.create(
+                    story=story,
+                    title=title,
+                    audio_file=file,
+                    uploaded_by=request.user
+                )
             
             # Create initial revision
             StoryRevision.objects.create(
@@ -252,36 +234,43 @@ def story_create(request):
             
             messages.success(request, "Story created successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
+        else:
+            logging.error("StoryForm errors: %s", story_form.errors)
     else:
-        form = StoryForm(user=request.user, is_new=True)
-        # Pre-populate the slug if title is provided
+        story_form = StoryForm(user=request.user, is_new=True)
         title = request.GET.get('title')
         if title:
-            form.initial['title'] = title
-            form.initial['slug'] = slugify(title)
+            story_form.initial['title'] = title
     
     context = {
-        'form': form,
-        'is_new': True
+        'form': story_form,
+        'is_new': True,
     }
-    
     return render(request, 'newsroom/story/story_create.html', context)
 
 @staff_required
 @can_edit_story
 def story_edit(request, story_id, story=None):
-    """Edit an existing story"""
+    """Edit an existing story with multiple audio upload handling"""
     if request.method == 'POST':
-        form = StoryForm(request.POST, instance=story, user=request.user, is_new=False)
-        if form.is_valid():
-            updated_story = form.save()
+        # Check if this is a status update (e.g., submit for review)
+        new_status = request.POST.get('status')
+        
+        story_form = StoryForm(request.POST, instance=story, user=request.user, is_new=False)
+        if story_form.is_valid():
+            updated_story = story_form.save(commit=False)
             
-            # Check if content changed, create a new revision
-            if 'content' in form.changed_data:
-                # Get the current highest revision number
+            # Update status if provided
+            if new_status and new_status in dict(Story.STATUS_CHOICES).keys():
+                updated_story.status = new_status
+                messages.success(request, f"Story status updated to {dict(Story.STATUS_CHOICES)[new_status]}")
+            
+            updated_story.save()
+            
+            # Create a new revision if content has changed
+            if 'content' in story_form.changed_data:
                 latest_revision = StoryRevision.objects.filter(story=story).order_by('-revision_number').first()
                 new_revision_number = 1 if not latest_revision else latest_revision.revision_number + 1
-                
                 StoryRevision.objects.create(
                     story=story,
                     content=updated_story.content,
@@ -289,17 +278,38 @@ def story_edit(request, story_id, story=None):
                     created_by=request.user
                 )
             
+            # Process individual audio files
+            # Find all file inputs with names starting with 'audio_file_'
+            audio_files = []
+            for key in request.FILES:
+                if key.startswith('audio_file_'):
+                    audio_files.append(request.FILES[key])
+            
+            # Process each audio file
+            for file in audio_files:
+                # Generate a title from the filename (strip extension)
+                title = os.path.splitext(file.name)[0]
+                
+                # Create the audio clip
+                AudioClip.objects.create(
+                    story=story,
+                    title=title,
+                    audio_file=file,
+                    uploaded_by=request.user
+                )
+            
             messages.success(request, "Story updated successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
+        else:
+            logging.error("StoryForm errors: %s", story_form.errors)
     else:
-        form = StoryForm(instance=story, user=request.user, is_new=False)
+        story_form = StoryForm(instance=story, user=request.user, is_new=False)
     
     context = {
-        'form': form,
+        'form': story_form,
         'story': story,
         'is_new': False
     }
-    
     return render(request, 'newsroom/story/story_edit.html', context)
 
 @staff_required
@@ -318,7 +328,6 @@ def story_publish(request, story_id, story=None):
             story.published_at = timezone.now()
             story.editor = request.user
             story.save()
-            
             messages.success(request, "Story published successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
     else:
@@ -328,7 +337,6 @@ def story_publish(request, story_id, story=None):
         'form': form,
         'story': story
     }
-    
     return render(request, 'newsroom/story/story_publish.html', context)
 
 @staff_required
@@ -403,23 +411,81 @@ def story_download(request, story_id):
 # Category views
 @staff_required
 def category_list(request):
-    """List all categories"""
-    # Get all parent categories with their children
-    parent_categories = Category.objects.filter(parent__isnull=True).order_by('name')
+    """List all categories organized by content type"""
+    # Group categories by content type
+    category_groups = {}
     
-    # Count stories in each category
-    for category in parent_categories:
-        category.story_count = Story.objects.filter(
-            Q(category=category) | Q(category__parent=category)
-        ).count()
+    for content_type, display_name in Category.TYPE_CHOICES:
+        # Get the top level content type categories
+        top_categories = Category.objects.filter(
+            content_type=content_type,
+            level=1
+        ).order_by('name')
         
-        # Add children and their counts
-        category.child_categories = category.children.all().order_by('name')
-        for child in category.child_categories:
-            child.story_count = Story.objects.filter(category=child).count()
+        # Get the default "Uncategorized" category
+        try:
+            default_category = Category.objects.get(
+                content_type=content_type,
+                is_default=True
+            )
+        except Category.DoesNotExist:
+            # Create it if it doesn't exist
+            default_category = Category.get_or_create_default(content_type)
+        
+        # For each top category, get children and story counts
+        categories_data = []
+        for category in top_categories:
+            category_data = {
+                'category': category,
+                'story_count': category.get_story_count(),
+                'children': []
+            }
+            
+            # Get children (parent categories)
+            parent_categories = Category.objects.filter(
+                parent=category,
+                level=2
+            ).order_by('name')
+            
+            for parent in parent_categories:
+                parent_data = {
+                    'category': parent,
+                    'story_count': parent.get_story_count(),
+                    'children': []
+                }
+                
+                # Get subcategories
+                subcategories = Category.objects.filter(
+                    parent=parent,
+                    level=3
+                ).order_by('name')
+                
+                for subcategory in subcategories:
+                    parent_data['children'].append({
+                        'category': subcategory,
+                        'story_count': subcategory.get_story_count()
+                    })
+                
+                category_data['children'].append(parent_data)
+            
+            categories_data.append(category_data)
+        
+        # Add the default "Uncategorized" category
+        default_data = {
+            'category': default_category,
+            'story_count': default_category.get_story_count(),
+            'children': [],
+            'is_default': True
+        }
+        
+        category_groups[content_type] = {
+            'name': display_name,
+            'categories': categories_data,
+            'default_category': default_data
+        }
     
     context = {
-        'parent_categories': parent_categories
+        'category_groups': category_groups
     }
     
     return render(request, 'newsroom/category/category_list.html', context)
@@ -437,14 +503,20 @@ def category_create(request):
     else:
         form = CategoryForm()
         
-        # Pre-populate parent if provided in URL
+        # Pre-populate parent and content type if provided in URL
         parent_id = request.GET.get('parent')
+        content_type = request.GET.get('content_type')
+        
         if parent_id:
             try:
                 parent = Category.objects.get(id=parent_id)
                 form.initial['parent'] = parent
+                form.initial['content_type'] = parent.content_type
+                form.fields['content_type'].disabled = True
             except Category.DoesNotExist:
                 pass
+        elif content_type:
+            form.initial['content_type'] = content_type
     
     context = {
         'form': form,
@@ -459,14 +531,23 @@ def category_edit(request, category_id):
     """Edit an existing category"""
     category = get_object_or_404(Category, id=category_id)
     
+    # Don't allow editing default categories.
+    if category.is_default:
+        messages.warning(request, "Default categories cannot be edited")
+        return redirect('newsroom:category_list')
+    
     if request.method == 'POST':
-        form = CategoryForm(request.POST, instance=category)
+        # Log the full POST data for debugging.
+        logging.debug("POST data: %s", request.POST)
+        form = CategoryForm(request.POST, instance=category, is_editing=True)
         if form.is_valid():
             form.save()
             messages.success(request, "Category updated successfully")
             return redirect('newsroom:category_list')
+        else:
+            logging.error("CategoryForm errors for category %s: %s", category.id, form.errors)
     else:
-        form = CategoryForm(instance=category)
+        form = CategoryForm(instance=category, is_editing=True)
     
     context = {
         'form': form,
@@ -479,30 +560,51 @@ def category_edit(request, category_id):
 @staff_required
 @editor_required
 def category_delete(request, category_id):
-    """Delete a category (only if no stories are assigned to it)"""
+    """Delete a category"""
     category = get_object_or_404(Category, id=category_id)
     
-    # Check if category has stories
-    has_stories = Story.objects.filter(category=category).exists()
-    
-    # Check if it's a parent with children
-    has_children = category.children.exists()
-    
-    if has_stories:
-        messages.error(request, "Cannot delete category that has stories assigned to it")
+    # Don't allow deleting default categories
+    if category.is_default:
+        messages.error(request, "Default categories cannot be deleted")
         return redirect('newsroom:category_list')
     
-    if has_children:
-        messages.error(request, "Cannot delete parent category that has subcategories")
-        return redirect('newsroom:category_list')
+    # Get counts for stories and subcategories
+    story_count = Story.objects.filter(category=category).count()
+    subcategory_count = category.children.count()
     
     if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'reassign' and story_count > 0:
+            # Reassign stories to the default category
+            default_category = Category.get_or_create_default(category.content_type)
+            Story.objects.filter(category=category).update(category=default_category)
+            messages.info(request, f"{story_count} stories moved to '{default_category.name}'")
+        
+        # Check if we should delete subcategories or reassign them
+        if subcategory_count > 0:
+            if action == 'delete_subcategories':
+                # First reassign stories from subcategories
+                default_category = Category.get_or_create_default(category.content_type)
+                for subcategory in category.children.all():
+                    Story.objects.filter(category=subcategory).update(category=default_category)
+                # Then delete subcategories
+                category.children.all().delete()
+                messages.info(request, f"Deleted {subcategory_count} subcategories")
+            else:
+                messages.error(request, "You must specify how to handle subcategories")
+                return redirect('newsroom:category_delete', category_id=category.id)
+        
+        # Now delete the category
         category.delete()
         messages.success(request, "Category deleted successfully")
         return redirect('newsroom:category_list')
     
     context = {
-        'category': category
+        'category': category,
+        'story_count': story_count,
+        'subcategory_count': subcategory_count,
+        'default_category': Category.get_or_create_default(category.content_type)
     }
     
     return render(request, 'newsroom/category/category_delete.html', context)

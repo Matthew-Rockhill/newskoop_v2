@@ -8,52 +8,91 @@ from .models import Story, Category, Task, AudioClip, TaskComment, TaskAttachmen
 
 class CategoryForm(forms.ModelForm):
     """Form for creating and editing categories"""
-    
+
     class Meta:
         model = Category
-        fields = ['name', 'slug', 'description', 'parent', 'content_type']
+        fields = ['name', 'slug', 'description', 'content_type', 'parent', 'is_active']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
-    
+
     def __init__(self, *args, **kwargs):
+        # Pass "is_editing" flag when editing an existing category
+        self.is_editing = kwargs.pop('is_editing', False)
         super().__init__(*args, **kwargs)
-        
-        # Limit parent choices to parent categories only
-        parent_categories = Category.objects.filter(parent__isnull=True)
-        self.fields['parent'].queryset = parent_categories
-        
-        # If editing a parent category, remove itself from parent options
-        if self.instance.pk and not self.instance.parent:
-            self.fields['parent'].queryset = parent_categories.exclude(pk=self.instance.pk)
-        
-        # Add CSS classes
+
+        # Add common CSS classes
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        parent = cleaned_data.get('parent')
-        content_type = cleaned_data.get('content_type')
-        
-        # Validate that only parent categories have content_type
-        if parent and content_type:
-            raise ValidationError("Only parent categories can have a content type")
-        if not parent and not content_type:
-            raise ValidationError("Parent categories must have a content type")
-            
-        return cleaned_data
 
+        # Use a different class for checkboxes
+        if 'is_active' in self.fields:
+            self.fields['is_active'].widget.attrs.update({'class': 'form-check-input'})
+
+        if self.is_editing and self.instance and self.instance.pk:
+            # Set the slug field to not required so that if it is missing from POST,
+            # the form will not immediately complain.
+            self.fields['slug'].required = False
+            # Use HiddenInput so its value is submitted.
+            self.fields['slug'].widget = forms.HiddenInput()
+            # Explicitly set the initial value of slug from the instance.
+            self.fields['slug'].initial = self.instance.slug
+            
+            if self.instance.parent is None:
+                # For a parent category, disable content_type to prevent changes.
+                self.fields['content_type'].disabled = True
+                self.fields['content_type'].help_text = "Content type cannot be changed after creation"
+            else:
+                # For subcategories, inherit content_type.
+                self.fields['content_type'].widget = forms.HiddenInput()
+                self.fields['content_type'].initial = self.instance.parent.content_type
+
+        # Set up the parent queryset based on the content type.
+        self.setup_parent_choices()
+
+    def setup_parent_choices(self):
+        """Limit parent choices based on the selected content type."""
+        if not self.is_bound:  # Form not submitted yet.
+            if self.instance and self.instance.pk and self.instance.content_type:
+                content_type = self.instance.content_type
+                self.setup_parent_choices_for_type(content_type)
+        else:
+            content_type = self.data.get('content_type')
+            if content_type:
+                self.setup_parent_choices_for_type(content_type)
+
+    def setup_parent_choices_for_type(self, content_type):
+        potential_parents = Category.objects.filter(
+            content_type=content_type,
+            level__in=[1, 2]  # Only allow top-level and parent categories
+        ).exclude(is_default=True)
+        if self.is_editing and self.instance and self.instance.pk:
+            # Exclude self and its descendants to avoid circular relations.
+            descendants = Category.objects.filter(parent=self.instance)
+            exclude_ids = [self.instance.pk] + [d.pk for d in descendants]
+            potential_parents = potential_parents.exclude(pk__in=exclude_ids)
+        self.fields['parent'].queryset = potential_parents
+        self.fields['parent'].empty_label = "None (Top Level Category)"
+
+    def clean_slug(self):
+        # If the slug field comes in empty, use the instance slug or generate one from the name.
+        slug = self.cleaned_data.get('slug')
+        name = self.cleaned_data.get('name')
+        if not slug:
+            # Prefer the instance slug if available, otherwise auto-generate.
+            return self.instance.slug if self.instance and self.instance.slug else slugify(name)
+        return slugify(slug)
+    
 class StoryForm(forms.ModelForm):
     """Form for creating and editing stories"""
     content = QuillFormField(required=True)
     
     class Meta:
         model = Story
-        fields = ['title', 'slug', 'content', 'category', 'religion_classification', 'language']
+        # Remove 'slug' from the fields; it will be auto-generated.
+        fields = ['title', 'content', 'category', 'religion_classification', 'language']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'slug': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'religion_classification': forms.Select(attrs={'class': 'form-control'}),
             'language': forms.Select(attrs={'class': 'form-control'}),
@@ -64,33 +103,27 @@ class StoryForm(forms.ModelForm):
         self.is_new = kwargs.pop('is_new', True)
         super().__init__(*args, **kwargs)
         
-        # Only editors and sub-editors can categorize
-        if self.user and self.user.staff_role not in ['EDITOR', 'SUB_EDITOR']:
-            self.fields['category'].disabled = True
-            self.fields['category'].help_text = "Only editors and sub-editors can categorize stories"
+        # For interns and journalists, remove fields they shouldn’t set.
+        if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
+            self.fields.pop('category', None)
+            self.fields.pop('religion_classification', None)
+        # Editors/Sub-Editors keep all fields.
     
-    def clean_slug(self):
-        slug = self.cleaned_data.get('slug')
-        if not slug:
-            title = self.cleaned_data.get('title')
-            if title:
-                slug = slugify(title)
-            else:
-                raise ValidationError("Slug cannot be generated without a title")
-        
-        # Check for uniqueness, but exclude the current instance when updating
-        if self.is_new or self.instance.slug != slug:
-            if Story.objects.filter(slug=slug).exists():
-                raise ValidationError("A story with this slug already exists")
-        
-        return slug
+    def clean(self):
+        cleaned_data = super().clean()
+        # Additional validations can be added here.
+        return cleaned_data
     
     def save(self, commit=True):
         story = super().save(commit=False)
-        
-        if not story.pk:  # New story
+        # For interns/journalists, assign default values.
+        if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
+            # Use the default category (adjust content type as appropriate)
+            default_category = Category.get_or_create_default('NEWS_STORIES')
+            story.category = default_category
+            story.religion_classification = 'GENERAL'
+        if not story.pk:
             story.author = self.user
-        
         if commit:
             story.save()
         return story

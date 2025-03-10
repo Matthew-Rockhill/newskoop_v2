@@ -3,21 +3,25 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from django.utils.text import slugify
 
 class Category(models.Model):
     """
     News categories for organizing content
-    Can be a parent or child category
+    Can be a top-level (content type), parent or child category
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True, 
+                                   help_text="When active, this category appears in menus")
     
-    # If parent is null, this is a top-level/parent category
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    # Parent-child relationship
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, 
+                               related_name='children')
     
-    # These are the broad parent categories that map to station permissions
+    # These are the broad content types that map to station permissions
     TYPE_CHOICES = [
         ('NEWS_STORIES', 'News Stories'),
         ('NEWS_BULLETINS', 'News Bulletins'),
@@ -25,15 +29,35 @@ class Category(models.Model):
         ('FINANCE', 'Finance'),
         ('SPECIALTY', 'Specialty'),
     ]
-    # Only set on parent categories, used for access control
-    content_type = models.CharField(max_length=20, choices=TYPE_CHOICES, blank=True, null=True)
+    # Required for all categories, defines the top-level group
+    content_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    
+    # Track category level for UI display and validation
+    LEVEL_CHOICES = [
+        (1, 'Content Type (Top Level)'),
+        (2, 'Parent Category'),
+        (3, 'Subcategory'),
+    ]
+    level = models.PositiveSmallIntegerField(choices=LEVEL_CHOICES, default=2)
+    
+    # Indicates if this is the default "Uncategorized" category for its content type
+    is_default = models.BooleanField(default=False, 
+                                    help_text="Default category for uncategorized content")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name_plural = "Categories"
-        ordering = ['name']
+        ordering = ['content_type', 'level', 'name']
+        constraints = [
+            # Ensure only one default category per content type
+            models.UniqueConstraint(
+                fields=['content_type', 'is_default'],
+                condition=models.Q(is_default=True),
+                name='unique_default_category_per_type'
+            )
+        ]
     
     def __str__(self):
         if self.parent:
@@ -41,23 +65,105 @@ class Category(models.Model):
         return self.name
     
     def save(self, *args, **kwargs):
-        # Ensure content_type is only set on parent categories
-        if not self.parent and not self.content_type:
-            raise ValidationError("Parent categories must have a content type")
-        if self.parent:
-            self.content_type = None
+        # Auto-generate slug if not provided
+        if not self.slug:
+            self.slug = slugify(self.name)
+            
+            # Ensure slug uniqueness by appending a number if needed
+            original_slug = self.slug
+            counter = 1
+            while Category.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        
+        # Set level based on parent relationship
+        if self.parent is None:
+            if self.is_default:
+                self.level = 2  # Default "Uncategorized" is a parent category
+            else:
+                self.level = 1  # Top level for content type categories
+        elif self.parent.level == 1:
+            self.level = 2  # Parent category
+        else:
+            self.level = 3  # Subcategory
+            
+        # Ensure the category inherits content_type from its parent
+        if self.parent and self.parent.content_type:
+            self.content_type = self.parent.content_type
+            
         super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_or_create_default(cls, content_type):
+        """Get or create the default 'Uncategorised' category for the given content type"""
+        defaults = {
+            'name': f"Uncategorised {dict(cls.TYPE_CHOICES)[content_type]}",
+            'slug': f"uncategorised-{content_type.lower().replace('_', '-')}",
+            'is_default': True,
+            'level': 2,  # Parent level
+            'description': f"Default category for uncategorised {dict(cls.TYPE_CHOICES)[content_type].lower()}"
+        }
+        
+        default_category, created = cls.objects.get_or_create(
+            content_type=content_type, 
+            is_default=True,
+            defaults=defaults
+        )
+        
+        return default_category
+        
+    def get_story_count(self):
+        """Get the total number of stories in this category and its children"""
+        from .models import Story  # Import here to avoid circular import
+        
+        # Direct stories in this category
+        count = Story.objects.filter(category=self).count()
+        
+        # Add stories from child categories
+        for child in self.children.all():
+            count += child.get_story_count()
+            
+        return count
+    
+    def is_deletable(self):
+        """Check if category can be safely deleted"""
+        from .models import Story  # Import here to avoid circular import
+        
+        # Can't delete if it has stories
+        if Story.objects.filter(category=self).exists():
+            return False
+            
+        # Can't delete if it has children
+        if self.children.exists():
+            return False
+            
+        # Can't delete default categories
+        if self.is_default:
+            return False
+            
+        return True
+    
+    def reassign_stories(self, target_category=None):
+        """
+        Reassign all stories from this category to another.
+        If no target is specified, uses the default category for this content type.
+        """
+        from .models import Story  # Import here to avoid circular import
+        
+        if target_category is None:
+            target_category = Category.get_or_create_default(self.content_type)
+            
+        Story.objects.filter(category=self).update(category=target_category)
+        
+        # Also handle child categories recursively
+        for child in self.children.all():
+            child.reassign_stories(target_category)
 
 class Story(models.Model):
-    """
-    The main content model for all types of stories
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
     content = models.TextField()
-    
-    # Story status
     STATUS_CHOICES = [
         ('DRAFT', 'Draft'),
         ('REVIEW', 'In Review'),
@@ -66,43 +172,25 @@ class Story(models.Model):
         ('ARCHIVED', 'Archived'),
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='DRAFT')
-    
-    # Classification
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='stories')
-    
-    # Religious content classification
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='stories')
     RELIGION_CHOICES = [
         ('GENERAL', 'General'),
         ('CHRISTIAN', 'Christian'),
         ('MUSLIM', 'Muslim'),
     ]
     religion_classification = models.CharField(max_length=10, choices=RELIGION_CHOICES, default='GENERAL')
-    
-    # Language tracking
     LANGUAGE_CHOICES = [
         ('ENGLISH', 'English'),
         ('AFRIKAANS', 'Afrikaans'),
         ('XHOSA', 'Xhosa'),
     ]
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='ENGLISH')
-    
-    # Translation tracking
-    is_translation = models.BooleanField(default=False)
-    translated_from = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, 
-                                      related_name='translations')
-    
-    # Attribution and metadata
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, 
-                              related_name='authored_stories')
-    editor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
-                              related_name='edited_stories', null=True, blank=True)
-    
-    # Timing
+    is_translation = models.BooleanField(default=False, help_text="Whether this story is a translation of another story")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='authored_stories')
+    editor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='edited_stories', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     published_at = models.DateTimeField(null=True, blank=True)
-    
-    # Analytics
     view_count = models.IntegerField(default=0)
     download_count = models.IntegerField(default=0)
     
@@ -113,17 +201,23 @@ class Story(models.Model):
     def __str__(self):
         return self.title
     
+    def save(self, *args, **kwargs):
+        # Auto-generate slug if not provided.
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while Story.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+    
     def publish(self, editor):
-        """Publish the story by changing status and recording publish time"""
         self.status = 'PUBLISHED'
         self.published_at = timezone.now()
         self.editor = editor
         self.save()
-    
-    def get_audio_clips(self):
-        """Return all audio clips for this story"""
-        return self.audio_clips.all()
-
 class AudioClip(models.Model):
     """
     Audio clips attached to stories

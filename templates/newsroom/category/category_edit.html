@@ -33,30 +33,37 @@
     </div>
     
     <div class="p-6">
-      <form id="category-form" method="post" class="space-y-4">
+      <form id="category-form" method="post" class="space-y-6">
         {% csrf_token %}
         
+        <!-- Content Type (at the top) -->
         <div class="form-group">
-          <label for="{{ form.name.id_for_label }}" class="form-label">Name <span class="text-danger">*</span></label>
-          <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" required>
-          {% if form.name.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.name.errors|first }}</div>
+          <label for="{{ form.content_type.id_for_label }}" class="form-label">Content Type <span class="text-danger">*</span></label>
+          {% if form.content_type.widget.input_type == "hidden" %}
+            <!-- Subcategory: field is hidden so display plain text -->
+            <p class="form-control-plaintext">{{ category.get_content_type_display }}</p>
+            {{ form.content_type }}
+          {% else %}
+            <!-- Parent category: show disabled select and include a hidden input -->
+            <select id="{{ form.content_type.id_for_label }}_display" class="form-control" disabled>
+              {% for value, text in form.content_type.field.choices %}
+                <option value="{{ value }}" {% if value|stringformat:"s" == category.content_type|stringformat:"s" %}selected{% endif %}>
+                  {{ text }}
+                </option>
+              {% endfor %}
+            </select>
+            <input type="hidden" name="{{ form.content_type.name }}" value="{{ category.content_type }}">
+          {% endif %}
+          {% if form.content_type.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.content_type.errors|first }}</div>
           {% endif %}
         </div>
         
-        <div class="form-group">
-          <label for="{{ form.slug.id_for_label }}" class="form-label">Slug <span class="text-danger">*</span></label>
-          <input type="text" name="{{ form.slug.name }}" id="{{ form.slug.id_for_label }}" class="form-control {% if form.slug.errors %}is-invalid{% endif %}" value="{{ form.slug.value|default:'' }}" required>
-          {% if form.slug.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.slug.errors|first }}</div>
-          {% endif %}
-          <div class="form-text">Used in URLs. Use lowercase letters, numbers, and hyphens only.</div>
-        </div>
-        
+        <!-- Parent Category -->
         <div class="form-group">
           <label for="{{ form.parent.id_for_label }}" class="form-label">Parent Category</label>
           <select name="{{ form.parent.name }}" id="{{ form.parent.id_for_label }}" class="form-control {% if form.parent.errors %}is-invalid{% endif %}">
-            <option value="">None (This is a parent category)</option>
+            <option value="">None (Top Level Category)</option>
             {% for parent in form.parent.field.queryset %}
               {% if parent.id != category.id %}
               <option value="{{ parent.id }}" {% if form.parent.value|stringformat:"s" == parent.id|stringformat:"s" %}selected{% endif %}>
@@ -68,28 +75,38 @@
           {% if form.parent.errors %}
             <div class="text-danger text-sm mt-1">{{ form.parent.errors|first }}</div>
           {% endif %}
+          <div class="form-text">Select a parent to create a subcategory, or leave empty for a top-level category.</div>
         </div>
         
+        <!-- Category Name -->
         <div class="form-group">
-          <label for="{{ form.content_type.id_for_label }}" class="form-label">Content Type</label>
-          <select name="{{ form.content_type.name }}" id="{{ form.content_type.id_for_label }}" class="form-control {% if form.content_type.errors %}is-invalid{% endif %}">
-            <option value="">None (For subcategories)</option>
-            {% for value, text in form.content_type.field.choices %}
-              <option value="{{ value }}" {% if form.content_type.value == value %}selected{% endif %}>{{ text }}</option>
-            {% endfor %}
-          </select>
-          {% if form.content_type.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.content_type.errors|first }}</div>
+          <label for="{{ form.name.id_for_label }}" class="form-label">Name <span class="text-danger">*</span></label>
+          <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" required>
+          {% if form.name.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.name.errors|first }}</div>
           {% endif %}
-          <div class="form-text">Only required for parent categories. Determines access permissions.</div>
         </div>
         
+        <!-- Description -->
         <div class="form-group">
           <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
           <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="3" class="form-control {% if form.description.errors %}is-invalid{% endif %}">{{ form.description.value|default:'' }}</textarea>
           {% if form.description.errors %}
             <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
           {% endif %}
+        </div>
+        
+        <!-- Active Status -->
+        <div class="form-group">
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" class="form-check-input" {% if form.is_active.value %}checked{% endif %}>
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-700">Active</label>
+              <p class="text-gray-500">When active, this category will appear in menus in the Radio Zone</p>
+            </div>
+          </div>
         </div>
         
         {% if form.non_field_errors %}
@@ -99,163 +116,45 @@
             {% endfor %}
           </div>
         {% endif %}
-        
-        {% if category.stories.exists or category.children.exists %}
-          <div class="bg-warning-light p-4 rounded-lg text-sm">
-            <div class="flex items-start">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <h4 class="font-medium">Caution</h4>
-                <p>
-                  {% if category.stories.exists and category.children.exists %}
-                    This category has {{ category.stories.count }} stories and {{ category.children.count }} subcategories. 
-                  {% elif category.stories.exists %}
-                    This category has {{ category.stories.count }} stories assigned to it.
-                  {% elif category.children.exists %}
-                    This category has {{ category.children.count }} subcategories.
-                  {% endif %}
-                  Changes may affect content visibility for radio stations.
-                </p>
-              </div>
-            </div>
-          </div>
-        {% endif %}
       </form>
     </div>
   </div>
   
-  <!-- Right Column -->
+  <!-- Right Column: Quick Tips -->
   <div class="space-y-6">
-    <!-- Quick Tips -->
     <div class="bg-info-light rounded-lg p-6">
       <h3 class="font-medium text-gray-800 mb-4 flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path stroke-linecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         Quick Tips
       </h3>
       <ul class="space-y-3">
         <li class="flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <path stroke-linecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
           <span>Parent categories must have a content type</span>
         </li>
         <li class="flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <path stroke-linecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
           <span>Subcategories inherit the content type of their parent</span>
         </li>
         <li class="flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <path stroke-linecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
           <span>Categories determine radio station access permissions</span>
         </li>
         <li class="flex items-start">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <path stroke-linecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span>{% if category.parent %}Changing to a parent category requires setting a content type{% else %}Changing to a subcategory will clear its content type{% endif %}</span>
+          <span>Content type is set at creation and cannot be changed.</span>
         </li>
       </ul>
-    </div>
-    
-    <!-- Category Details -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">Category Details</h3>
-      </div>
-      
-      <div class="p-6">
-        <dl class="grid grid-cols-2 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Category Type</dt>
-            <dd class="mt-1">{% if category.parent %}Subcategory{% else %}Parent Category{% endif %}</dd>
-          </div>
-          
-          {% if category.parent %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Parent</dt>
-            <dd class="mt-1">{{ category.parent.name }}</dd>
-          </div>
-          {% endif %}
-          
-          {% if category.content_type %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Content Type</dt>
-            <dd class="mt-1">{{ category.get_content_type_display }}</dd>
-          </div>
-          {% endif %}
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Created</dt>
-            <dd class="mt-1">{{ category.created_at|date:"M d, Y" }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
-            <dd class="mt-1">{{ category.updated_at|date:"M d, Y" }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Stories</dt>
-            <dd class="mt-1">{{ category.stories.count }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Subcategories</dt>
-            <dd class="mt-1">{{ category.children.count }}</dd>
-          </div>
-        </dl>
-        
-        {% if category.stories.exists or category.children.exists %}
-        <div class="mt-6 pt-6 border-t border-gray-200">
-          <h4 class="font-medium text-gray-700 mb-4">Related Content</h4>
-          
-          {% if category.children.exists %}
-          <div class="mb-4">
-            <h5 class="text-sm font-medium text-gray-500 mb-2">Subcategories</h5>
-            <div class="flex flex-wrap gap-2">
-              {% for subcategory in category.children.all|slice:":5" %}
-                <a href="{% url 'newsroom:category_edit' category_id=subcategory.id %}" class="px-2 py-1 bg-gray-100 rounded text-primary hover:bg-gray-200 text-sm">
-                  {{ subcategory.name }}
-                </a>
-              {% endfor %}
-              {% if category.children.count > 5 %}
-                <a href="{% url 'newsroom:category_list' %}" class="px-2 py-1 bg-gray-100 rounded text-gray-500 hover:bg-gray-200 text-sm">
-                  +{{ category.children.count|add:"-5" }} more
-                </a>
-              {% endif %}
-            </div>
-          </div>
-          {% endif %}
-          
-          {% if category.stories.exists %}
-          <div>
-            <h5 class="text-sm font-medium text-gray-500 mb-2">Recent Stories</h5>
-            <div class="space-y-2">
-              {% for story in category.stories.all|slice:":3" %}
-                <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="block px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
-                  <div class="text-primary font-medium truncate">{{ story.title }}</div>
-                  <div class="flex items-center mt-1 text-xs text-gray-500">
-                    <span class="story-status-badge story-status-{{ story.status|lower }} mr-2">{{ story.get_status_display }}</span>
-                    <span>{{ story.created_at|date:"M d, Y" }}</span>
-                  </div>
-                </a>
-              {% endfor %}
-              {% if category.stories.count > 3 %}
-                <a href="{% url 'newsroom:story_list' %}?category={{ category.id }}" class="text-sm text-primary hover:underline">View all {{ category.stories.count }} stories</a>
-              {% endif %}
-            </div>
-          </div>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
     </div>
   </div>
 </div>
