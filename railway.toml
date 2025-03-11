@@ -6,4 +6,4 @@ buildCommand = "python manage.py tailwind build && python manage.py collectstati
 startCommand = "gunicorn newskoop.wsgi:application"
 healthcheckPath = "/"
 healthcheckTimeout = 100
-restartPolicyType = "on-failure"
+restartPolicy = "on-failure"
