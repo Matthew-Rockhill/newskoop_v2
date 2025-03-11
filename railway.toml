@@ -1,9 +1,14 @@
 [build]
 builder = "nixpacks"
-buildCommand = "python manage.py tailwind build && python manage.py collectstatic --noinput"
+buildCommand = """
+apt-get update && apt-get install -y nodejs npm
+npm install -g n && n stable
+npm install
+python manage.py tailwind install
+python manage.py tailwind build
+python manage.py collectstatic --noinput
+"""
 
 [deploy]
 startCommand = "gunicorn newskoop.wsgi:application"
 healthcheckPath = "/"
-healthcheckTimeout = 100
-restartPolicy = "on-failure"
