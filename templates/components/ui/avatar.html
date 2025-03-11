@@ -1,0 +1,16 @@
+{% comment %}
+  Updated Avatar Component for Newskoop
+  This version outputs a consistent avatar with initials and styling similar to the newsroom header.
+{% endcomment %}
+
+{% if user %}
+  {% with initials=user.first_name|first|upper|add:user.last_name|first|upper %}
+    <div class="avatar avatar-{{ size|default:'md' }} {{ extra_classes|default:'w-8 h-8 bg-primary-50 text-primary rounded-full flex items-center justify-center' }}">
+      {{ initials }}
+    </div>
+  {% endwith %}
+{% else %}
+  <div class="avatar avatar-{{ size|default:'md' }} {{ extra_classes|default:'w-8 h-8 bg-primary-50 text-primary rounded-full flex items-center justify-center' }}">
+    {{ initials }}
+  </div>
+{% endif %}

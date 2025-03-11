@@ -1,0 +1,23 @@
+{% comment %}
+  Quick Action Component for Newskoop
+  
+  Usage examples:
+  
+  Basic quick action:
+  {% include "components/ui/quick_action.html" with icon="plus" title="Create New Story" description="Draft a new news article" url="#" %}
+  
+  Quick action with custom icon background:
+  {% include "components/ui/quick_action.html" with icon="radio" title="Add Radio Station" description="Register a new station" url="accounts:station_create" bg="success" %}
+  
+  Available bg options: primary (default), success, warning, danger, info
+{% endcomment %}
+
+<a href="{% if url %}{% if url|slice:':1' == '#' %}{{ url }}{% else %}{% url url %}{% endif %}{% else %}#{% endif %}" class="flex items-center p-3 rounded-md hover:bg-gray-50 transition-colors">
+    <div class="w-10 h-10 rounded-full bg-{{ bg|default:'primary' }}-50 flex items-center justify-center mr-3">
+      {% include "components/ui/icons.html" with name=icon class="text-{{ bg|default:'primary' }}" %}
+    </div>
+    <div>
+      <p class="text-sm font-medium text-gray-900">{{ title }}</p>
+      <p class="text-xs text-gray-500">{{ description }}</p>
+    </div>
+  </a>

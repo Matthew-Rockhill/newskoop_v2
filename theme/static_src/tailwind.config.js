@@ -1,57 +1,111 @@
 /**
- * This is a minimal config.
- *
- * If you need the full config, get it from here:
- * https://unpkg.com/browse/tailwindcss@latest/stubs/defaultConfig.stub.js
+ * Tailwind CSS configuration for Newskoop project
  */
 
 module.exports = {
     content: [
-        /**
-         * HTML. Paths to Django template files that will contain Tailwind CSS classes.
-         */
-
-        /*  Templates within theme app (<tailwind_app_name>/templates), e.g. base.html. */
-        '../templates/**/*.html',
-
-        /*
-         * Main templates directory of the project (BASE_DIR/templates).
-         * Adjust the following line to match your project structure.
-         */
-        '../../templates/**/*.html',
-
-        /*
-         * Templates in other django apps (BASE_DIR/<any_app_name>/templates).
-         * Adjust the following line to match your project structure.
-         */
-        '../../**/templates/**/*.html',
-
-        /**
-         * JS: If you use Tailwind CSS in JavaScript, uncomment the following lines and make sure
-         * patterns match your project structure.
-         */
-        /* JS 1: Ignore any JavaScript in node_modules folder. */
-        // '!../../**/node_modules',
-        /* JS 2: Process all JavaScript files in the project. */
-        // '../../**/*.js',
-
-        /**
-         * Python: If you use Tailwind CSS classes in Python, uncomment the following line
-         * and make sure the pattern below matches your project structure.
-         */
-        // '../../**/*.py'
+      // Templates within theme app
+      '../templates/**/*.html',
+      // Main templates directory
+      '../../templates/**/*.html',
+      // Templates in other django apps
+      '../../**/templates/**/*.html',
+    ],
+    safelist: [
+      'bg-green-100',
+      'text-green-700',
+      'hover:text-green-800',
+      'bg-red-100',
+      'text-red-700',
+      'hover:text-red-800',
+      'bg-yellow-100',
+      'text-yellow-700',
+      'hover:text-yellow-800',
+      'bg-blue-100',
+      'text-blue-700',
+      'hover:text-blue-800',
+      'bg-gray-100',
+      'text-gray-700',
+      'hover:text-gray-800',
     ],
     theme: {
-        extend: {},
+      extend: {
+        colors: {
+          // Primary brand colors
+          primary: {
+            DEFAULT: '#6fb316',
+            dark: '#5a9012',
+            light: '#8bc34a',
+            50: 'rgba(111, 179, 22, 0.05)',
+            100: 'rgba(111, 179, 22, 0.1)',
+            200: 'rgba(111, 179, 22, 0.2)',
+          },
+          // Gray palette
+          gray: {
+            50: '#f9fafb',
+            100: '#f3f4f6',
+            200: '#e5e7eb',
+            300: '#d1d5db',
+            400: '#9ca3af',
+            500: '#6b7280',
+            600: '#4b5563',
+            700: '#374151',
+            800: '#1f2937',
+            900: '#111827',
+          },
+          // Status colors
+          success: {
+            DEFAULT: '#10b981',
+            light: '#d1fae5',
+          },
+          warning: {
+            DEFAULT: '#f59e0b',
+            light: '#fef3c7',
+          },
+          danger: {
+            DEFAULT: '#ef4444',
+            light: '#fee2e2',
+          },
+          info: {
+            DEFAULT: '#3b82f6',
+            light: '#dbeafe',
+          },
+        },
+        fontFamily: {
+          sans: [
+            'Inter',
+            'ui-sans-serif',
+            'system-ui',
+            '-apple-system',
+            'BlinkMacSystemFont',
+            'Segoe UI',
+            'Roboto',
+            'Helvetica Neue',
+            'Arial',
+            'sans-serif',
+          ],
+        },
+        borderRadius: {
+          sm: '0.125rem', // 2px
+          DEFAULT: '0.375rem', // 6px
+          md: '0.5rem', // 8px
+          lg: '0.75rem', // 12px
+          xl: '1rem', // 16px
+        },
+        boxShadow: {
+          sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          DEFAULT:
+            '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+          md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        },
+      },
     },
     plugins: [
-        /**
-         * '@tailwindcss/forms' is the forms plugin that provides a minimal styling
-         * for forms. If you don't like it or have own styling for forms,
-         * comment the line below to disable '@tailwindcss/forms'.
-         */
-        require('@tailwindcss/forms'),
-        require('@tailwindcss/typography'),
-        require('@tailwindcss/aspect-ratio'),
+      require('@tailwindcss/forms'),
+      require('@tailwindcss/typography'),
+      require('@tailwindcss/aspect-ratio'),
     ],
-}
+  }
+  

@@ -1,0 +1,19 @@
+{% comment %}
+  Content List Item Component for Newskoop
+  
+  Usage examples:
+  
+  Basic content list item:
+  {% include "components/data/content_list.html" with rank=1 title="National Budget Analysis 2025" category="Finance" views=2342 %}
+  
+  Content list with custom styling:
+  {% include "components/data/content_list.html" with rank=3 title="Local Tourism Boom Expected" category="News Story" views=1567 rank_class="bg-primary-50 text-primary" %}
+{% endcomment %}
+
+<div class="flex items-center">
+    <div class="w-8 h-8 rounded-full {{ rank_class|default:'bg-gray-200 text-gray-800' }} flex items-center justify-center mr-3 font-semibold">{{ rank }}</div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-gray-900 truncate">{{ title }}</p>
+      <p class="text-xs text-gray-500">{{ category }}{% if views %} • {{ views }} views{% endif %}</p>
+    </div>
+  </div>

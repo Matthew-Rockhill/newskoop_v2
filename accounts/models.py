@@ -9,11 +9,19 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('The Email field must be set')
+        
         email = self.normalize_email(email)
+        
         if self.model.objects.filter(email=email).exists():
             raise ValueError('A user with this email already exists.')
+        
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
+        
+        # Fix for the uppercase/lowercase user_type check
+        if user.user_type == self.model.UserType.RADIO and not user.radio_station:
+            raise ValueError("Radio users must be assigned to a radio station.")
+        
         user.full_clean()  # Validate before saving
         user.save(using=self._db)
         return user
@@ -23,12 +31,13 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('user_type', 'STAFF')
-        extra_fields.setdefault('staff_role', 'SUPERADMIN')
+        extra_fields.setdefault('staff_role', 'SUPERADMIN')  # Set the SUPERADMIN role
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
+        
         return self.create_user(email, password, **extra_fields)
 
 class RadioStation(models.Model):

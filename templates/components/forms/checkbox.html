@@ -1,0 +1,24 @@
+{% comment %}
+  checkbox.html
+  
+  Usage examples:
+  
+  Basic checkbox:
+  {% include "components/forms/checkbox.html" with id="terms" name="terms" label="I agree to the terms and conditions" %}
+  
+  Checked checkbox:
+  {% include "components/forms/checkbox.html" with id="subscribe" name="subscribe" label="Subscribe to newsletter" checked=True %}
+{% endcomment %}
+
+<div class="flex items-center">
+    <input 
+      type="checkbox"
+      id="{{ id }}"
+      name="{{ name|default:id }}"
+      class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+      {% if checked %}checked{% endif %}
+      {% if required %}required{% endif %}
+      {% if disabled %}disabled{% endif %}
+    >
+    <label for="{{ id }}" class="ml-2 block text-sm text-gray-700">{{ label }}</label>
+  </div>

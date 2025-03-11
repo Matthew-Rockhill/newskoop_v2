@@ -1,0 +1,45 @@
+{% comment %}
+  Button Components for Newskoop
+  
+  Usage examples:
+  
+  Primary button:
+  {% include "components/ui/buttons.html" with type="primary" text="Save Changes" %}
+  
+  Outline button:
+  {% include "components/ui/buttons.html" with type="outline" text="Cancel" %}
+  
+  Danger button:
+  {% include "components/ui/buttons.html" with type="danger" text="Delete" %}
+  
+  Button with icon:
+  {% include "components/ui/buttons.html" with type="primary" text="Save" icon="save" %}
+  
+  Button with custom classes:
+  {% include "components/ui/buttons.html" with type="primary" text="Custom" extra_classes="w-full" %}
+  
+  Button sizes:
+  {% include "components/ui/buttons.html" with type="primary" text="Small" size="sm" %}
+  {% include "components/ui/buttons.html" with type="primary" text="Large" size="lg" %}
+  
+  Submit button (for forms):
+  {% include "components/ui/buttons.html" with type="primary" text="Submit" is_submit=True %}
+  
+  Button with URL:
+  {% include "components/ui/buttons.html" with type="primary" text="View Profile" url="accounts:profile" %}
+{% endcomment %}
+
+{% if is_submit %}
+<button type="submit" class="btn btn-{{ type|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {% if icon %}inline-flex items-center{% endif %} {{ extra_classes|default:'' }}">
+{% else %}
+<a href="{% if url %}{% if url|slice:':1' == '#' %}{{ url }}{% else %}{% url url %}{% endif %}{% else %}#{% endif %}" class="btn btn-{{ type|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {% if icon %}inline-flex items-center{% endif %} {{ extra_classes|default:'' }}">
+{% endif %}
+  {% if icon %}
+    {% include "components/ui/icons.html" with name=icon class="mr-1" %}
+  {% endif %}
+  {{ text }}
+{% if is_submit %}
+</button>
+{% else %}
+</a>
+{% endif %}

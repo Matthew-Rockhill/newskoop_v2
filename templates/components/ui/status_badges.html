@@ -1,0 +1,25 @@
+{% comment %}
+  Status Badge Components for Newskoop
+  
+  Usage examples:
+  
+  Basic status badge:
+  {% include "components/ui/status_badges.html" with status="active" text="Active" %}
+  
+  Status types: active, inactive, pending, success, warning, danger, info
+  
+  Status badge with dot only:
+  {% include "components/ui/status_badges.html" with status="active" dot_only=True %}
+  
+  Custom text:
+  {% include "components/ui/status_badges.html" with status="pending" text="In Review" %}
+{% endcomment %}
+
+{% if dot_only %}
+<span class="status-dot status-dot-{{ status }}"></span>
+{% else %}
+<span class="status-badge status-{{ status }}">
+  <span class="status-dot status-dot-{{ status }}"></span>
+  {{ text|default:status|title }}
+</span>
+{% endif %}

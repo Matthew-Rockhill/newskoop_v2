@@ -1,0 +1,55 @@
+{% comment %}
+  Input Component for Newskoop
+  
+  Usage examples:
+  
+  Basic input:
+  {% include "components/forms/input.html" with type="text" id="name" name="name" %}
+  
+  Input with placeholder:
+  {% include "components/forms/input.html" with type="email" id="email" name="email" placeholder="Enter your email" %}
+  
+  Input with value:
+  {% include "components/forms/input.html" with type="text" id="username" name="username" value=user.username %}
+  
+  Required input:
+  {% include "components/forms/input.html" with type="text" id="required_field" name="required_field" required=True %}
+  
+  Input with error:
+  {% include "components/forms/input.html" with type="text" id="field_with_error" name="field_with_error" error="This field is required" %}
+  
+  Input with label:
+  {% include "components/forms/input.html" with type="text" id="field_with_label" name="field_with_label" label="Field Label" %}
+{% endcomment %}
+
+{% if label %}
+<div class="mb-4">
+  <label for="{{ id }}" class="form-label">{{ label }}</label>
+{% endif %}
+
+<input 
+  type="{{ type|default:'text' }}"
+  id="{{ id }}"
+  name="{{ name|default:id }}"
+  class="form-control {{ extra_classes|default:'' }}"
+  {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+  {% if value %}value="{{ value }}"{% endif %}
+  {% if required %}required{% endif %}
+  {% if disabled %}disabled{% endif %}
+  {% if readonly %}readonly{% endif %}
+  {% if min %}min="{{ min }}"{% endif %}
+  {% if max %}max="{{ max }}"{% endif %}
+  {% if pattern %}pattern="{{ pattern }}"{% endif %}
+>
+
+{% if error %}
+<p class="mt-1 text-sm text-danger">{{ error }}</p>
+{% endif %}
+
+{% if helper_text %}
+<p class="form-text">{{ helper_text }}</p>
+{% endif %}
+
+{% if label %}
+</div>
+{% endif %}
