@@ -1,0 +1,21 @@
+{% comment %}
+  Sidebar Item Component for Newskoop
+  
+  Usage examples:
+  
+  Basic sidebar item:
+  {% include "components/patterns/sidebar_item.html" with url="accounts:dashboard" label="Dashboard" icon="dashboard" %}
+  
+  Active sidebar item:
+  {% include "components/patterns/sidebar_item.html" with url="accounts:dashboard" label="Dashboard" icon="dashboard" active=True %}
+  
+  With url_name check:
+  {% include "components/patterns/sidebar_item.html" with url="accounts:dashboard" label="Dashboard" icon="dashboard" active_url="dashboard" %}
+{% endcomment %}
+
+<li class="{{ extra_classes|default:'' }}">
+  <a href="{% url url %}" class="flex items-center px-6 py-3 {% if active or request.resolver_match.url_name == active_url %}bg-primary-50 text-primary border-l-4 border-primary{% else %}text-gray-700 hover:bg-gray-50 hover:text-primary border-l-4 border-transparent{% endif %}">
+    {% include "components/ui/icons.html" with name=icon size=18 class="mr-2" %}
+    {{ label }}
+  </a>
+</li>

@@ -1,0 +1,36 @@
+{% comment %}
+  form_group.html
+  
+  Usage examples:
+  
+  Basic form group:
+  {% include "components/forms/form_group.html" with label="First Name" id="first_name" %}
+    <input type="text" id="first_name" name="first_name" class="form-control">
+  {% include "components/forms/form_group.html" with end=True %}
+  
+  Form group with helper text:
+  {% include "components/forms/form_group.html" with label="Email" id="email" helper_text="We'll never share your email." %}
+    <input type="email" id="email" name="email" class="form-control">
+  {% include "components/forms/form_group.html" with end=True %}
+  
+  Form group with error:
+  {% include "components/forms/form_group.html" with label="Password" id="password" error="Password is required" %}
+    <input type="password" id="password" name="password" class="form-control">
+  {% include "components/forms/form_group.html" with end=True %}
+{% endcomment %}
+
+{% if not end %}
+<div class="form-group">
+  {% if label %}
+    <label for="{{ id }}" class="form-label">{{ label }}</label>
+  {% endif %}
+{% else %}
+  {% if helper_text %}
+    <small class="form-text">{{ helper_text }}</small>
+  {% endif %}
+  
+  {% if error %}
+    <p class="mt-1 text-sm text-danger">{{ error }}</p>
+  {% endif %}
+</div>
+{% endif %}

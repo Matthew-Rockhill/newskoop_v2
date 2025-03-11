@@ -1,0 +1,54 @@
+{% comment %}
+  Icon Input Component for Newskoop
+  
+  Usage examples:
+  
+  Basic icon input:
+  {% include "components/forms/icon_input.html" with type="text" id="search" name="search" icon="search" placeholder="Search..." %}
+  
+  Icon input with label:
+  {% include "components/forms/icon_input.html" with type="text" id="username" name="username" icon="user" label="Username" %}
+  
+  Icon input with error:
+  {% include "components/forms/icon_input.html" with type="email" id="email" name="email" icon="mail" error="Please enter a valid email" %}
+  
+  Icon input with value:
+  {% include "components/forms/icon_input.html" with type="text" id="username" name="username" icon="user" value=form.username.value %}
+{% endcomment %}
+
+{% if label %}
+<div class="mb-4">
+  <label for="{{ id }}" class="form-label">{{ label }}</label>
+{% endif %}
+
+<div class="relative">
+  <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+    {% include "components/ui/icons.html" with name=icon class="text-gray-400" %}
+  </div>
+  <input 
+    type="{{ type|default:'text' }}"
+    id="{{ id }}"
+    name="{{ name|default:id }}"
+    class="pl-10 form-control {{ extra_classes|default:'' }}"
+    {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+    {% if value %}value="{{ value }}"{% endif %}
+    {% if required %}required{% endif %}
+    {% if disabled %}disabled{% endif %}
+    {% if readonly %}readonly{% endif %}
+    {% if min %}min="{{ min }}"{% endif %}
+    {% if max %}max="{{ max }}"{% endif %}
+    {% if pattern %}pattern="{{ pattern }}"{% endif %}
+  >
+</div>
+
+{% if error %}
+<p class="mt-1 text-sm text-danger">{{ error }}</p>
+{% endif %}
+
+{% if helper_text %}
+<p class="form-text">{{ helper_text }}</p>
+{% endif %}
+
+{% if label %}
+</div>
+{% endif %}

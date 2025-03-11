@@ -1,0 +1,154 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Revision #{{ revision.revision_number }} - {{ story.title }} - Newsroom{% endblock %}
+{% block page_title %}Viewing Revision #{{ revision.revision_number }}{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+    Restore to This Version
+  </a>
+  
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Back to Story
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-4 gap-6">
+  <!-- Left Column - Revision Metadata -->
+  <div class="col-span-1">
+    <div class="space-y-6">
+      <!-- Revision Info -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-800">Revision Info</h2>
+        </div>
+        
+        <div class="p-6">
+          <dl class="grid grid-cols-1 gap-4">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Revision Number</dt>
+              <dd class="mt-1 text-lg font-semibold">{{ revision.revision_number }}</dd>
+            </div>
+            
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created By</dt>
+              <dd class="mt-1">{{ revision.created_by.get_full_name }}</dd>
+            </div>
+            
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created On</dt>
+              <dd class="mt-1">{{ revision.created_at|date:"F j, Y, g:i a" }}</dd>
+            </div>
+          </dl>
+          
+          <div class="mt-6">
+            <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="btn btn-primary w-full">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Restore This Version
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Story Timeline -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-800">Story Timeline</h2>
+        </div>
+        
+        <div class="p-6">
+          <div class="relative">
+            <div class="absolute h-full w-0.5 bg-gray-200 left-2"></div>
+            
+            {% for rev in story.revisions.all|dictsortreversed:"revision_number" %}
+              <div class="relative flex items-start mb-3 last:mb-0">
+                <div class="flex-shrink-0 h-5 w-5 rounded-full {% if rev.id == revision.id %}bg-primary{% else %}bg-gray-300{% endif %} flex items-center justify-center relative z-10">
+                  <span class="text-xs text-white">{{ rev.revision_number }}</span>
+                </div>
+                <div class="ml-3">
+                  <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=rev.id %}" class="text-sm {% if rev.id == revision.id %}font-medium text-primary{% else %}text-gray-600 hover:text-primary hover:underline{% endif %}">
+                    Revision #{{ rev.revision_number }}
+                  </a>
+                  <div class="text-xs text-gray-500">
+                    {{ rev.created_at|date:"M d, Y" }} by {{ rev.created_by.get_full_name }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+            
+            <div class="relative flex items-start mb-3 last:mb-0">
+              <div class="flex-shrink-0 h-5 w-5 rounded-full bg-gray-300 flex items-center justify-center relative z-10">
+                <span class="text-xs text-white">0</span>
+              </div>
+              <div class="ml-3">
+                <span class="text-sm text-gray-600">Story Created</span>
+                <div class="text-xs text-gray-500">
+                  {{ story.created_at|date:"M d, Y" }} by {{ story.author.get_full_name }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Right Column - Revision Content -->
+  <div class="col-span-3">
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h2 class="text-lg font-semibold text-gray-800">Content at Revision #{{ revision.revision_number }}</h2>
+        </div>
+        <span class="story-status-badge story-status-{{ story.status|lower }}">
+          {{ story.get_status_display }}
+        </span>
+      </div>
+      
+      <div class="p-6">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">{{ story.title }}</h3>
+        
+        <div class="prose max-w-none story-content">
+          {{ revision.content|safe }}
+        </div>
+      </div>
+    </div>
+    
+    {% if not forloop.first %}
+    <div class="mt-6 bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Changes from Previous Revision</h2>
+      </div>
+      
+      <div class="p-6">
+        <div class="bg-info-light rounded-lg p-4">
+          <div class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p class="text-sm text-gray-600">For the complete history of changes, view the Story History in the Story Details page.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

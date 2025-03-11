@@ -1,0 +1,56 @@
+{% comment %}
+  Select Component for Newskoop
+  
+  Usage examples:
+  
+  Basic select:
+  {% include "components/forms/select.html" with id="country" name="country" options=countries %}
+  
+  Select with selected value:
+  {% include "components/forms/select.html" with id="country" name="country" options=countries selected=user.country %}
+  
+  Select with label:
+  {% include "components/forms/select.html" with id="country" name="country" options=countries label="Country" %}
+  
+  Select with placeholder:
+  {% include "components/forms/select.html" with id="country" name="country" options=countries placeholder="Select a country" %}
+  
+  The options parameter should be a list of dictionaries with 'value' and 'text' keys, or a list of tuples with value and text.
+{% endcomment %}
+
+{% if label %}
+<div class="mb-4">
+  <label for="{{ id }}" class="form-label">{{ label }}</label>
+{% endif %}
+
+<select 
+  id="{{ id }}"
+  name="{{ name|default:id }}"
+  class="form-control {{ extra_classes|default:'' }}"
+  {% if required %}required{% endif %}
+  {% if disabled %}disabled{% endif %}
+>
+  {% if placeholder %}
+  <option value="">{{ placeholder }}</option>
+  {% endif %}
+  
+  {% for option in options %}
+    {% if option.value %}
+      <option value="{{ option.value }}" {% if option.value == selected %}selected{% endif %}>{{ option.text }}</option>
+    {% else %}
+      <option value="{{ option.0 }}" {% if option.0 == selected %}selected{% endif %}>{{ option.1 }}</option>
+    {% endif %}
+  {% endfor %}
+</select>
+
+{% if error %}
+<p class="mt-1 text-sm text-danger">{{ error }}</p>
+{% endif %}
+
+{% if helper_text %}
+<p class="form-text">{{ helper_text }}</p>
+{% endif %}
+
+{% if label %}
+</div>
+{% endif %}

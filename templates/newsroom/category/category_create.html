@@ -1,0 +1,161 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}{% if is_new %}Create Category{% else %}Edit Category{% endif %} - Newsroom{% endblock %}
+{% block page_title %}{% if is_new %}Create Category{% else %}Edit Category{% endif %}{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <button type="submit" form="category-form" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+    </svg>
+    {% if is_new %}Create Category{% else %}Save Changes{% endif %}
+  </button>
+  
+  <a href="{% url 'newsroom:category_list' %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Cancel
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 gap-6">
+  <!-- Left Column -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">
+        {% if is_new %}Create New Category{% else %}Edit Category{% endif %}
+      </h2>
+    </div>
+    
+    <div class="p-6">
+      <form id="category-form" method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Content Type Selection (if applicable) -->
+        <div class="form-group">
+          <label for="{{ form.content_type.id_for_label }}" class="form-label">Content Type <span class="text-danger">*</span></label>
+          <select name="{{ form.content_type.name }}" id="{{ form.content_type.id_for_label }}" class="form-control {% if form.content_type.errors %}is-invalid{% endif %}" {% if form.content_type.field.disabled %}disabled{% endif %}>
+            <option value="">Select Content Type</option>
+            {% for value, text in form.content_type.field.choices %}
+              <option value="{{ value }}" {% if form.content_type.value == value %}selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+          </select>
+          {% if form.content_type.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.content_type.errors|first }}</div>
+          {% endif %}
+          {% if form.content_type.help_text %}
+            <div class="form-text mt-1">{{ form.content_type.help_text }}</div>
+          {% endif %}
+        </div>
+        
+        <!-- Parent Category -->
+        <div class="form-group">
+          <label for="{{ form.parent.id_for_label }}" class="form-label">Parent Category</label>
+          <select name="{{ form.parent.name }}" id="{{ form.parent.id_for_label }}" class="form-control {% if form.parent.errors %}is-invalid{% endif %}">
+            <option value="">None (Top Level Category)</option>
+            {% for parent in form.parent.field.queryset %}
+              <option value="{{ parent.id }}" {% if form.parent.value|stringformat:"s" == parent.id|stringformat:"s" %}selected{% endif %}>
+                {{ parent.name }}
+              </option>
+            {% endfor %}
+          </select>
+          {% if form.parent.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.parent.errors|first }}</div>
+          {% endif %}
+          <div class="form-text mt-1">
+            Select a parent to create a subcategory, or leave empty for a top-level category.
+          </div>
+        </div>
+        
+        <!-- Category Name -->
+        <div class="form-group">
+          <label for="{{ form.name.id_for_label }}" class="form-label">Name <span class="text-danger">*</span></label>
+          <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" required>
+          {% if form.name.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.name.errors|first }}</div>
+          {% endif %}
+        </div>
+        
+        <!-- Description -->
+        <div class="form-group">
+          <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+          <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="3" class="form-control {% if form.description.errors %}is-invalid{% endif %}">{{ form.description.value|default:'' }}</textarea>
+          {% if form.description.errors %}
+            <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
+          {% endif %}
+        </div>
+        
+        <!-- Active Status (rendered once) -->
+        <div class="form-group">
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" class="form-check-input" {% if form.is_active.value %}checked{% endif %}>
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-700">Active</label>
+              <p class="text-gray-500">When active, this category will appear in menus in the Radio Zone</p>
+            </div>
+          </div>
+        </div>
+        
+        {% if form.non_field_errors %}
+          <div class="bg-danger-light p-4 rounded-lg text-danger">
+            {% for error in form.non_field_errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  
+  <!-- Right Column: Quick Tips -->
+  <div class="space-y-6">
+    <div class="bg-info-light rounded-lg p-6">
+      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Category Guidelines
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Choose a content type first, which determines radio station access</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Categories support up to 3 levels of nesting (Type > Parent > Subcategory)</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Use clear, descriptive names that make sense to radio stations</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Only active categories will be visible in the Radio Zone</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Slug will be automatically generated from the category name</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

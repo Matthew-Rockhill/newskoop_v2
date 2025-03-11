@@ -1,0 +1,358 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Categories - Newsroom{% endblock %}
+{% block page_title %}Categories{% endblock %}
+
+{% block page_actions %}
+{% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+<a href="{% url 'newsroom:category_create' %}" class="btn btn-primary">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+  </svg>
+  Add Category
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <!-- Content Type Sections -->
+  {% for content_type, group in category_groups.items %}
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <button type="button" class="w-full px-6 py-3 border-b border-gray-200 flex justify-between items-center section-header" data-target="content-{{ content_type }}">
+      <div class="flex items-center">
+        <h2 class="text-lg font-semibold text-gray-800">{{ group.name }}</h2>
+        <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{{ group.categories|length|add:"1" }}</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+          <a href="{% url 'newsroom:category_create' %}?content_type={{ content_type }}" class="text-primary hover:text-primary-dark" title="Add Top-Level Category">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </a>
+        {% endif %}
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </button>
+    
+    <div class="category-content" id="content-{{ content_type }}">
+      <!-- All Categories (including "Uncategorised") -->
+      {% for category_data in group.categories %}
+        <div class="border-b border-gray-100">
+          <div class="p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <span class="text-gray-500 mr-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 class="font-medium text-gray-900">{{ category_data.category.name }}</h3>
+                  {% if category_data.category.description %}
+                    <p class="text-xs text-gray-500">{{ category_data.category.description|truncatechars:80 }}</p>
+                  {% endif %}
+                </div>
+                
+                {% if not category_data.category.is_active %}
+                <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inactive</span>
+                {% endif %}
+                
+                {% if category_data.category.is_default %}
+                <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-medium rounded-full">Default</span>
+                {% endif %}
+              </div>
+              
+              <div class="flex items-center space-x-4">
+                <div class="text-gray-500 text-sm">
+                  {{ category_data.story_count }} {{ category_data.story_count|pluralize:"story,stories" }}
+                </div>
+                
+                {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' and not category_data.category.is_default %}
+                <div class="flex space-x-2">
+                  <a href="{% url 'newsroom:category_edit' category_id=category_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </a>
+                  
+                  <a href="{% url 'newsroom:category_create' %}?parent={{ category_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </a>
+                  
+                  {% if category_data.category.is_deletable %}
+                  <a href="{% url 'newsroom:category_delete' category_id=category_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <!-- Toggle for children -->
+            {% if category_data.children %}
+            <div class="mt-1">
+              <button type="button" class="text-xs text-primary hover:text-primary-dark flex items-center children-toggle" data-target="children-{{ category_data.category.id }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 children-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+                <span>{{ category_data.children|length }} subcategories</span>
+              </button>
+            </div>
+            {% endif %}
+          </div>
+          
+          <!-- Parent Categories (Level 2) -->
+          {% if category_data.children %}
+          <div class="hidden pl-8 pb-3 border-t border-gray-50" id="children-{{ category_data.category.id }}">
+            {% for parent_data in category_data.children %}
+              <div class="border-b border-gray-100 py-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="text-gray-400 mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <h4 class="font-medium text-gray-800">{{ parent_data.category.name }}</h4>
+                      {% if not parent_data.category.is_active %}
+                      <span class="ml-1 px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inactive</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center space-x-3">
+                    <div class="text-gray-500 text-xs">
+                      {{ parent_data.story_count }} {{ parent_data.story_count|pluralize:"story,stories" }}
+                    </div>
+                    
+                    {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+                    <div class="flex space-x-1">
+                      <a href="{% url 'newsroom:category_edit' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </a>
+                      
+                      <a href="{% url 'newsroom:category_create' %}?parent={{ parent_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </a>
+                      
+                      {% if parent_data.category.is_deletable %}
+                      <a href="{% url 'newsroom:category_delete' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </a>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- Toggle for subcategories -->
+                {% if parent_data.children %}
+                <div class="mt-1">
+                  <button type="button" class="text-xs text-primary hover:text-primary-dark flex items-center subcategories-toggle" data-target="subcategories-{{ parent_data.category.id }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1 subcategories-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span>{{ parent_data.children|length }} subcategories</span>
+                  </button>
+                </div>
+                
+                <!-- Subcategories (Level 3) -->
+                <div class="hidden pl-6 mt-2" id="subcategories-{{ parent_data.category.id }}">
+                  <div class="grid grid-cols-2 gap-2 mt-2">
+                    {% for subcategory in parent_data.children %}
+                      <div class="border border-gray-100 rounded p-2 bg-gray-50">
+                        <div class="flex justify-between items-start">
+                          <div>
+                            <h5 class="text-xs font-medium text-gray-800">{{ subcategory.category.name }}</h5>
+                            <div class="text-xs text-gray-500">{{ subcategory.story_count }} {{ subcategory.story_count|pluralize:"story,stories" }}</div>
+                          </div>
+                          
+                          <div class="flex flex-col items-end">
+                            {% if not subcategory.category.is_active %}
+                            <span class="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full mb-1">Inactive</span>
+                            {% endif %}
+                            
+                            {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+                            <div class="flex space-x-1">
+                              <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </a>
+                              
+                              {% if subcategory.category.is_deletable %}
+                              <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </a>
+                              {% endif %}
+                            </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      
+      <!-- Default "Uncategorised" Category -->
+      <div class="border-b border-gray-100">
+        <div class="p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="text-gray-400 mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </span>
+              <div>
+                <h3 class="font-medium text-gray-900">Uncategorised {{ group.name }}</h3>
+              </div>
+              <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-medium rounded-full">Default</span>
+            </div>
+            <div class="text-gray-500 text-sm">
+              {{ group.default_category.story_count }} {{ group.default_category.story_count|pluralize:"story,stories" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-12 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900">No categories found</h3>
+      <p class="mt-2 text-sm text-gray-500">Categories help organize content for radio stations</p>
+      {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+      <div class="mt-6">
+        <a href="{% url 'newsroom:category_create' %}" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Create Category
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', function() {
+    // Section toggles (content type accordions)
+    const sectionHeaders = document.querySelectorAll('.section-header');
+    sectionHeaders.forEach(header => {
+      const targetId = header.getAttribute('data-target');
+      const targetElement = document.getElementById(targetId);
+      const icon = header.querySelector('.toggle-icon');
+      
+      // Set initial state: expanded
+      if (targetElement && icon) {
+        targetElement.classList.remove('hidden');
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+      }
+      
+      header.addEventListener('click', function() {
+        if (targetElement && icon) {
+          if (targetElement.classList.contains('hidden')) {
+            targetElement.classList.remove('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+          } else {
+            targetElement.classList.add('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+          }
+        }
+      });
+    });
+    
+    // Children toggles (subcategories)
+    const childrenToggles = document.querySelectorAll('.children-toggle');
+    childrenToggles.forEach(toggle => {
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const targetId = this.getAttribute('data-target');
+        const targetElement = document.getElementById(targetId);
+        const icon = this.querySelector('.children-icon');
+        const textSpan = this.querySelector('span');
+        
+        if (targetElement && icon) {
+          if (targetElement.classList.contains('hidden')) {
+            targetElement.classList.remove('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+            if (textSpan) {
+              const count = textSpan.textContent.split(' ')[0];
+              textSpan.textContent = count + ' subcategories (hide)';
+            }
+          } else {
+            targetElement.classList.add('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />';
+            if (textSpan) {
+              const count = textSpan.textContent.split(' ')[0];
+              textSpan.textContent = count + ' subcategories';
+            }
+          }
+        }
+      });
+    });
+    
+    // Subcategory toggles
+    const subToggles = document.querySelectorAll('.subcategories-toggle');
+    subToggles.forEach(toggle => {
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const targetId = this.getAttribute('data-target');
+        const targetElement = document.getElementById(targetId);
+        const icon = this.querySelector('.subcategories-icon');
+        const textSpan = this.querySelector('span');
+        
+        if (targetElement && icon) {
+          if (targetElement.classList.contains('hidden')) {
+            targetElement.classList.remove('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+            if (textSpan) {
+              const count = textSpan.textContent.split(' ')[0];
+              textSpan.textContent = count + ' subcategories (hide)';
+            }
+          } else {
+            targetElement.classList.add('hidden');
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />';
+            if (textSpan) {
+              const count = textSpan.textContent.split(' ')[0];
+              textSpan.textContent = count + ' subcategories';
+            }
+          }
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

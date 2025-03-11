@@ -1,0 +1,256 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Publish: {{ story.title }} - Newsroom{% endblock %}
+{% block page_title %}Publish Story{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <button type="submit" form="publish-form" class="btn btn-success">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    Publish Story
+  </button>
+  
+  <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    Edit Content
+  </a>
+  
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+    Cancel
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-3 gap-6">
+  <!-- Main Content Column (2/3 width) -->
+  <div class="col-span-2 space-y-6">
+    <!-- Story Preview -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 bg-success-light">
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-success mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 class="text-lg font-semibold text-success-600">Review before publishing</h2>
+        </div>
+      </div>
+      
+      <div class="p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ story.title }}</h1>
+        
+        <div class="prose max-w-none story-content">
+          {{ story.content|safe }}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Audio Clips -->
+    {% if story.audio_clips.exists %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Audio Clips ({{ story.audio_clips.count }})</h2>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 gap-4">
+          {% for clip in story.audio_clips.all %}
+            <div class="border rounded-md p-4">
+              <h3 class="font-medium">{{ clip.title }}</h3>
+              {% if clip.description %}
+                <p class="text-sm text-gray-500 mt-1">{{ clip.description }}</p>
+              {% endif %}
+              <div class="mt-2">
+                <audio src="{{ clip.audio_file.url }}" controls class="audio-player w-full"></audio>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">
+                Uploaded by {{ clip.uploaded_by.get_full_name }} on {{ clip.created_at|date:"M d, Y" }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Right Column (1/3 width) -->
+  <div class="col-span-1 space-y-6">
+    <!-- Publish Form -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Publish Options</h2>
+      </div>
+      
+      <div class="p-6">
+        <form id="publish-form" method="post" class="space-y-4">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="published_at" class="form-label">Publication Date</label>
+            <input type="datetime-local" name="published_at" id="published_at" class="form-control" value="{{ now|date:'Y-m-d' }}T{{ now|time:'H:i' }}">
+            <div class="form-text">
+              Leave as is to publish immediately, or set a future date for scheduled publication.
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="editorial_notes" class="form-label">Editorial Notes</label>
+            <textarea name="editorial_notes" id="editorial_notes" rows="3" class="form-control" placeholder="Optional notes about this publication"></textarea>
+            <div class="form-text">
+              These notes will be visible to other staff members only.
+            </div>
+          </div>
+          
+          <div class="form-check mt-4">
+            <input type="checkbox" name="send_notifications" id="send_notifications" class="form-check-input" checked>
+            <label for="send_notifications" class="form-check-label">
+              Send notifications to radio stations
+            </label>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Story Details -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+      </div>
+      
+      <div class="p-6">
+        <dl class="grid grid-cols-1 gap-4">
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Current Status</dt>
+            <dd class="mt-1">
+              <span class="story-status-badge story-status-{{ story.status|lower }}">
+                {{ story.get_status_display }}
+              </span>
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Author</dt>
+            <dd class="mt-1">{{ story.author.get_full_name }}</dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Category</dt>
+            <dd class="mt-1">
+              {% if story.category.parent %}
+                {{ story.category.parent.name }} > 
+              {% endif %}
+              {{ story.category.name }}
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Language</dt>
+            <dd class="mt-1">{{ story.get_language_display }}</dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Created</dt>
+            <dd class="mt-1">{{ story.created_at|date:"M d, Y" }}</dd>
+          </div>
+          
+          {% if story.religion_classification %}
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Religious Classification</dt>
+            <dd class="mt-1">{{ story.get_religion_classification_display }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    
+    <!-- Publishing Checklist -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Publishing Checklist</h2>
+      </div>
+      
+      <div class="p-6">
+        <ul class="space-y-3">
+          <li class="flex items-start">
+            <div class="flex h-5 items-center">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-content">
+            </div>
+            <label for="check-content" class="ml-3 text-sm">
+              <span class="font-medium text-gray-700">Content is accurate and well-written</span>
+              <p class="text-gray-500">Check for spelling, grammar, and factual accuracy</p>
+            </label>
+          </li>
+          
+          <li class="flex items-start">
+            <div class="flex h-5 items-center">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-metadata">
+            </div>
+            <label for="check-metadata" class="ml-3 text-sm">
+              <span class="font-medium text-gray-700">Metadata is complete</span>
+              <p class="text-gray-500">Category, language, and classifications are correct</p>
+            </label>
+          </li>
+          
+          <li class="flex items-start">
+            <div class="flex h-5 items-center">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-audio">
+            </div>
+            <label for="check-audio" class="ml-3 text-sm">
+              <span class="font-medium text-gray-700">Audio clips reviewed</span>
+              <p class="text-gray-500">All audio clips have been checked for quality{% if not story.audio_clips.exists %} or confirmed as not needed{% endif %}</p>
+            </label>
+          </li>
+          
+          <li class="flex items-start">
+            <div class="flex h-5 items-center">
+              <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-approval">
+            </div>
+            <label for="check-approval" class="ml-3 text-sm">
+              <span class="font-medium text-gray-700">Editorial approval confirmed</span>
+              <p class="text-gray-500">Content meets editorial standards and is ready for publication</p>
+            </label>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Important Information -->
+    <div class="bg-warning-light rounded-lg p-6">
+      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Important Information
+      </h3>
+      <ul class="space-y-3">
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Once published, this story will be visible to all radio stations with access to the selected category</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Changes after publication will require editor permissions</span>
+        </li>
+        <li class="flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>If notifications are enabled, radio stations will receive an email alert</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

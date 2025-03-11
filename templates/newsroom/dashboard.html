@@ -1,0 +1,308 @@
+{% extends "newsroom/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - Newsroom{% endblock %}
+{% block page_title %}Newsroom Dashboard{% endblock %}
+
+{% block page_actions %}
+{% if user.user_type == 'STAFF' %}
+<div class="flex space-x-3">
+  <a href="{% url 'newsroom:story_create' %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    New Story
+  </a>
+  <a href="{% url 'newsroom:task_create' %}" class="btn btn-outline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+    New Task
+  </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+  {% if user.user_type == 'STAFF' %}
+  <!-- Staff Dashboard -->
+  
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Story Stats -->
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-gray-500 text-sm font-medium">Stories</p>
+          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ story_count|default:"0" }}</h3>
+        </div>
+        <div class="rounded-full bg-primary-50 p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
+        </div>
+      </div>
+      <div class="mt-2 text-sm">
+        <span class="font-medium">{{ published_count|default:"0" }}</span>
+        <span class="text-gray-500 ml-1">published</span>
+        <span class="mx-1">•</span>
+        <span class="font-medium">{{ draft_count|default:"0" }}</span>
+        <span class="text-gray-500 ml-1">drafts</span>
+      </div>
+    </div>
+    
+    <!-- My Stories -->
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-gray-500 text-sm font-medium">My Stories</p>
+          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ my_story_count|default:"0" }}</h3>
+        </div>
+        <div class="rounded-full bg-primary-50 p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </div>
+      </div>
+      <div class="mt-2">
+        <a href="{% url 'newsroom:story_create' %}" class="text-sm text-primary hover:underline">Create new story</a>
+      </div>
+    </div>
+    
+    <!-- Pending Tasks -->
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-gray-500 text-sm font-medium">My Tasks</p>
+          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ pending_tasks|default:"0" }}</h3>
+        </div>
+        <div class="rounded-full bg-warning-light p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      </div>
+      <div class="mt-2 text-sm">
+        <span class="font-medium">{{ pending_tasks|default:"0" }}</span>
+        <span class="text-gray-500 ml-1">pending</span>
+        <span class="mx-1">•</span>
+        <span class="font-medium">{{ in_progress_tasks|default:"0" }}</span>
+        <span class="text-gray-500 ml-1">in progress</span>
+      </div>
+    </div>
+    
+    {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN,SUB_EDITOR' %}
+    <!-- Editorial Stats -->
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-gray-500 text-sm font-medium">For Review</p>
+          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ awaiting_review|default:"0" }}</h3>
+        </div>
+        <div class="rounded-full bg-info-light p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      </div>
+      <div class="mt-2">
+        <a href="{% url 'newsroom:story_list' %}?status=REVIEW" class="text-sm text-primary hover:underline">View stories for review</a>
+      </div>
+    </div>
+    {% else %}
+    <!-- Tasks Overview for Regular Staff -->
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-gray-500 text-sm font-medium">Tasks Created</p>
+          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ tasks_created|default:"0" }}</h3>
+        </div>
+        <div class="rounded-full bg-info-light p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+      </div>
+      <div class="mt-2">
+        <a href="{% url 'newsroom:task_list' %}?view=created" class="text-sm text-primary hover:underline">View my created tasks</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- My Assigned Tasks and Recent Stories -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Assigned Tasks (narrower column) -->
+    <div class="lg:col-span-1">
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-800">My Tasks</h2>
+          <a href="{% url 'newsroom:task_list' %}?view=assigned" class="text-sm text-primary hover:underline">View all</a>
+        </div>
+        <div class="p-6">
+          {% if assigned_tasks %}
+            <div class="space-y-4">
+              {% for task in assigned_tasks %}
+                <div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+                  <div class="flex justify-between">
+                    <h3 class="font-medium">
+                      <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="hover:text-primary">
+                        {{ task.title }}
+                      </a>
+                    </h3>
+                    <span class="text-sm task-priority-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+                  </div>
+                  <div class="mt-1 text-sm text-gray-500">
+                    <span class="task-status-badge task-status-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+                    
+                    {% if task.due_date %}
+                      <span class="ml-2">
+                        Due: {{ task.due_date|date:"M d, Y" }}
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-6">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="mt-2 text-gray-500">No tasks assigned to you</p>
+              <div class="mt-4">
+                <a href="{% url 'newsroom:task_list' %}" class="btn btn-sm btn-primary">View all tasks</a>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Recent Stories (wider column) -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-800">Recent Stories</h2>
+          <a href="{% url 'newsroom:story_list' %}" class="text-sm text-primary hover:underline">View all</a>
+        </div>
+        <div class="p-6">
+          {% if recent_stories %}
+            <div class="space-y-4">
+              {% for story in recent_stories %}
+                <div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+                  <div class="flex justify-between">
+                    <h3 class="font-medium">
+                      <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="hover:text-primary">
+                        {{ story.title }}
+                      </a>
+                    </h3>
+                    <span class="text-sm">{{ story.created_at|date:"M d, Y" }}</span>
+                  </div>
+                  <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
+                    <span class="story-status-badge story-status-{{ story.status|lower }}">{{ story.get_status_display }}</span>
+                    <span>•</span>
+                    <span>{{ story.get_language_display }}</span>
+                    <span>•</span>
+                    <span>By {{ story.author.get_full_name }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-6">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+              </svg>
+              <p class="mt-2 text-gray-500">No stories yet</p>
+              <div class="mt-4">
+                <a href="{% url 'newsroom:story_create' %}" class="btn btn-sm btn-primary">Create a story</a>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {% else %}
+  <!-- Radio Station Dashboard -->
+  
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Welcome, {{ user.get_full_name }}</h2>
+    
+    <div class="bg-primary-50 rounded-lg p-4 border border-primary-100">
+      <div class="flex items-start">
+        <div class="flex-shrink-0 mt-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-gray-800">
+            You have access to <span class="font-bold">{{ story_count|default:"0" }} stories</span> from Newskoop.
+            Browse the content below or use the filter options on the <a href="{% url 'newsroom:story_list' %}" class="text-primary hover:underline">stories page</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Recent Stories -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <h2 class="text-lg font-semibold text-gray-800">Recent Content</h2>
+      <a href="{% url 'newsroom:story_list' %}" class="text-sm text-primary hover:underline">View all</a>
+    </div>
+    <div class="p-6">
+      {% if recent_stories %}
+        <div class="space-y-4">
+          {% for story in recent_stories %}
+            <div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+              <div class="flex justify-between">
+                <h3 class="font-medium">
+                  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="hover:text-primary">
+                    {{ story.title }}
+                  </a>
+                </h3>
+                <div class="flex space-x-2">
+                  <span class="text-sm">{{ story.published_at|date:"M d, Y" }}</span>
+                  <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="text-primary" title="Download">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+              <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
+                <span>{{ story.category.name }}</span>
+                <span>•</span>
+                <span>{{ story.get_language_display }}</span>
+                {% if story.audio_clips.exists %}
+                  <span>•</span>
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
+                    </svg>
+                    {{ story.audio_clips.count }} audio clip{{ story.audio_clips.count|pluralize }}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
+          <p class="mt-2 text-gray-500">No stories available for your station yet</p>
+          <p class="text-sm text-gray-500">Content matching your station's permissions will appear here</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

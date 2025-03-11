@@ -2,10 +2,8 @@
 {% block title %}Radio Stations - Newskoop{% endblock %}
 {% block page_title %}Radio Stations{% endblock %}
 {% block page_actions %}
-<a href="{% url 'accounts:station_create' %}" class="btn btn-primary">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-  </svg>
+<a href="{% url 'accounts:station_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+  {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
   Add Station
 </a>
 {% endblock %}
@@ -23,17 +21,15 @@
           <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <div class="relative rounded-md shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              {% include "components/ui/icons.html" with name="search" class="text-gray-400" %}
             </div>
-            <input type="text" name="q" id="search" class="form-control pl-10" placeholder="Search stations..." value="{{ search_query }}">
+            <input type="text" name="q" id="search" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 pl-10" placeholder="Search stations..." value="{{ search_query }}">
           </div>
         </div>
         
         <div class="w-full md:w-1/4">
           <label for="province" class="block text-sm font-medium text-gray-700 mb-1">Province</label>
-          <select name="province" id="province" class="form-control">
+          <select name="province" id="province" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
             <option value="">All Provinces</option>
             {% for code, name in provinces %}
             <option value="{{ code }}" {% if province_filter == code %}selected{% endif %}>{{ name }}</option>
@@ -43,7 +39,7 @@
         
         <div class="w-full md:w-1/5">
           <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select name="status" id="status" class="form-control">
+          <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
             <option value="">All Statuses</option>
             <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
             <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
@@ -51,10 +47,8 @@
         </div>
         
         <div class="md:pb-1">
-          <button type="submit" class="btn btn-primary w-full md:w-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
+          <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            {% include "components/ui/icons.html" with name="filter" class="mr-2" %}
             Filter
           </button>
         </div>
@@ -130,35 +124,18 @@
               {% endif %}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              {% if station.is_active %}
-                <span class="status-badge status-active">
-                  <span class="status-dot status-dot-active"></span>
-                  Active
-                </span>
-              {% else %}
-                <span class="status-badge status-inactive">
-                  <span class="status-dot status-dot-inactive"></span>
-                  Inactive
-                </span>
-              {% endif %}
+              {% include "components/ui/status_badges.html" with status=station.is_active|yesno:"active,inactive" text=station.is_active|yesno:"Active,Inactive" %}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <div class="flex justify-end space-x-2">
                 <a href="{% url 'accounts:station_detail' station_id=station.id %}" class="text-gray-600 hover:text-primary" title="View">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
+                  {% include "components/ui/icons.html" with name="eye" %}
                 </a>
                 <a href="{% url 'accounts:station_edit' station_id=station.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  {% include "components/ui/icons.html" with name="edit" %}
                 </a>
                 <a href="{% url 'accounts:station_delete_confirm' station_id=station.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  {% include "components/ui/icons.html" with name="trash" %}
                 </a>
               </div>
             </td>
@@ -170,9 +147,7 @@
     
     {% else %}
     <div class="px-6 py-12 text-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-      </svg>
+      {% include "components/ui/icons.html" with name="radio" size=48 class="mx-auto text-gray-400" %}
       <h3 class="mt-4 text-lg font-medium text-gray-900">No stations found</h3>
       <p class="mt-2 text-sm text-gray-500">
         {% if search_query or province_filter or status_filter %}
@@ -182,10 +157,8 @@
         {% endif %}
       </p>
       <div class="mt-6">
-        <a href="{% url 'accounts:station_create' %}" class="btn btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+        <a href="{% url 'accounts:station_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
           Add Station
         </a>
       </div>

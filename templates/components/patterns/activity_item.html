@@ -1,0 +1,25 @@
+{% comment %}
+  Activity Item Component for Newskoop
+  
+  Usage examples:
+  
+  Basic activity item:
+  {% include "components/patterns/activity_item.html" with icon="user" icon_bg="primary" title="Sarah Johnson logged in" subtitle="2 minutes ago • Staff User" %}
+  
+  Activity item with custom icon background color:
+  {% include "components/patterns/activity_item.html" with icon="check" icon_bg="success" title="New story published" subtitle="15 minutes ago • News Story" %}
+  
+  Available icon_bg: primary, success, warning, danger, info
+{% endcomment %}
+
+<div class="flex">
+  <div class="flex-shrink-0">
+    <div class="w-10 h-10 rounded-full bg-{{ icon_bg|default:'primary' }}-50 flex items-center justify-center">
+      {% include "components/ui/icons.html" with name=icon size=20 class="text-{{ icon_bg|default:'primary' }}" %}
+    </div>
+  </div>
+  <div class="ml-4">
+    <p class="text-sm font-medium text-gray-900">{{ title }}</p>
+    <p class="text-sm text-gray-500">{{ subtitle }}</p>
+  </div>
+</div>
