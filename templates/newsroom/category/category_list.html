@@ -1,15 +1,13 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Categories - Newsroom{% endblock %}
+{% block title %}Categories - Newskoop{% endblock %}
 {% block page_title %}Categories{% endblock %}
 
 {% block page_actions %}
 {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-<a href="{% url 'newsroom:category_create' %}" class="btn btn-primary">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-  </svg>
+<a href="{% url 'newsroom:category_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+  {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
   Add Category
 </a>
 {% endif %}
@@ -28,14 +26,10 @@
       <div class="flex items-center space-x-2">
         {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
           <a href="{% url 'newsroom:category_create' %}?content_type={{ content_type }}" class="text-primary hover:text-primary-dark" title="Add Top-Level Category">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+            {% include "components/ui/icons.html" with name="plus" %}
           </a>
         {% endif %}
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-        </svg>
+        {% include "components/ui/icons.html" with name="chevron-down" class="h-5 w-5 text-gray-500 toggle-icon" %}
       </div>
     </button>
     
@@ -47,9 +41,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <span class="text-gray-500 mr-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
+                  {% include "components/ui/icons.html" with name="tag" %}
                 </span>
                 <div>
                   <h3 class="font-medium text-gray-900">{{ category_data.category.name }}</h3>
@@ -75,22 +67,16 @@
                 {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' and not category_data.category.is_default %}
                 <div class="flex space-x-2">
                   <a href="{% url 'newsroom:category_edit' category_id=category_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    {% include "components/ui/icons.html" with name="edit" %}
                   </a>
                   
                   <a href="{% url 'newsroom:category_create' %}?parent={{ category_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    {% include "components/ui/icons.html" with name="plus" %}
                   </a>
                   
                   {% if category_data.category.is_deletable %}
                   <a href="{% url 'newsroom:category_delete' category_id=category_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    {% include "components/ui/icons.html" with name="trash" %}
                   </a>
                   {% endif %}
                 </div>
@@ -102,9 +88,7 @@
             {% if category_data.children %}
             <div class="mt-1">
               <button type="button" class="text-xs text-primary hover:text-primary-dark flex items-center children-toggle" data-target="children-{{ category_data.category.id }}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 children-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
+                {% include "components/ui/icons.html" with name="chevron-right" class="h-4 w-4 mr-1 children-icon" %}
                 <span>{{ category_data.children|length }} subcategories</span>
               </button>
             </div>
@@ -119,9 +103,7 @@
                 <div class="flex items-center justify-between">
                   <div class="flex items-center">
                     <span class="text-gray-400 mr-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                      </svg>
+                      {% include "components/ui/icons.html" with name="folder" %}
                     </span>
                     <div>
                       <h4 class="font-medium text-gray-800">{{ parent_data.category.name }}</h4>
@@ -139,22 +121,16 @@
                     {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
                     <div class="flex space-x-1">
                       <a href="{% url 'newsroom:category_edit' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        {% include "components/ui/icons.html" with name="edit" class="h-4 w-4" %}
                       </a>
                       
                       <a href="{% url 'newsroom:category_create' %}?parent={{ parent_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+                        {% include "components/ui/icons.html" with name="plus" class="h-4 w-4" %}
                       </a>
                       
                       {% if parent_data.category.is_deletable %}
                       <a href="{% url 'newsroom:category_delete' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        {% include "components/ui/icons.html" with name="trash" class="h-4 w-4" %}
                       </a>
                       {% endif %}
                     </div>
@@ -166,9 +142,7 @@
                 {% if parent_data.children %}
                 <div class="mt-1">
                   <button type="button" class="text-xs text-primary hover:text-primary-dark flex items-center subcategories-toggle" data-target="subcategories-{{ parent_data.category.id }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1 subcategories-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    {% include "components/ui/icons.html" with name="chevron-right" class="h-3 w-3 mr-1 subcategories-icon" %}
                     <span>{{ parent_data.children|length }} subcategories</span>
                   </button>
                 </div>
@@ -192,16 +166,12 @@
                             {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
                             <div class="flex space-x-1">
                               <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
+                                {% include "components/ui/icons.html" with name="edit" class="h-3 w-3" %}
                               </a>
                               
                               {% if subcategory.category.is_deletable %}
                               <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                                {% include "components/ui/icons.html" with name="trash" class="h-3 w-3" %}
                               </a>
                               {% endif %}
                             </div>
@@ -226,9 +196,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <span class="text-gray-400 mr-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
+                {% include "components/ui/icons.html" with name="folder" %}
               </span>
               <div>
                 <h3 class="font-medium text-gray-900">Uncategorised {{ group.name }}</h3>
@@ -246,17 +214,13 @@
   {% empty %}
   <div class="bg-white rounded-lg shadow">
     <div class="px-6 py-12 text-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-      </svg>
+      {% include "components/ui/icons.html" with name="tag" class="h-12 w-12 mx-auto text-gray-400" %}
       <h3 class="mt-4 text-lg font-medium text-gray-900">No categories found</h3>
       <p class="mt-2 text-sm text-gray-500">Categories help organize content for radio stations</p>
       {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
       <div class="mt-6">
-        <a href="{% url 'newsroom:category_create' %}" class="btn btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+        <a href="{% url 'newsroom:category_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
           Create Category
         </a>
       </div>
@@ -278,17 +242,17 @@
       // Set initial state: expanded
       if (targetElement && icon) {
         targetElement.classList.remove('hidden');
-        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+        icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-up" %}';
       }
       
       header.addEventListener('click', function() {
         if (targetElement && icon) {
           if (targetElement.classList.contains('hidden')) {
             targetElement.classList.remove('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-up" %}';
           } else {
             targetElement.classList.add('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
           }
         }
       });
@@ -307,14 +271,14 @@
         if (targetElement && icon) {
           if (targetElement.classList.contains('hidden')) {
             targetElement.classList.remove('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
             if (textSpan) {
               const count = textSpan.textContent.split(' ')[0];
               textSpan.textContent = count + ' subcategories (hide)';
             }
           } else {
             targetElement.classList.add('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-right" %}';
             if (textSpan) {
               const count = textSpan.textContent.split(' ')[0];
               textSpan.textContent = count + ' subcategories';
@@ -337,14 +301,14 @@
         if (targetElement && icon) {
           if (targetElement.classList.contains('hidden')) {
             targetElement.classList.remove('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
             if (textSpan) {
               const count = textSpan.textContent.split(' ')[0];
               textSpan.textContent = count + ' subcategories (hide)';
             }
           } else {
             targetElement.classList.add('hidden');
-            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />';
+            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-right" %}';
             if (textSpan) {
               const count = textSpan.textContent.split(' ')[0];
               textSpan.textContent = count + ' subcategories';

@@ -1,37 +1,31 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ story.title }} - Newsroom{% endblock %}
+{% block title %}{{ story.title }} - Newskoop{% endblock %}
 {% block page_title %}Story Details{% endblock %}
 
 {% block page_actions %}
 <div class="flex space-x-3">
   {% if user.user_type == 'STAFF' %}
     {% if story.status != 'PUBLISHED' or user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-    <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="btn btn-primary">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-      </svg>
+    <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+      {% include "components/ui/icons.html" with name="edit" class="mr-2" %}
       Edit Story
     </a>
     {% endif %}
     
     {% if story.status == 'DRAFT' or story.status == 'REVIEW' or story.status == 'APPROVED' %}
       {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-      <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="btn btn-success">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+      <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
+        {% include "components/ui/icons.html" with name="check" class="mr-2" %}
         Publish
       </a>
       {% elif story.author == user and story.status == 'DRAFT' %}
       <form method="post" action="{% url 'newsroom:story_edit' story_id=story.id %}">
         {% csrf_token %}
         <input type="hidden" name="status" value="REVIEW">
-        <button type="submit" class="btn btn-warning">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+          {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
           Submit for Review
         </button>
       </form>
@@ -40,18 +34,14 @@
   {% endif %}
   
   {% if story.status == 'PUBLISHED' %}
-  <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
+  <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="download" class="mr-2" %}
     Download
   </a>
   {% endif %}
   
-  <a href="{% url 'newsroom:story_list' %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
+  <a href="{% url 'newsroom:story_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
     Back to List
   </a>
 </div>
@@ -63,73 +53,58 @@
   <div class="col-span-2 space-y-6">
     <!-- Story Content -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
-        <div class="flex flex-wrap items-center justify-between">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div class="flex-1">
           <h1 class="text-2xl font-bold text-gray-900">{{ story.title }}</h1>
-          <span class="story-status-badge story-status-{{ story.status|lower }}">{{ story.get_status_display }}</span>
-        </div>
-        <div class="mt-2 flex flex-wrap items-center text-sm text-gray-500 gap-x-4 gap-y-2">
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            By {{ story.author.get_full_name }}
-          </span>
-          
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            {% if story.published_at %}
-              Published: {{ story.published_at|date:"F j, Y" }}
-            {% else %}
-              Created: {{ story.created_at|date:"F j, Y" }}
+          <div class="mt-2 flex flex-wrap items-center text-sm text-gray-500 gap-x-4 gap-y-2">
+            <span>
+              {% include "components/ui/icons.html" with name="user" class="h-4 w-4 inline mr-1" %}
+              By {{ story.author.get_full_name }}
+            </span>
+            
+            <span>
+              {% include "components/ui/icons.html" with name="calendar" class="h-4 w-4 inline mr-1" %}
+              {% if story.published_at %}
+                Published: {{ story.published_at|date:"F j, Y" }}
+              {% else %}
+                Created: {{ story.created_at|date:"F j, Y" }}
+              {% endif %}
+            </span>
+            
+            <span>
+              {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 inline mr-1" %}
+              {{ story.category.name }}
+              {% if story.category.parent %}
+                <span class="text-xs">({{ story.category.parent.name }})</span>
+              {% endif %}
+            </span>
+            
+            <span>
+              {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 inline mr-1" %}
+              {{ story.get_language_display }}
+            </span>
+            
+            {% if story.audio_clips.exists %}
+            <span>
+              {% include "components/ui/icons.html" with name="radio" class="h-4 w-4 inline mr-1" %}
+              {{ story.audio_clips.count }} Audio clip{{ story.audio_clips.count|pluralize }}
+            </span>
             {% endif %}
-          </span>
-          
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            {{ story.category.name }}
-            {% if story.category.parent %}
-              <span class="text-xs">({{ story.category.parent.name }})</span>
+            
+            {% if user.user_type == 'STAFF' %}
+            <span>
+              {% include "components/ui/icons.html" with name="eye" class="h-4 w-4 inline mr-1" %}
+              {{ story.view_count }} view{{ story.view_count|pluralize }}
+            </span>
+            
+            <span>
+              {% include "components/ui/icons.html" with name="download" class="h-4 w-4 inline mr-1" %}
+              {{ story.download_count }} download{{ story.download_count|pluralize }}
+            </span>
             {% endif %}
-          </span>
-          
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
-            {{ story.get_language_display }}
-          </span>
-          
-          {% if story.audio_clips.exists %}
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
-            </svg>
-            {{ story.audio_clips.count }} Audio clip{{ story.audio_clips.count|pluralize }}
-          </span>
-          {% endif %}
-          
-          {% if user.user_type == 'STAFF' %}
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            {{ story.view_count }} view{{ story.view_count|pluralize }}
-          </span>
-          
-          <span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {{ story.download_count }} download{{ story.download_count|pluralize }}
-          </span>
-          {% endif %}
+          </div>
         </div>
+        {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
       </div>
       
       <div class="p-6">
@@ -143,12 +118,18 @@
     {% if story.audio_clips.exists %}
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="radio" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+            <p class="text-sm text-gray-500">Listen to audio content</p>
+          </div>
+        </div>
         {% if user.user_type == 'STAFF' %}
-        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="text-sm text-primary hover:underline flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="inline-flex items-center text-sm text-primary hover:underline">
+          {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
           Add Audio
         </a>
         {% endif %}
@@ -170,10 +151,8 @@
               
               {% if user.user_type == 'STAFF' %}
               <div class="mt-2 flex justify-end">
-                <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="text-sm text-danger hover:underline">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="inline-flex items-center text-sm text-danger hover:underline">
+                  {% include "components/ui/icons.html" with name="trash" class="h-4 w-4 mr-1" %}
                   Delete
                 </a>
               </div>
@@ -188,8 +167,14 @@
     <!-- Story Revisions (Staff Only) -->
     {% if user.user_type == 'STAFF' and revisions %}
     <div class="bg-white rounded-lg shadow overflow-hidden" id="revisions">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Revision History</h2>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="content" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Revision History</h2>
+          <p class="text-sm text-gray-500">View previous versions</p>
+        </div>
       </div>
       <div class="p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,17 +213,21 @@
   <div class="col-span-1 space-y-6">
     <!-- Story Metadata Card -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="info" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+          <p class="text-sm text-gray-500">Metadata and classification</p>
+        </div>
       </div>
       <div class="p-6">
         <dl class="grid grid-cols-1 gap-4">
           <div>
             <dt class="text-sm font-medium text-gray-500">Status</dt>
             <dd class="mt-1">
-              <span class="story-status-badge story-status-{{ story.status|lower }}">
-                {{ story.get_status_display }}
-              </span>
+              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
             </dd>
           </div>
           
@@ -288,11 +277,17 @@
     {% if user.user_type == 'STAFF' and tasks %}
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">Related Tasks</h2>
-        <a href="{% url 'newsroom:task_create' %}?story={{ story.id }}" class="text-sm text-primary hover:underline flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="check-circle" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Related Tasks</h2>
+            <p class="text-sm text-gray-500">Tasks associated with this story</p>
+          </div>
+        </div>
+        <a href="{% url 'newsroom:task_create' %}?story={{ story.id }}" class="inline-flex items-center text-sm text-primary hover:underline">
+          {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
           Add Task
         </a>
       </div>
@@ -309,7 +304,7 @@
                 <span class="text-sm task-priority-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
               </div>
               <div class="mt-1 text-sm text-gray-500">
-                <span class="task-status-badge task-status-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+                {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
                 <span class="ml-2">Assigned to: {{ task.assigned_to.get_full_name }}</span>
                 {% if task.due_date %}
                   <span class="ml-2">Due: {{ task.due_date|date:"M d, Y" }}</span>
@@ -324,33 +319,48 @@
     
     <!-- Quick Actions -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Quick Actions</h2>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="menu" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Quick Actions</h2>
+          <p class="text-sm text-gray-500">Common operations</p>
+        </div>
       </div>
       <div class="p-6">
-        <div class="space-y-2">
+        <div class="space-y-3">
           {% if user.user_type == 'STAFF' %}
-            <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="btn btn-outline w-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit Story
+            <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="flex items-center p-3 rounded-md hover:bg-gray-50 transition-colors">
+              <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center mr-3">
+                {% include "components/ui/icons.html" with name="edit" class="text-primary" %}
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Edit Story</p>
+                <p class="text-xs text-gray-500">Modify content or metadata</p>
+              </div>
             </a>
             
-            <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="btn btn-outline w-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
-              </svg>
-              Add Audio
+            <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="flex items-center p-3 rounded-md hover:bg-gray-50 transition-colors">
+              <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center mr-3">
+                {% include "components/ui/icons.html" with name="radio" class="text-primary" %}
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Add Audio</p>
+                <p class="text-xs text-gray-500">Upload audio files</p>
+              </div>
             </a>
           {% endif %}
           
           {% if story.status == 'PUBLISHED' %}
-          <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="btn btn-outline w-full flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download Story
+          <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="flex items-center p-3 rounded-md hover:bg-gray-50 transition-colors">
+            <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center mr-3">
+              {% include "components/ui/icons.html" with name="download" class="text-primary" %}
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Download Story</p>
+              <p class="text-xs text-gray-500">Save for offline use</p>
+            </div>
           </a>
           {% endif %}
         </div>

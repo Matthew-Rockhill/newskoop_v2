@@ -18,8 +18,25 @@ def staff_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+def admin_required(view_func):
+    """Decorator that ensures only admins and super admins can access a view"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if request.user.user_type != CustomUser.UserType.STAFF:
+            raise PermissionDenied("Only staff users can access this page")
+        
+        allowed_roles = ['SUPERADMIN', 'ADMIN']
+        if request.user.staff_role not in allowed_roles:
+            raise PermissionDenied("Only administrators can access this page")
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
 def editor_required(view_func):
-    """Decorator that ensures only editors and super admins can access a view"""
+    """Decorator that ensures only editors and admins can access a view"""
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -30,7 +47,24 @@ def editor_required(view_func):
         
         allowed_roles = ['EDITOR', 'SUPERADMIN', 'ADMIN']
         if request.user.staff_role not in allowed_roles:
-            raise PermissionDenied("Only editors can access this page")
+            raise PermissionDenied("Only editors and administrators can access this page")
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+def editor_or_subeditor_required(view_func):
+    """Decorator that ensures only editors, sub-editors and admins can access a view"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if request.user.user_type != CustomUser.UserType.STAFF:
+            raise PermissionDenied("Only staff users can access this page")
+        
+        allowed_roles = ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
+        if request.user.staff_role not in allowed_roles:
+            raise PermissionDenied("Only editors and sub-editors can access this page")
         
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -93,6 +127,25 @@ def can_edit_story(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+def can_manage_categories(view_func):
+    """Decorator that ensures only users with category management rights can access a view"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if request.user.user_type != CustomUser.UserType.STAFF:
+            raise PermissionDenied("Only staff users can access this page")
+        
+        # Only editors and admins can manage categories
+        allowed_roles = ['EDITOR', 'SUPERADMIN', 'ADMIN', 'SUB_EDITOR']
+        if request.user.staff_role not in allowed_roles:
+            messages.error(request, "You don't have permission to manage categories")
+            return redirect('newsroom:dashboard')
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
 def can_manage_task(view_func):
     """
     Decorator that ensures users can only manage tasks if:
@@ -129,8 +182,8 @@ def can_manage_task(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-def can_manage_categories(view_func):
-    """Decorator that ensures only users with category management rights can access a view"""
+def can_view_all_tasks(view_func):
+    """Decorator that ensures only admins, editors can view all tasks"""
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -139,11 +192,13 @@ def can_manage_categories(view_func):
         if request.user.user_type != CustomUser.UserType.STAFF:
             raise PermissionDenied("Only staff users can access this page")
         
-        # Only editors and admins can manage categories
-        allowed_roles = ['EDITOR', 'SUPERADMIN', 'ADMIN']
-        if request.user.staff_role not in allowed_roles:
-            messages.error(request, "You don't have permission to manage categories")
-            return redirect('newsroom:dashboard')
+        # Check if trying to view all tasks
+        view_mode = request.GET.get('view', 'assigned')
+        
+        # If not admin/editor and trying to view all, redirect to assigned tasks
+        if view_mode == 'all' and request.user.staff_role not in ['EDITOR', 'SUPERADMIN', 'ADMIN']:
+            messages.info(request, "You can only view tasks assigned to you or created by you")
+            return redirect(f"{request.path}?view=assigned")
         
         return view_func(request, *args, **kwargs)
     return _wrapped_view

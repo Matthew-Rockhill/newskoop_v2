@@ -1,0 +1,36 @@
+{% comment %}
+  Component: story_item
+  Description: Displays a story item with title, status, and metadata
+  
+  Parameters:
+    - story: Story object
+    - url: URL name for detail view
+    - url_param_name: Parameter name for URL (default: story_id)
+    - url_param_value: Parameter value for URL (default: story.id)
+{% endcomment %}
+
+<div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+    <div class="flex justify-between">
+      <h3 class="font-medium">
+        <a href="{% url url|default:'newsroom:story_detail' %}{{ url_param_name|default:'story_id' }}={{ url_param_value|default:story.id }}" class="hover:text-primary">
+          {{ story.title }}
+        </a>
+      </h3>
+      <span class="text-sm">{{ story.created_at|date:"M d, Y" }}</span>
+    </div>
+    <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+        {% if story.status == 'DRAFT' %}bg-gray-100 text-gray-800
+        {% elif story.status == 'REVIEW' %}bg-warning-light text-warning
+        {% elif story.status == 'PUBLISHED' %}bg-success-light text-success
+        {% elif story.status == 'APPROVED' %}bg-info-light text-info
+        {% elif story.status == 'ARCHIVED' %}bg-gray-200 text-gray-600
+        {% endif %}">
+        {{ story.get_status_display }}
+      </span>
+      <span>•</span>
+      <span>{{ story.get_language_display }}</span>
+      <span>•</span>
+      <span>By {{ story.author.get_full_name }}</span>
+    </div>
+  </div>

@@ -1,42 +1,34 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Edit Story - {{ story.title }} - Newsroom{% endblock %}
+{% block title %}Edit Story - {{ story.title }} - Newskoop{% endblock %}
 {% block page_title %}Edit Story{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <!-- Include Quill stylesheet -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 {% endblock %}
 
 {% block page_actions %}
 <div class="flex justify-end space-x-3">
-  <button type="submit" form="story-form" class="btn btn-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-    </svg>
+  <button type="submit" form="story-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
     Save Changes
   </button>
   {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' and story.status != 'PUBLISHED' %}
-    <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="btn btn-success">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+    <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
+      {% include "components/ui/icons.html" with name="check" class="mr-2" %}
       Publish
     </a>
   {% endif %}
   {% if story.author == user and story.status == 'DRAFT' %}
-    <button type="submit" form="submit-review-form" class="btn btn-warning">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
+    <button type="submit" form="submit-review-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+      {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
       Submit for Review
     </button>
   {% endif %}
-  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-    </svg>
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
     Cancel
   </a>
 </div>
@@ -56,232 +48,244 @@
     <!-- Left Column (2/3 width): Story Content & Audio Clips -->
     <div class="col-span-2 space-y-6">
       <!-- Story Content Section -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Story Content</h2>
-        <div class="mb-4">
-          <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium">Title <span class="text-red-500">*</span></label>
-          <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" value="{{ form.title.value|default:'' }}" required class="mt-1 block w-full border rounded-md p-2">
-          {% if form.title.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.title.errors|first }}</p>
-          {% endif %}
-        </div>
-        <div class="mb-4">
-          <label for="content-editor" class="block text-sm font-medium">Content <span class="text-red-500">*</span></label>
-          <!-- Quill editor container -->
-          <div id="content-editor" class="mt-1" style="min-height: 300px; border-radius: 0.375rem;"></div>
-          <!-- Hidden input to store the HTML content -->
-          <input type="hidden" name="content" id="id_content" value="{{ form.content.value|default:'' }}">
-          {% if form.content.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.content.errors|first }}</p>
-          {% endif %}
-        </div>
-      </div>
-      <!-- Audio Clips Section -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Audio Clips</h2>
-        <p class="mb-2 text-sm text-gray-600">Select additional audio files to attach (existing clips are shown below).</p>
-        <div class="flex items-center">
-          <input type="file" id="audio_files" name="audio_files" multiple accept="audio/*" class="hidden">
-          <button type="button" id="add-audio-btn" class="btn btn-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Audio Clips
-          </button>
-        </div>
-        <div id="audio-preview" class="mt-4"></div>
-        <div class="text-xs text-gray-500 mt-2">
-          Supported formats: MP3, WAV, M4A, OGG (max 20MB per file)
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="content" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Story Content</h2>
+            <p class="text-sm text-gray-500">Edit the main content for this story</p>
+          </div>
         </div>
         
-        <!-- Existing Audio Clips -->
-        {% if story.audio_clips.exists %}
-          <div class="mt-6 border-t border-gray-200 pt-4">
-            <h3 class="font-medium text-gray-700 mb-3">Existing Audio Clips</h3>
-            <div class="space-y-3">
-              {% for clip in story.audio_clips.all %}
-                <div class="border rounded-md p-3 flex items-center justify-between">
-                  <div class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    <div>
-                      <div class="font-medium">{{ clip.title }}</div>
-                      <div class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</div>
-                    </div>
-                  </div>
-                  <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="text-danger hover:text-danger-600 text-sm" onclick="return confirm('Are you sure you want to delete this audio clip?');">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </a>
-                </div>
-              {% endfor %}
-            </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-danger">*</span></label>
+            <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" value="{{ form.title.value|default:'' }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+            {% if form.title.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
+            {% endif %}
           </div>
-        {% endif %}
+          
+          <div class="form-group">
+            <label for="content-editor" class="block text-sm font-medium text-gray-700 mb-1">Content <span class="text-danger">*</span></label>
+            <!-- Quill editor container -->
+            <div id="content-editor" class="mt-1" style="min-height: 300px; border-radius: 0.375rem;"></div>
+            <!-- Hidden input to store the HTML content -->
+            <input type="hidden" name="content" id="id_content" value="{{ form.content.value|default:'' }}">
+            {% if form.content.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.content.errors|first }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Audio Clips Section -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="radio" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+            <p class="text-sm text-gray-500">Manage audio files for this story</p>
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <p class="mb-3 text-sm text-gray-600">Select additional audio files to attach (existing clips are shown below).</p>
+          <div class="flex items-center">
+            <input type="file" id="audio_files" name="audio_files" multiple accept="audio/*" class="hidden">
+            <button type="button" id="add-audio-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
+              Add Audio Clips
+            </button>
+          </div>
+          <div id="audio-preview" class="mt-4"></div>
+          <div class="text-xs text-gray-500 mt-2">
+            Supported formats: MP3, WAV, M4A, OGG (max 20MB per file)
+          </div>
+          
+          <!-- Existing Audio Clips -->
+          {% if story.audio_clips.exists %}
+            <div class="mt-6 border-t border-gray-200 pt-4">
+              <h3 class="font-medium text-gray-700 mb-3">Existing Audio Clips</h3>
+              <div class="space-y-3">
+                {% for clip in story.audio_clips.all %}
+                  <div class="border rounded-md p-3 flex items-center justify-between">
+                    <div class="flex items-center">
+                      {% include "components/ui/icons.html" with name="radio" class="h-5 w-5 text-gray-400 mr-2" %}
+                      <div>
+                        <div class="font-medium">{{ clip.title }}</div>
+                        <div class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</div>
+                      </div>
+                    </div>
+                    <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="text-danger hover:text-danger-600 text-sm inline-flex items-center" onclick="return confirm('Are you sure you want to delete this audio clip?');">
+                      {% include "components/ui/icons.html" with name="trash" class="h-5 w-5 mr-1" %}
+                      Delete
+                    </a>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
       </div>
     </div>
+    
     <!-- Right Column (1/3 width): Category & Metadata -->
     <div class="col-span-1 space-y-6">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Story Details</h2>
-        {% if form.category %}
-        <div class="mb-4">
-          <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium">Category <span class="text-red-500">*</span></label>
-          <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="mt-1 block w-full border rounded-md p-2">
-            <option value="">Select a category</option>
-            {% for cat in form.category.field.queryset %}
-              <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
-            {% endfor %}
-          </select>
-          {% if form.category.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.category.errors|first }}</p>
-          {% endif %}
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="tag" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+            <p class="text-sm text-gray-500">Classification and metadata</p>
+          </div>
         </div>
-        {% endif %}
-        {% if form.religion_classification %}
-        <div class="mb-4">
-          <label for="{{ form.religion_classification.id_for_label }}" class="block text-sm font-medium">Religion</label>
-          {{ form.religion_classification }}
-          {% if form.religion_classification.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.religion_classification.errors|first }}</p>
+        
+        <div class="p-6">
+          {% if form.category %}
+          <div class="mb-4">
+            <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-danger">*</span></label>
+            <select name="{{ form.category.name }}" id="{{ form.category.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+              <option value="">Select a category</option>
+              {% for cat in form.category.field.queryset %}
+                <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>
+                  {% if cat.parent %}{{ cat.parent.name }} > {% endif %}{{ cat.name }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if form.category.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.category.errors|first }}</div>
+            {% endif %}
+          </div>
           {% endif %}
-        </div>
-        {% endif %}
-        <div class="mb-4">
-          <label for="{{ form.language.id_for_label }}" class="block text-sm font-medium">Language</label>
-          {{ form.language }}
-          {% if form.language.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.language.errors|first }}</p>
+          
+          {% if form.religion_classification %}
+          <div class="mb-4">
+            <label for="{{ form.religion_classification.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Religion</label>
+            <select name="{{ form.religion_classification.name }}" id="{{ form.religion_classification.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+              <option value="">Select classification (optional)</option>
+              {% for choice in form.religion_classification.field.choices %}
+                {% if choice.0 %} <!-- Skip the empty choice -->
+                <option value="{{ choice.0 }}" {% if form.religion_classification.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            {% if form.religion_classification.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.religion_classification.errors|first }}</div>
+            {% endif %}
+          </div>
           {% endif %}
+          
+          <div class="mb-4">
+            <label for="{{ form.language.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Language</label>
+            <select name="{{ form.language.name }}" id="{{ form.language.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+              {% for choice in form.language.field.choices %}
+                {% if choice.0 %} <!-- Skip the empty choice -->
+                <option value="{{ choice.0 }}" {% if form.language.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            {% if form.language.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.language.errors|first }}</div>
+            {% endif %}
+          </div>
         </div>
       </div>
       
       <!-- Story Status Card -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="font-semibold text-gray-700 mb-3">Story Status</h2>
-        <div class="mb-4">
-          <div class="flex items-center space-x-2">
-            <span class="story-status-badge story-status-{{ story.status|lower }}">{{ story.get_status_display }}</span>
-            {% if story.published_at %}
-              <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
-            {% endif %}
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-info-50 flex items-center justify-center text-info mr-4">
+            {% include "components/ui/icons.html" with name="info" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Story Status</h2>
+            <p class="text-sm text-gray-500">Current publication status</p>
           </div>
         </div>
         
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between">
-            <span class="text-gray-500">Created by:</span>
-            <span class="font-medium">{{ story.author.get_full_name }}</span>
+        <div class="p-6">
+          <div class="mb-4">
+            <div class="flex items-center space-x-2">
+              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+              {% if story.published_at %}
+                <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
+              {% endif %}
+            </div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-500">Created on:</span>
-            <span>{{ story.created_at|date:"M d, Y" }}</span>
+          
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Created by:</span>
+              <span class="font-medium">{{ story.author.get_full_name }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Created on:</span>
+              <span>{{ story.created_at|date:"M d, Y" }}</span>
+            </div>
+            {% if story.editor %}
+            <div class="flex justify-between">
+              <span class="text-gray-500">Edited by:</span>
+              <span>{{ story.editor.get_full_name }}</span>
+            </div>
+            {% endif %}
+            <div class="flex justify-between">
+              <span class="text-gray-500">Last updated:</span>
+              <span>{{ story.updated_at|date:"M d, Y" }}</span>
+            </div>
+            {% if story.view_count %}
+            <div class="flex justify-between">
+              <span class="text-gray-500">Views:</span>
+              <span>{{ story.view_count }}</span>
+            </div>
+            {% endif %}
+            {% if story.download_count %}
+            <div class="flex justify-between">
+              <span class="text-gray-500">Downloads:</span>
+              <span>{{ story.download_count }}</span>
+            </div>
+            {% endif %}
           </div>
-          {% if story.editor %}
-          <div class="flex justify-between">
-            <span class="text-gray-500">Edited by:</span>
-            <span>{{ story.editor.get_full_name }}</span>
-          </div>
-          {% endif %}
-          <div class="flex justify-between">
-            <span class="text-gray-500">Last updated:</span>
-            <span>{{ story.updated_at|date:"M d, Y" }}</span>
-          </div>
-          {% if story.view_count %}
-          <div class="flex justify-between">
-            <span class="text-gray-500">Views:</span>
-            <span>{{ story.view_count }}</span>
-          </div>
-          {% endif %}
-          {% if story.download_count %}
-          <div class="flex justify-between">
-            <span class="text-gray-500">Downloads:</span>
-            <span>{{ story.download_count }}</span>
-          </div>
-          {% endif %}
         </div>
       </div>
       
       <!-- Revision History Card -->
       {% if story.revisions.exists %}
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="font-semibold text-gray-700 mb-3">Revision History</h2>
-        <div class="space-y-2 max-h-64 overflow-y-auto">
-          {% for revision in story.revisions.all|dictsortreversed:"revision_number" %}
-            <div class="border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
-              <div class="flex items-center justify-between">
-                <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="text-primary hover:underline">
-                  Revision #{{ revision.revision_number }}
-                </a>
-                <span class="text-xs text-gray-500">{{ revision.created_at|date:"M d, Y" }}</span>
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-800">Revision History</h2>
+        </div>
+        <div class="p-6">
+          <div class="space-y-2 max-h-64 overflow-y-auto">
+            {% for revision in story.revisions.all|dictsortreversed:"revision_number" %}
+              <div class="border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
+                <div class="flex items-center justify-between">
+                  <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="text-primary hover:underline">
+                    Revision #{{ revision.revision_number }}
+                  </a>
+                  <span class="text-xs text-gray-500">{{ revision.created_at|date:"M d, Y" }}</span>
+                </div>
+                <div class="text-xs text-gray-500">By {{ revision.created_by.get_full_name }}</div>
               </div>
-              <div class="text-xs text-gray-500">By {{ revision.created_by.get_full_name }}</div>
-            </div>
-          {% endfor %}
+            {% endfor %}
+          </div>
         </div>
       </div>
       {% endif %}
     </div>
   </div>
 </form>
-
-<!-- Add this modal template to your story_edit.html file -->
-<!-- The modal will be hidden by default and shown via JavaScript -->
-
-<div id="audio-delete-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-  <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    <!-- Background overlay -->
-    <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-      <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-    </div>
-
-    <!-- Modal panel -->
-    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-        <div class="sm:flex sm:items-start">
-          <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-light sm:mx-0 sm:h-10 sm:w-10">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </div>
-          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-              Delete Audio Clip
-            </h3>
-            <div class="mt-2">
-              <p class="text-sm text-gray-500">
-                Are you sure you want to delete this audio clip? This action cannot be undone.
-              </p>
-              <div class="mt-4 p-3 bg-gray-50 rounded-md">
-                <div id="modal-audio-title" class="font-medium"></div>
-                <div id="modal-audio-info" class="text-xs text-gray-500 mt-1"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-        <form id="delete-audio-form" method="post">
-          {% csrf_token %}
-          <input type="hidden" id="delete-audio-id" name="audio_id" value="">
-          <button type="submit" class="btn btn-danger ml-3">
-            Delete Audio Clip
-          </button>
-        </form>
-        <button type="button" class="btn btn-outline" id="cancel-delete">
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
-{% block extra_scripts %}
-<!-- Use main.js which now contains all the story editor functionality -->
-<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}
+<!-- Include Quill script -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <!-- Additional script for "Submit for Review" form -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
