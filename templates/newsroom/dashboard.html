@@ -1,4 +1,4 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}Dashboard - Newsroom{% endblock %}
@@ -7,18 +7,8 @@
 {% block page_actions %}
 {% if user.user_type == 'STAFF' %}
 <div class="flex space-x-3">
-  <a href="{% url 'newsroom:story_create' %}" class="btn btn-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-    New Story
-  </a>
-  <a href="{% url 'newsroom:task_create' %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-    </svg>
-    New Task
-  </a>
+  {% include "components/ui/buttons.html" with type="primary" text="New Story" icon="plus" url="newsroom:story_create" %}
+  {% include "components/ui/buttons.html" with type="outline" text="New Task" icon="plus" url="newsroom:task_create" %}
 </div>
 {% endif %}
 {% endblock %}
@@ -31,103 +21,20 @@
   <!-- Stats Overview -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Story Stats -->
-    <div class="bg-white rounded-lg shadow p-5">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-gray-500 text-sm font-medium">Stories</p>
-          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ story_count|default:"0" }}</h3>
-        </div>
-        <div class="rounded-full bg-primary-50 p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
-        </div>
-      </div>
-      <div class="mt-2 text-sm">
-        <span class="font-medium">{{ published_count|default:"0" }}</span>
-        <span class="text-gray-500 ml-1">published</span>
-        <span class="mx-1">•</span>
-        <span class="font-medium">{{ draft_count|default:"0" }}</span>
-        <span class="text-gray-500 ml-1">drafts</span>
-      </div>
-    </div>
+    {% include "components/patterns/stat_card.html" with label="Stories" value=story_count icon="content" icon_bg="primary" %}
     
     <!-- My Stories -->
-    <div class="bg-white rounded-lg shadow p-5">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-gray-500 text-sm font-medium">My Stories</p>
-          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ my_story_count|default:"0" }}</h3>
-        </div>
-        <div class="rounded-full bg-primary-50 p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </div>
-      </div>
-      <div class="mt-2">
-        <a href="{% url 'newsroom:story_create' %}" class="text-sm text-primary hover:underline">Create new story</a>
-      </div>
-    </div>
+    {% include "components/patterns/stat_card.html" with label="My Stories" value=my_story_count icon="edit" icon_bg="primary" %}
     
     <!-- Pending Tasks -->
-    <div class="bg-white rounded-lg shadow p-5">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-gray-500 text-sm font-medium">My Tasks</p>
-          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ pending_tasks|default:"0" }}</h3>
-        </div>
-        <div class="rounded-full bg-warning-light p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      </div>
-      <div class="mt-2 text-sm">
-        <span class="font-medium">{{ pending_tasks|default:"0" }}</span>
-        <span class="text-gray-500 ml-1">pending</span>
-        <span class="mx-1">•</span>
-        <span class="font-medium">{{ in_progress_tasks|default:"0" }}</span>
-        <span class="text-gray-500 ml-1">in progress</span>
-      </div>
-    </div>
+    {% include "components/patterns/stat_card.html" with label="My Tasks" value=pending_tasks icon="check" icon_bg="warning" %}
     
     {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN,SUB_EDITOR' %}
     <!-- Editorial Stats -->
-    <div class="bg-white rounded-lg shadow p-5">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-gray-500 text-sm font-medium">For Review</p>
-          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ awaiting_review|default:"0" }}</h3>
-        </div>
-        <div class="rounded-full bg-info-light p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      </div>
-      <div class="mt-2">
-        <a href="{% url 'newsroom:story_list' %}?status=REVIEW" class="text-sm text-primary hover:underline">View stories for review</a>
-      </div>
-    </div>
+    {% include "components/patterns/stat_card.html" with label="For Review" value=awaiting_review icon="check-circle" icon_bg="info" %}
     {% else %}
     <!-- Tasks Overview for Regular Staff -->
-    <div class="bg-white rounded-lg shadow p-5">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-gray-500 text-sm font-medium">Tasks Created</p>
-          <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ tasks_created|default:"0" }}</h3>
-        </div>
-        <div class="rounded-full bg-info-light p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </div>
-      </div>
-      <div class="mt-2">
-        <a href="{% url 'newsroom:task_list' %}?view=created" class="text-sm text-primary hover:underline">View my created tasks</a>
-      </div>
-    </div>
+    {% include "components/patterns/stat_card.html" with label="Tasks Created" value=tasks_created icon="check" icon_bg="info" %}
     {% endif %}
   </div>
   
@@ -154,7 +61,7 @@
                     <span class="text-sm task-priority-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
                   </div>
                   <div class="mt-1 text-sm text-gray-500">
-                    <span class="task-status-badge task-status-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+                    {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
                     
                     {% if task.due_date %}
                       <span class="ml-2">
@@ -167,12 +74,10 @@
             </div>
           {% else %}
             <div class="text-center py-6">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              {% include "components/ui/icons.html" with name="check-circle" size=48 class="mx-auto text-gray-400" %}
               <p class="mt-2 text-gray-500">No tasks assigned to you</p>
               <div class="mt-4">
-                <a href="{% url 'newsroom:task_list' %}" class="btn btn-sm btn-primary">View all tasks</a>
+                {% include "components/ui/buttons.html" with type="primary" size="sm" text="View all tasks" url="newsroom:task_list" %}
               </div>
             </div>
           {% endif %}
@@ -201,7 +106,7 @@
                     <span class="text-sm">{{ story.created_at|date:"M d, Y" }}</span>
                   </div>
                   <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
-                    <span class="story-status-badge story-status-{{ story.status|lower }}">{{ story.get_status_display }}</span>
+                    {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
                     <span>•</span>
                     <span>{{ story.get_language_display }}</span>
                     <span>•</span>
@@ -212,12 +117,10 @@
             </div>
           {% else %}
             <div class="text-center py-6">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-              </svg>
+              {% include "components/ui/icons.html" with name="content" size=48 class="mx-auto text-gray-400" %}
               <p class="mt-2 text-gray-500">No stories yet</p>
               <div class="mt-4">
-                <a href="{% url 'newsroom:story_create' %}" class="btn btn-sm btn-primary">Create a story</a>
+                {% include "components/ui/buttons.html" with type="primary" size="sm" text="Create a story" url="newsroom:story_create" %}
               </div>
             </div>
           {% endif %}
@@ -235,9 +138,7 @@
     <div class="bg-primary-50 rounded-lg p-4 border border-primary-100">
       <div class="flex items-start">
         <div class="flex-shrink-0 mt-1">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          {% include "components/ui/icons.html" with name="info" class="text-primary" %}
         </div>
         <div class="ml-3">
           <p class="text-gray-800">
@@ -269,9 +170,7 @@
                 <div class="flex space-x-2">
                   <span class="text-sm">{{ story.published_at|date:"M d, Y" }}</span>
                   <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="text-primary" title="Download">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+                    {% include "components/ui/icons.html" with name="download" %}
                   </a>
                 </div>
               </div>
@@ -281,10 +180,8 @@
                 <span>{{ story.get_language_display }}</span>
                 {% if story.audio_clips.exists %}
                   <span>•</span>
-                  <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 017.072 0m-9.9-2.828a9 9 0 0112.728 0" />
-                    </svg>
+                  <span class="flex items-center">
+                    {% include "components/ui/icons.html" with name="radio" size=14 class="text-gray-400 mr-1" %}
                     {{ story.audio_clips.count }} audio clip{{ story.audio_clips.count|pluralize }}
                   </span>
                 {% endif %}
@@ -294,9 +191,7 @@
         </div>
       {% else %}
         <div class="text-center py-6">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
+          {% include "components/ui/icons.html" with name="content" size=48 class="mx-auto text-gray-400" %}
           <p class="mt-2 text-gray-500">No stories available for your station yet</p>
           <p class="text-sm text-gray-500">Content matching your station's permissions will appear here</p>
         </div>

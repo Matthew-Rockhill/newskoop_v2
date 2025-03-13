@@ -35,13 +35,13 @@ AudioClipFormSet = inlineformset_factory(
     can_delete=True   # Allow deletion of existing clips.
 )
 
-# Dashboard view remains unchanged
 @login_required
 def dashboard(request):
     """Main dashboard for the newsroom app"""
     context = {}
     
     if request.user.user_type == CustomUser.UserType.STAFF:
+        # Common data for all staff
         context['recent_stories'] = Story.objects.order_by('-created_at')[:5]
         context['assigned_tasks'] = Task.objects.filter(
             assigned_to=request.user, 
@@ -50,13 +50,45 @@ def dashboard(request):
         context['story_count'] = Story.objects.count()
         context['draft_count'] = Story.objects.filter(status='DRAFT').count()
         context['published_count'] = Story.objects.filter(status='PUBLISHED').count()
-        context['my_story_count'] = Story.objects.filter(author=request.user).count()
         
+        # My stories stats
+        my_stories = Story.objects.filter(author=request.user)
+        context['my_story_count'] = my_stories.count()
+        context['my_draft_count'] = my_stories.filter(status='DRAFT').count()
+        context['my_published_count'] = my_stories.filter(status='PUBLISHED').count()
+        context['my_review_count'] = my_stories.filter(status='REVIEW').count()
+        
+        # Last updated story
+        last_updated_story = my_stories.order_by('-updated_at').first()
+        if last_updated_story:
+            days_since = (timezone.now() - last_updated_story.updated_at).days
+            context['last_updated_days'] = days_since
+            
+        # Pending tasks stats
+        context['pending_tasks'] = Task.objects.filter(
+            assigned_to=request.user, 
+            status='PENDING'
+        ).count()
+        context['in_progress_tasks'] = Task.objects.filter(
+            assigned_to=request.user, 
+            status='IN_PROGRESS'
+        ).count()
+        context['tasks_created'] = Task.objects.filter(
+            assigned_by=request.user
+        ).count()
+        
+        # For editors and sub-editors
         if request.user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN', 'SUB_EDITOR']:
             context['awaiting_review'] = Story.objects.filter(status='REVIEW').count()
             context['all_pending_tasks'] = Task.objects.filter(status='PENDING').count()
+            context['stories_for_review'] = Story.objects.filter(status='REVIEW').order_by('-created_at')[:5]
+            
+        # For journalists and interns
+        if request.user.staff_role in ['INTERN', 'JOURNALIST']:
+            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
     
     elif request.user.user_type == CustomUser.UserType.RADIO:
+        # [Radio station user logic remains unchanged]
         station = request.user.radio_station
         if station:
             query = Q(status='PUBLISHED')

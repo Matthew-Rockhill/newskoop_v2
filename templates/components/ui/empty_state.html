@@ -1,0 +1,26 @@
+{% comment %}
+  Component: empty_state
+  Description: Displays an empty state with icon, title, message and action
+  
+  Parameters:
+    - icon: Icon name (from your icon system)
+    - title: Title text
+    - message: Message text (optional)
+    - action_url: URL for action button (optional)
+    - action_text: Text for action button (optional)
+{% endcomment %}
+
+<div class="mt-4">
+    <a href="{% url action_url %}" class="btn btn-sm btn-primary">{{ action_text }}</a>
+  </div>
+  {% endif %}
+</div>text-center py-6">
+  <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 text-gray-400 mb-4">
+    {% include "components/ui/icons.html" with name=icon size=32 %}
+  </div>
+  <p class="font-medium text-gray-800 mb-1">{{ title }}</p>
+  {% if message %}
+    <p class="text-sm text-gray-500 mb-4">{{ message }}</p>
+  {% endif %}
+  {% if action_url and action_text %}
+    <div class="

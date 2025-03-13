@@ -1,0 +1,57 @@
+{% comment %}
+  Component: task_item
+  Description: Displays a task item with title, status, priority and due date
+  
+  Parameters:
+    - task: Task object
+    - url: URL name for detail view
+    - url_param_name: Parameter name for URL (default: task_id)
+    - url_param_value: Parameter value for URL (default: task.id)
+{% endcomment %}
+
+<div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+    <div class="flex justify-between">
+      <h3 class="font-medium">
+        <a href="{% url url|default:'newsroom:task_detail' %}{{ url_param_name|default:'task_id' }}={{ url_param_value|default:task.id }}" class="hover:text-primary">
+          {{ task.title }}
+        </a>
+      </h3>
+      <span class="text-sm 
+        {% if task.priority == 'LOW' %}text-gray-500
+        {% elif task.priority == 'MEDIUM' %}text-info
+        {% elif task.priority == 'HIGH' %}text-warning
+        {% elif task.priority == 'URGENT' %}text-danger
+        {% endif %}">
+        {{ task.get_priority_display }}
+      </span>
+    </div>
+    <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+        {% if task.status == 'PENDING' %}bg-gray-100 text-gray-800
+        {% elif task.status == 'IN_PROGRESS' %}bg-info-light text-info
+        {% elif task.status == 'REVIEW' %}bg-warning-light text-warning
+        {% elif task.status == 'COMPLETED' %}bg-success-light text-success
+        {% elif task.status == 'CANCELLED' %}bg-gray-200 text-gray-600
+        {% endif %}">
+        {{ task.get_status_display }}
+      </span>
+      
+      {% if task.due_date %}
+        <span>•</span>
+        <span class="flex items-center">
+          {% include "components/ui/icons.html" with name="calendar" class="h-3 w-3 mr-1" %}
+          Due: {{ task.due_date|date:"M d, Y" }}
+        </span>
+      {% endif %}
+      
+      {% if task.related_story %}
+        <span>•</span>
+        <span class="flex items-center">
+          {% include "components/ui/icons.html" with name="document-text" class="h-3 w-3 mr-1" %}
+          <a href="{% url 'newsroom:story_detail' story_id=task.related_story.id %}" class="hover:text-primary">
+            Related Story
+          </a>
+        </span>
+      {% endif %}
+    </div>
+  </div>

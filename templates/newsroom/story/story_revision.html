@@ -1,22 +1,18 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Revision #{{ revision.revision_number }} - {{ story.title }} - Newsroom{% endblock %}
+{% block title %}Revision #{{ revision.revision_number }} - {{ story.title }} - Newskoop{% endblock %}
 {% block page_title %}Viewing Revision #{{ revision.revision_number }}{% endblock %}
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="btn btn-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
+  <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
     Restore to This Version
   </a>
   
-  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
     Back to Story
   </a>
 </div>
@@ -28,9 +24,15 @@
   <div class="col-span-1">
     <div class="space-y-6">
       <!-- Revision Info -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-800">Revision Info</h2>
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="content" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Revision Info</h2>
+            <p class="text-sm text-gray-500">Details about this version</p>
+          </div>
         </div>
         
         <div class="p-6">
@@ -52,10 +54,8 @@
           </dl>
           
           <div class="mt-6">
-            <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="btn btn-primary w-full">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+            <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary w-full">
+              {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
               Restore This Version
             </a>
           </div>
@@ -63,7 +63,7 @@
       </div>
       
       <!-- Story Timeline -->
-      <div class="bg-white rounded-lg shadow">
+      <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-800">Story Timeline</h2>
         </div>
@@ -107,17 +107,18 @@
   
   <!-- Right Column - Revision Content -->
   <div class="col-span-3">
-    <div class="bg-white rounded-lg shadow">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <div class="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h2 class="text-lg font-semibold text-gray-800">Content at Revision #{{ revision.revision_number }}</h2>
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="content" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Content at Revision #{{ revision.revision_number }}</h2>
+            <p class="text-sm text-gray-500">Viewing historical version of this story</p>
+          </div>
         </div>
-        <span class="story-status-badge story-status-{{ story.status|lower }}">
-          {{ story.get_status_display }}
-        </span>
+        {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
       </div>
       
       <div class="p-6">
@@ -130,17 +131,21 @@
     </div>
     
     {% if not forloop.first %}
-    <div class="mt-6 bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Changes from Previous Revision</h2>
+    <div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-info-50 flex items-center justify-center text-info mr-4">
+          {% include "components/ui/icons.html" with name="info" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Changes from Previous Revision</h2>
+          <p class="text-sm text-gray-500">View what was modified in this version</p>
+        </div>
       </div>
       
       <div class="p-6">
-        <div class="bg-info-light rounded-lg p-4">
+        <div class="bg-info-50 rounded-lg p-4 border border-info-100">
           <div class="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            {% include "components/ui/icons.html" with name="info" class="h-5 w-5 text-info mr-2 mt-0.5" %}
             <div>
               <p class="text-sm text-gray-600">For the complete history of changes, view the Story History in the Story Details page.</p>
             </div>

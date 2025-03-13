@@ -1,270 +1,182 @@
-{% extends "newsroom/base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Delete Category - {{ category.name }} - Newsroom{% endblock %}
+{% block title %}Delete Category - {{ category.name }} - Newskoop{% endblock %}
 {% block page_title %}Delete Category{% endblock %}
 
 {% block page_actions %}
-<div class="flex space-x-3">
-  <a href="{% url 'newsroom:category_list' %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
-    Cancel
-  </a>
-</div>
+<a href="{% url 'newsroom:category_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+  {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+  Cancel
+</a>
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-2 gap-6">
-  <!-- Left Column - Deletion Form -->
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200 bg-danger-light">
-      <div class="flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-danger mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <h2 class="text-lg font-semibold text-danger-600">Warning: You are about to delete a category</h2>
-      </div>
-    </div>
-    
-    <div class="p-6">
-      <div class="bg-danger-50 border border-danger-100 rounded-lg p-4 mb-6">
-        <div class="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-danger mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div>
-            <p class="text-danger-700">This action <strong>cannot be undone</strong>. This will permanently delete the category <strong>{{ category.name }}</strong>.</p>
+<div class="bg-white rounded-lg shadow-lg overflow-hidden border-l-4 border-danger">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <h2 class="text-xl font-bold text-danger flex items-center">
+      {% include "components/ui/icons.html" with name="warning" class="mr-2" %}
+      Confirm Category Deletion
+    </h2>
+  </div>
+  
+  <div class="p-6">
+    <!-- Warning Alert -->
+    <div class="bg-danger-light rounded-lg p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          {% include "components/ui/icons.html" with name="warning" class="text-danger" %}
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-danger">Warning</h3>
+          <div class="mt-2 text-sm text-danger">
+            <p>You are about to permanently delete the category <strong>{{ category.name }}</strong>. This action cannot be undone.</p>
+            
+            {% if story_count > 0 %}
+              <p class="mt-2">This will affect <strong>{{ story_count }} {{ story_count|pluralize:"story,stories" }}</strong> that will need to be reassigned.</p>
+            {% endif %}
+            
+            {% if subcategory_count > 0 %}
+              <p class="mt-2">This will also affect <strong>{{ subcategory_count }} {{ subcategory_count|pluralize:"subcategory,subcategories" }}</strong> that will be deleted.</p>
+            {% endif %}
           </div>
         </div>
       </div>
-      
-      <div class="space-y-4">
-        <div>
-          <h3 class="font-medium text-gray-900 mb-2">Category Details</h3>
+    </div>
+    
+    <!-- Category Details -->
+    <div class="mb-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-2">Category Details</h3>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm text-gray-500">Name</p>
+            <p class="font-medium">{{ category.name }}</p>
+          </div>
           
-          <div class="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Name:</dt>
-              <dd class="font-medium">{{ category.name }}</dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Slug:</dt>
-              <dd class="font-medium">{{ category.slug }}</dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Content Type:</dt>
-              <dd>{{ category.get_content_type_display }}</dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Level:</dt>
-              <dd>{{ category.get_level_display }}</dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Status:</dt>
-              <dd>{% if category.is_active %}Active{% else %}Inactive{% endif %}</dd>
-            </div>
-            
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Created:</dt>
-              <dd>{{ category.created_at|date:"M d, Y" }}</dd>
-            </div>
+          <div>
+            <p class="text-sm text-gray-500">Slug</p>
+            <p class="font-medium">{{ category.slug }}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500">Content Type</p>
+            <p class="font-medium">{{ category.get_content_type_display }}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500">Level</p>
+            <p class="font-medium">{{ category.get_level_display }}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500">Status</p>
+            <p class="font-medium">{% if category.is_active %}Active{% else %}Inactive{% endif %}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500">Created</p>
+            <p class="font-medium">{{ category.created_at|date:"M d, Y" }}</p>
           </div>
         </div>
         
         {% if category.description %}
-        <div>
-          <h3 class="font-medium text-gray-900 mb-2">Description</h3>
-          <div class="bg-gray-50 rounded-lg p-4 text-gray-700">
-            {{ category.description }}
-          </div>
-        </div>
-        {% endif %}
-        
-        <!-- Story reassignment section -->
-        {% if story_count > 0 %}
-        <div class="bg-warning-light rounded-lg p-4">
-          <h3 class="font-medium text-gray-900 mb-2">Stories in this category</h3>
-          <p class="text-sm text-gray-700 mb-3">
-            This category contains <strong>{{ story_count }} {{ story_count|pluralize:"story,stories" }}</strong>. 
-            Before deleting, you must decide what to do with the content.
-          </p>
-          
-          <form method="post" id="story-reassign-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="reassign">
-            
-            <div class="mt-4">
-              <div class="flex items-start">
-                <div class="flex items-center h-5">
-                  <input id="reassign" name="action" type="radio" value="reassign" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" checked>
-                </div>
-                <label for="reassign" class="ml-3 block text-sm font-medium text-gray-700">
-                  Move all stories to the default "{{ default_category.name }}" category
-                </label>
-              </div>
-            </div>
-            
-            <div class="mt-3">
-              <button type="submit" class="btn btn-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Move Stories and Delete Category
-              </button>
-            </div>
-          </form>
-        </div>
-        {% endif %}
-        
-        <!-- Subcategory handling section -->
-        {% if subcategory_count > 0 %}
-        <div class="bg-warning-light rounded-lg p-4">
-          <h3 class="font-medium text-gray-900 mb-2">Subcategories</h3>
-          <p class="text-sm text-gray-700 mb-3">
-            This category has <strong>{{ subcategory_count }} {{ subcategory_count|pluralize:"subcategory,subcategories" }}</strong>.
-            Before deleting, you must decide what to do with them.
-          </p>
-          
-          <form method="post" id="subcategory-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="delete_subcategories">
-            
-            <div class="mt-4">
-              <div class="flex items-start">
-                <div class="flex items-center h-5">
-                  <input id="delete_subcategories" name="action" type="radio" value="delete_subcategories" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" checked>
-                </div>
-                <label for="delete_subcategories" class="ml-3 block text-sm font-medium text-gray-700">
-                  Delete all subcategories and move their stories to "{{ default_category.name }}"
-                </label>
-              </div>
-            </div>
-            
-            <div class="mt-3">
-              <button type="submit" class="btn btn-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Delete Subcategories and Category
-              </button>
-            </div>
-          </form>
-        </div>
-        {% endif %}
-        
-        <!-- Direct deletion form (only shown when there are no stories or subcategories) -->
-        {% if story_count == 0 and subcategory_count == 0 %}
-        <div class="mt-6 border-t border-gray-200 pt-6">
-          <form method="post" id="category-delete-form">
-            {% csrf_token %}
-            <p class="mb-4">Please confirm that you want to delete this category.</p>
-            <button type="submit" class="btn btn-danger">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete Category Permanently
-            </button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  
-  <!-- Right Column - Information and Warnings -->
-  <div class="space-y-6">
-    <!-- Verification Box -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">Verification</h3>
-      </div>
-      
-      <div class="p-6">
-        {% if story_count > 0 or subcategory_count > 0 %}
-        <div class="bg-warning-light rounded-lg p-4">
-          <div class="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div>
-              <h4 class="font-medium">Caution</h4>
-              <ul class="mt-1 text-sm space-y-1">
-                {% if story_count > 0 %}
-                <li>This category has {{ story_count }} {{ story_count|pluralize:"story,stories" }}</li>
-                {% endif %}
-                {% if subcategory_count > 0 %}
-                <li>This category has {{ subcategory_count }} {{ subcategory_count|pluralize:"subcategory,subcategories" }}</li>
-                {% endif %}
-              </ul>
-            </div>
-          </div>
-        </div>
-        {% else %}
-        <div class="bg-success-light rounded-lg p-4">
-          <div class="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <div>
-              <h4 class="font-medium">Safe to Delete</h4>
-              <ul class="mt-1 text-sm space-y-1">
-                <li>This category has no stories</li>
-                <li>This category has no subcategories</li>
-                <li>The category is not a default category</li>
-              </ul>
-            </div>
-          </div>
+        <div class="mt-4">
+          <p class="text-sm text-gray-500">Description</p>
+          <p class="text-sm text-gray-700 mt-1">{{ category.description }}</p>
         </div>
         {% endif %}
       </div>
     </div>
     
-    <!-- Important Information -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">Important Information</h3>
-      </div>
-      
-      <div class="p-6">
-        <div class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <h4 class="font-medium text-gray-700 mb-2">What happens when you delete a category?</h4>
-            <ul class="text-sm text-gray-600 space-y-2">
-              <li class="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Stories in the category may be moved to the default "Uncategorized" category</span>
-              </li>
-              <li class="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Subcategories may be deleted, with their stories moved to the default category</span>
-              </li>
-              <li class="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>The category will be removed from all menus in the Radio Zone</span>
-              </li>
-              <li class="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>This action cannot be undone</span>
-              </li>
-            </ul>
+    <!-- Confirmation Forms -->
+    {% if story_count > 0 %}
+    <div class="mb-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-2">Stories in this category</h3>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <p class="mb-3 text-sm text-gray-700">
+          This category contains <strong>{{ story_count }} {{ story_count|pluralize:"story,stories" }}</strong>. 
+          Before deleting, you must decide what to do with the content.
+        </p>
+        
+        <form method="post" id="story-reassign-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reassign">
+          
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input id="reassign" name="action" type="radio" value="reassign" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" checked>
+            </div>
+            <label for="reassign" class="ml-3 block text-sm font-medium text-gray-700">
+              Move all stories to the default "{{ default_category.name }}" category
+            </label>
           </div>
-        </div>
+          
+          <div class="mt-3">
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+              {% include "components/ui/icons.html" with name="trash" class="mr-2" %}
+              Move Stories and Delete Category
+            </button>
+          </div>
+        </form>
       </div>
     </div>
+    {% endif %}
+    
+    {% if subcategory_count > 0 %}
+    <div class="mb-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-2">Subcategories</h3>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <p class="mb-3 text-sm text-gray-700">
+          This category has <strong>{{ subcategory_count }} {{ subcategory_count|pluralize:"subcategory,subcategories" }}</strong>.
+          Before deleting, you must decide what to do with them.
+        </p>
+        
+        <form method="post" id="subcategory-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_subcategories">
+          
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input id="delete_subcategories" name="action" type="radio" value="delete_subcategories" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" checked>
+            </div>
+            <label for="delete_subcategories" class="ml-3 block text-sm font-medium text-gray-700">
+              Delete all subcategories and move their stories to "{{ default_category.name }}"
+            </label>
+          </div>
+          
+          <div class="mt-3">
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+              {% include "components/ui/icons.html" with name="trash" class="mr-2" %}
+              Delete Subcategories and Category
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Direct deletion form (only shown when there are no stories or subcategories) -->
+    {% if story_count == 0 and subcategory_count == 0 %}
+    <form method="post" id="category-delete-form" class="space-y-4">
+      {% csrf_token %}
+      
+      <div class="space-y-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <label for="confirmation" class="block text-sm font-medium text-gray-700">
+          To confirm deletion, type <span class="font-bold text-danger">{{ category.name }}</span> below:
+        </label>
+        <input type="text" name="confirmation" id="confirmation" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" required placeholder="Enter category name to confirm">
+        <p class="text-xs text-gray-500">This helps prevent accidental deletions.</p>
+      </div>
+      
+      <div class="pt-4 flex justify-end">
+        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-danger hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger">
+          {% include "components/ui/icons.html" with name="trash" class="mr-2" %}
+          Permanently Delete Category
+        </button>
+      </div>
+    </form>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
