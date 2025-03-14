@@ -5,17 +5,12 @@ from dotenv import load_dotenv
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Environment settings
-# Can be 'development', 'production', or 'testing'
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
-IS_PRODUCTION = ENVIRONMENT == 'production'
-
-# Debug settings - can be enabled even in production if needed
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-for-development')
 
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
 
 INSTALLED_APPS = [
     # Django default apps
@@ -40,9 +35,7 @@ INSTALLED_APPS = [
     # add other local apps here
 ]
 
-# Only set NPM_BIN_PATH on Windows development environment
-if os.name == 'nt' and not IS_PRODUCTION:
-    NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
 TAILWIND_APP_NAME = 'theme'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
@@ -63,7 +56,7 @@ ROOT_URLCONF = 'newskoop.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  
+        'DIRS': [BASE_DIR / 'templates'],  # your templates are here
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -79,17 +72,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'newskoop.wsgi.application' 
 
 # Database configuration
-# Use PostgreSQL in production, SQLite in development
-if IS_PRODUCTION:
+DATABASE_URL = os.getenv('DATABASE_URL', None)
+if DATABASE_URL:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DATABASE_NAME', 'newskoop'),
-            'USER': os.getenv('DATABASE_USER', 'nksuper'),
-            'PASSWORD': os.getenv('DATABASE_PASSWORD', 'Nk195330Db#'),
-            'HOST': os.getenv('DATABASE_HOST', 'localhost'),
-            'PORT': os.getenv('DATABASE_PORT', '5432'),
-        }
+        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
     }
 else:
     DATABASES = {
@@ -124,31 +110,23 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# Custom User Group settings
+# Custom User Group settings (example)
 CUSTOM_USER_GROUPS = {
     'STAFF': 'Newskoop Staff',
     'RADIO': 'Radio Users',
 }
 
+# Crispy forms configuration
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Security settings - decouple from DEBUG so we can have DEBUG=True in production if needed
-# if IS_PRODUCTION:
-#     # Production security settings
-#     SECURE_SSL_REDIRECT = True
-#     SESSION_COOKIE_SECURE = True
-#     CSRF_COOKIE_SECURE = True
-#     SECURE_BROWSER_XSS_FILTER = True
-#     SECURE_HSTS_SECONDS = 2592000  # 30 days
-#     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-#     SECURE_HSTS_PRELOAD = True
-    
-#     # Add your production domain to trusted origins
-#     CSRF_TRUSTED_ORIGINS = [f'https://{os.getenv("DOMAIN", "yourdomain.com")}']
+CSRF_TRUSTED_ORIGINS = [f'https://*.vercel.app']
+if os.environ.get('CUSTOM_DOMAIN'):
+    CSRF_TRUSTED_ORIGINS.append(f'https://{os.environ.get("CUSTOM_DOMAIN")}')
 
-# Development security settings
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+# Configure security settings
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
-CSRF_TRUSTED_ORIGINS = []
