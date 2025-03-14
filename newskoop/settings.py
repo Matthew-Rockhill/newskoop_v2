@@ -132,20 +132,20 @@ CUSTOM_USER_GROUPS = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Security settings - decouple from DEBUG so we can have DEBUG=True in production if needed
-if IS_PRODUCTION:
-    # Production security settings
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_HSTS_SECONDS = 2592000  # 30 days
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+# # Security settings - decouple from DEBUG so we can have DEBUG=True in production if needed
+# if IS_PRODUCTION:
+#     # Production security settings
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
+#     SECURE_BROWSER_XSS_FILTER = True
+#     SECURE_HSTS_SECONDS = 2592000  # 30 days
+#     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#     SECURE_HSTS_PRELOAD = True
     
-    # Add your production domain to trusted origins
-    CSRF_TRUSTED_ORIGINS = [f'https://{os.getenv("DOMAIN", "yourdomain.com")}']
-else:
+#     # Add your production domain to trusted origins
+#     CSRF_TRUSTED_ORIGINS = [f'https://{os.getenv("DOMAIN", "yourdomain.com")}']
+# else:
     # Development security settings
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
