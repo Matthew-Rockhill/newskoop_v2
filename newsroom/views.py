@@ -1,6 +1,8 @@
 import os
 import uuid
 import logging
+import json
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -25,6 +27,18 @@ from .permissions import (
     staff_required, editor_required, publishing_rights_required,
     can_edit_story, can_manage_task, can_manage_categories, has_radio_access
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('story_creation.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('newsroom.story_creation')
+
 
 # Create an inline formset for AudioClip linked to a Story.
 AudioClipFormSet = inlineformset_factory(
@@ -226,6 +240,43 @@ def story_detail(request, story_id):
     }
     return render(request, 'newsroom/story/story_detail.html', context)
 
+def debug_story_create(original_view):
+    def wrapped_view(request, *args, **kwargs):
+        logger.info(f"---- Story creation attempt by {request.user} ----")
+        
+        if request.method == 'POST':
+            # Log POST data (excluding content which might be too large)
+            post_data = {k: v for k, v in request.POST.items() if k != 'content'}
+            logger.info(f"POST data: {json.dumps(post_data)}")
+            
+            # Log file info
+            file_info = []
+            for key, file in request.FILES.items():
+                file_info.append({
+                    'name': key,
+                    'file_name': file.name,
+                    'size': file.size,
+                    'content_type': file.content_type
+                })
+            logger.info(f"FILES data: {json.dumps(file_info)}")
+        
+        try:
+            return original_view(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Exception in story_create: {str(e)}")
+            logger.error(traceback.format_exc())
+            messages.error(request, "An error occurred while saving your story. Please try again.")
+            
+            # Re-render the form with error message
+            story_form = StoryForm(request.POST, user=request.user, is_new=True)
+            context = {
+                'form': story_form,
+                'is_new': True,
+            }
+            return render(request, 'newsroom/story/story_create.html', context)
+    
+    return wrapped_view
+
 @staff_required
 def story_create(request):
     """Create a new story with drag-and-drop audio upload"""
@@ -236,12 +287,23 @@ def story_create(request):
             story.author = request.user
             story.save()
             
-            # Process individual audio files
-            # Find all file inputs with names starting with 'audio_file_'
+            # Process audio files - track which files we've processed
+            processed_files = set()
             audio_files = []
+            
+            # First check for files with audio_file_X pattern (our JS enhancement)
             for key in request.FILES:
                 if key.startswith('audio_file_'):
-                    audio_files.append(request.FILES[key])
+                    file = request.FILES[key]
+                    audio_files.append(file)
+                    processed_files.add(file.name)  # Track by filename
+            
+            # Then check for multiple files uploaded via audio_files field
+            # But only process files we haven't seen yet
+            if 'audio_files' in request.FILES:
+                for file in request.FILES.getlist('audio_files'):
+                    if file.name not in processed_files:
+                        audio_files.append(file)
             
             # Process each audio file
             for file in audio_files:
@@ -267,7 +329,9 @@ def story_create(request):
             messages.success(request, "Story created successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
         else:
-            logging.error("StoryForm errors: %s", story_form.errors)
+            # Debug: Log the form errors
+            print(f"Form errors: {story_form.errors}")
+            messages.error(request, "Please correct the errors below")
     else:
         story_form = StoryForm(user=request.user, is_new=True)
         title = request.GET.get('title')
@@ -280,6 +344,8 @@ def story_create(request):
     }
     return render(request, 'newsroom/story/story_create.html', context)
 
+story_create = debug_story_create(story_create)
+
 @staff_required
 @can_edit_story
 def story_edit(request, story_id, story=None):
@@ -288,6 +354,18 @@ def story_edit(request, story_id, story=None):
         # Check if this is a status update (e.g., submit for review)
         new_status = request.POST.get('status')
         
+        # If we're just updating the status (like Submit for Review from the detail page)
+        if new_status and not request.POST.get('is_full_edit', False):
+            if new_status in dict(Story.STATUS_CHOICES).keys():
+                # Update just the status without requiring full form validation
+                story.status = new_status
+                story.save()
+                
+                status_display = dict(Story.STATUS_CHOICES)[new_status]
+                messages.success(request, f"Story status updated to {status_display}")
+                return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Otherwise, handle as a full edit
         story_form = StoryForm(request.POST, instance=story, user=request.user, is_new=False)
         if story_form.is_valid():
             updated_story = story_form.save(commit=False)
@@ -311,7 +389,6 @@ def story_edit(request, story_id, story=None):
                 )
             
             # Process individual audio files
-            # Find all file inputs with names starting with 'audio_file_'
             audio_files = []
             for key in request.FILES:
                 if key.startswith('audio_file_'):
@@ -319,10 +396,7 @@ def story_edit(request, story_id, story=None):
             
             # Process each audio file
             for file in audio_files:
-                # Generate a title from the filename (strip extension)
                 title = os.path.splitext(file.name)[0]
-                
-                # Create the audio clip
                 AudioClip.objects.create(
                     story=story,
                     title=title,
@@ -334,6 +408,7 @@ def story_edit(request, story_id, story=None):
             return redirect('newsroom:story_detail', story_id=story.id)
         else:
             logging.error("StoryForm errors: %s", story_form.errors)
+            messages.error(request, "Please correct the errors below")
     else:
         story_form = StoryForm(instance=story, user=request.user, is_new=False)
     
@@ -354,20 +429,56 @@ def story_publish(request, story_id, story=None):
         return redirect('newsroom:story_detail', story_id=story.id)
     
     if request.method == 'POST':
-        form = StoryPublishForm(request.POST, story=story)
-        if form.is_valid():
+        action = request.POST.get('action')
+        
+        if action == 'publish':
+            # Get the publication date (use current time if not provided)
+            published_at_str = request.POST.get('published_at')
+            if published_at_str:
+                try:
+                    # Parse the datetime-local input value (format: YYYY-MM-DDThh:mm)
+                    published_at = timezone.datetime.strptime(published_at_str, '%Y-%m-%dT%H:%M')
+                    # Make it timezone-aware
+                    published_at = timezone.make_aware(published_at)
+                except (ValueError, TypeError):
+                    # If there's any error parsing, use current time
+                    published_at = timezone.now()
+            else:
+                published_at = timezone.now()
+            
+            # Get editorial notes if provided
+            editorial_notes = request.POST.get('editorial_notes', '')
+            
+            # Update the story
             story.status = 'PUBLISHED'
-            story.published_at = timezone.now()
+            story.published_at = published_at
             story.editor = request.user
+            
+            # Save the changes
             story.save()
+            
+            # Log the editorial notes if provided
+            if editorial_notes:
+                # You might want to store these notes in a separate model
+                # For now, we'll just print them
+                print(f"Editorial notes for {story.id}: {editorial_notes}")
+            
+            # Handle notifications if selected
+            should_notify = request.POST.get('send_notifications') is not None
+            if should_notify:
+                # Send notifications logic would go here
+                # For now, just log it
+                print(f"Should send notifications for story {story.id}")
+            
             messages.success(request, "Story published successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
-    else:
-        form = StoryPublishForm(story=story)
+    
+    # For GET requests, prepare the form context
+    now = timezone.now()
     
     context = {
-        'form': form,
-        'story': story
+        'story': story,
+        'now': now,
     }
     return render(request, 'newsroom/story/story_publish.html', context)
 

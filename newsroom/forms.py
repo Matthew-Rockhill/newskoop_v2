@@ -103,29 +103,60 @@ class StoryForm(forms.ModelForm):
         self.is_new = kwargs.pop('is_new', True)
         super().__init__(*args, **kwargs)
         
-        # For interns and journalists, remove fields they shouldn’t set.
+        # Set the content field as required
+        self.fields['content'].required = True
+        
+        # For interns and journalists, remove fields they shouldn't set
         if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
             self.fields.pop('category', None)
             self.fields.pop('religion_classification', None)
-        # Editors/Sub-Editors keep all fields.
+            
+        # Ensure the category field is available to editors and admins
+        elif self.user and self.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            # Make sure the category queryset is properly set
+            if 'category' in self.fields:
+                self.fields['category'].queryset = Category.objects.filter(
+                    level__in=[2, 3]  # Only allow parent categories and subcategories
+                ).order_by('content_type', 'name')
+    
+    def clean_content(self):
+        """Ensure content is not empty after HTML cleanup"""
+        content = self.cleaned_data.get('content')
+        if not content or content.strip() == '':
+            raise forms.ValidationError("Content is required")
+        return content
     
     def clean(self):
         cleaned_data = super().clean()
-        # Additional validations can be added here.
+        
+        # If category is not in the form (for interns/journalists), don't validate it
+        if 'category' not in self.fields:
+            return cleaned_data
+            
+        # Ensure category is provided for others
+        category = cleaned_data.get('category')
+        if not category and self.user and self.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            self.add_error('category', "Please select a category")
+            
         return cleaned_data
     
     def save(self, commit=True):
         story = super().save(commit=False)
-        # For interns/journalists, assign default values.
-        if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
-            # Use the default category (adjust content type as appropriate)
+        
+        # For interns/journalists, assign default values if creating a new story
+        if self.is_new and self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
+            # Use the default category for NEWS_STORIES content type
             default_category = Category.get_or_create_default('NEWS_STORIES')
             story.category = default_category
             story.religion_classification = 'GENERAL'
-        if not story.pk:
+        
+        # Always set the author when creating a new story
+        if self.is_new and self.user:
             story.author = self.user
+        
         if commit:
             story.save()
+            
         return story
 
 class AudioClipForm(forms.ModelForm):
