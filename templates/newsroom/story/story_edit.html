@@ -11,33 +11,51 @@
 
 {% block page_actions %}
 <div class="flex justify-end space-x-3">
+  {# Save Changes button (always shown) #}
   <button type="submit" form="story-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="save" class="mr-2" %}
     Save Changes
   </button>
+  
+  {# Publish button for editors #}
   {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' and story.status != 'PUBLISHED' %}
     <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
       {% include "components/ui/icons.html" with name="check" class="mr-2" %}
       Publish
     </a>
   {% endif %}
+  
+  {# Submit for Review button for authors of draft stories #}
   {% if story.author == user and story.status == 'DRAFT' %}
     <button type="submit" form="submit-review-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
       {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
       Submit for Review
     </button>
   {% endif %}
+  
+  {# Cancel button (always shown) #}
   <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
     Cancel
   </a>
 </div>
 
-<!-- Hidden form for submit to review action -->
+{# Hidden form for submit to review action #}
 <form id="submit-review-form" method="post" action="{% url 'newsroom:story_edit' story_id=story.id %}" class="hidden">
   {% csrf_token %}
   <input type="hidden" name="status" value="REVIEW">
-  <!-- Copy all form fields from main form using JavaScript -->
+  <input type="hidden" name="title" value="{{ form.title.value|default:'' }}">
+  <input type="hidden" name="content" value="{{ form.content.value|default:'' }}">
+  
+  {% if form.category %}
+    <input type="hidden" name="category" value="{{ form.category.value|default:'' }}">
+  {% endif %}
+  
+  {% if form.religion_classification %}
+    <input type="hidden" name="religion_classification" value="{{ form.religion_classification.value|default:'' }}">
+  {% endif %}
+  
+  <input type="hidden" name="language" value="{{ form.language.value|default:'' }}">
 </form>
 {% endblock %}
 

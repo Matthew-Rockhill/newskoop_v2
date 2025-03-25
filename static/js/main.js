@@ -130,6 +130,7 @@ function updateToggleAppearance(toggle, isChecked) {
 function initStoryEditor() {
   const editorContainer = document.getElementById('content-editor');
   const contentInput = document.getElementById('id_content');
+  const storyForm = document.getElementById('story-form');
   
   if (editorContainer && contentInput) {
     // Configure Quill toolbar options
@@ -164,28 +165,116 @@ function initStoryEditor() {
     }
 
     // When form is submitted, update the hidden input with Quill content
-    const storyForm = document.getElementById('story-form');
     if (storyForm) {
-      storyForm.addEventListener('submit', function() {
-        contentInput.value = quill.root.innerHTML;
+      storyForm.addEventListener('submit', function(e) {
+        // For story-create page, enhance submission process
+        if (window.location.pathname.includes('/stories/create/')) {
+          e.preventDefault();
+          
+          // Update the hidden input with Quill content
+          contentInput.value = quill.root.innerHTML;
+          
+          // Create FormData object
+          const formData = new FormData(storyForm);
+          
+          // Handle audio files properly
+          const audioInput = document.getElementById('audio_files');
+          if (audioInput && audioInput.files && audioInput.files.length > 0) {
+            // First, remove the standard audio_files field to prevent duplication
+            formData.delete('audio_files');
+            
+            // Add each file with our custom naming pattern
+            for (let i = 0; i < audioInput.files.length; i++) {
+              formData.append(`audio_file_${i}`, audioInput.files[i]);
+            }
+          }          
+     
+          // Submit the form using fetch API
+          fetch(storyForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+          })
+          .then(response => {
+            if (response.redirected) {
+              // If redirected, go to the new URL (story detail page)
+              window.location.href = response.url;
+            } else {
+              // Parse the response to check for errors
+              return response.text();
+            }
+          })
+          .then(html => {
+            if (html) {
+              // If we got HTML back, there might be form errors
+              // Replace the current form with the new one containing error messages
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = html;
+              const newForm = tempDiv.querySelector('#story-form');
+              if (newForm) {
+                storyForm.innerHTML = newForm.innerHTML;
+                // Reinitialize Quill
+                initStoryEditor();
+              } else {
+                console.error('Form submission error occurred');
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error submitting form:', error);
+          });
+        } else {
+          // For other pages, just update the hidden input
+          contentInput.value = quill.root.innerHTML;
+        }
       });
     }
 
-    // If we have a "Submit for Review" form, also update content there
-    const reviewForm = document.getElementById('submit-review-form');
-    if (reviewForm) {
-      reviewForm.addEventListener('submit', function() {
-        // Create a hidden input for content if it doesn't exist
-        let reviewContentInput = reviewForm.querySelector('input[name="content"]');
-        if (!reviewContentInput) {
-          reviewContentInput = document.createElement('input');
-          reviewContentInput.type = 'hidden';
-          reviewContentInput.name = 'content';
-          reviewForm.appendChild(reviewContentInput);
+    // Specifically handle the "Submit for Review" button click
+    const submitReviewBtn = document.querySelector('button[form="submit-review-form"]');
+    const submitReviewForm = document.getElementById('submit-review-form');
+
+    if (submitReviewBtn && submitReviewForm && quill) {
+      submitReviewBtn.addEventListener('click', function(e) {
+        // Prevent the default form submission
+        e.preventDefault();
+        
+        // Update the content input in the submit-review-form with the current Quill content
+        const contentInput = submitReviewForm.querySelector('input[name="content"]');
+        if (contentInput) {
+          contentInput.value = quill.root.innerHTML;
+        } else {
+          // If the content input doesn't exist, create it
+          const newContentInput = document.createElement('input');
+          newContentInput.type = 'hidden';
+          newContentInput.name = 'content';
+          newContentInput.value = quill.root.innerHTML;
+          submitReviewForm.appendChild(newContentInput);
         }
         
-        // Set the value to the current Quill content
-        reviewContentInput.value = quill.root.innerHTML;
+        // Make sure the title is also transferred
+        const titleInput = submitReviewForm.querySelector('input[name="title"]');
+        const mainTitleInput = document.querySelector('#story-form input[name="title"]');
+        if (titleInput && mainTitleInput) {
+          titleInput.value = mainTitleInput.value;
+        }
+        
+        // Also transfer any other important fields
+        const fieldsToTransfer = ['category', 'religion_classification', 'language'];
+        fieldsToTransfer.forEach(field => {
+          const mainInput = document.querySelector(`#story-form [name="${field}"]`);
+          const reviewInput = submitReviewForm.querySelector(`input[name="${field}"]`);
+          
+          if (mainInput && reviewInput && mainInput.value) {
+            reviewInput.value = mainInput.value;
+          }
+        });
+        
+        // Now submit the form
+        submitReviewForm.submit();
       });
     }
   }
@@ -216,7 +305,11 @@ function initAudioUpload() {
           
           // Create a preview container
           const container = document.createElement('div');
-          container.className = 'border rounded-md p-3 mb-3 flex items-center';
+          container.className = 'border rounded-md p-3 mb-3 flex items-center justify-between';
+          
+          // Left side with icon and info
+          const leftDiv = document.createElement('div');
+          leftDiv.className = 'flex items-center';
           
           // Icon
           const iconDiv = document.createElement('div');
@@ -238,9 +331,44 @@ function initAudioUpload() {
           infoDiv.appendChild(fileName);
           infoDiv.appendChild(fileSize);
           
+          leftDiv.appendChild(iconDiv);
+          leftDiv.appendChild(infoDiv);
+          
+          // Right side with remove button
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'text-danger hover:text-danger-dark focus:outline-none';
+          removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
+          
+          // Add click event to remove this file
+          removeBtn.addEventListener('click', function() {
+            // Remove this file from the input
+            // We need to create a new FileList since it's read-only
+            const dt = new DataTransfer();
+            const files = audioInput.files;
+            
+            for (let j = 0; j < files.length; j++) {
+              // Skip the file we want to remove
+              if (j !== i) {
+                dt.items.add(files[j]);
+              }
+            }
+            
+            // Set the new FileList to the input
+            audioInput.files = dt.files;
+            
+            // Remove the container from the preview
+            container.remove();
+            
+            // If all files are removed, clear the preview
+            if (audioInput.files.length === 0) {
+              audioPreview.innerHTML = '';
+            }
+          });
+          
           // Add components to container
-          container.appendChild(iconDiv);
-          container.appendChild(infoDiv);
+          container.appendChild(leftDiv);
+          container.appendChild(removeBtn);
           
           // Add container to preview area
           audioPreview.appendChild(container);
