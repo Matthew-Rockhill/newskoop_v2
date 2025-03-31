@@ -643,6 +643,9 @@ def category_create(request):
             category = form.save()
             messages.success(request, "Category created successfully")
             return redirect('newsroom:category_list')
+        else:
+            logging.error("CategoryForm errors: %s", form.errors)
+            messages.error(request, "Please correct the errors below")
     else:
         form = CategoryForm()
         
@@ -680,8 +683,9 @@ def category_edit(request, category_id):
         return redirect('newsroom:category_list')
     
     if request.method == 'POST':
-        # Log the full POST data for debugging.
-        logging.debug("POST data: %s", request.POST)
+        # Log the full POST data for debugging
+        logging.debug("Category edit POST data: %s", request.POST)
+        
         form = CategoryForm(request.POST, instance=category, is_editing=True)
         if form.is_valid():
             form.save()
@@ -689,6 +693,7 @@ def category_edit(request, category_id):
             return redirect('newsroom:category_list')
         else:
             logging.error("CategoryForm errors for category %s: %s", category.id, form.errors)
+            messages.error(request, "Please correct the errors below")
     else:
         form = CategoryForm(instance=category, is_editing=True)
     

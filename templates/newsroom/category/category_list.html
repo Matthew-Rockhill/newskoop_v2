@@ -97,7 +97,7 @@
           
           <!-- Parent Categories (Level 2) -->
           {% if category_data.children %}
-          <div class="hidden pl-8 pb-3 border-t border-gray-50" id="children-{{ category_data.category.id }}">
+          <div class="hidden pl-6 pr-4 pb-3 border-t border-gray-50" id="children-{{ category_data.category.id }}">
             {% for parent_data in category_data.children %}
               <div class="border-b border-gray-100 py-3">
                 <div class="flex items-center justify-between">
@@ -145,43 +145,45 @@
                     {% include "components/ui/icons.html" with name="chevron-right" class="h-3 w-3 mr-1 subcategories-icon" %}
                     <span>{{ parent_data.children|length }} subcategories</span>
                   </button>
-                </div>
                 
-                <!-- Subcategories (Level 3) -->
-                <div class="hidden pl-6 mt-2" id="subcategories-{{ parent_data.category.id }}">
-                  <div class="grid grid-cols-2 gap-2 mt-2">
-                    {% for subcategory in parent_data.children %}
-                      <div class="border border-gray-100 rounded p-2 bg-gray-50">
-                        <div class="flex justify-between items-start">
-                          <div>
-                            <h5 class="text-xs font-medium text-gray-800">{{ subcategory.category.name }}</h5>
-                            <div class="text-xs text-gray-500">{{ subcategory.story_count }} {{ subcategory.story_count|pluralize:"story,stories" }}</div>
-                          </div>
-                          
-                          <div class="flex flex-col items-end">
-                            {% if not subcategory.category.is_active %}
-                            <span class="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full mb-1">Inactive</span>
-                            {% endif %}
-                            
-                            {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-                            <div class="flex space-x-1">
-                              <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                                {% include "components/ui/icons.html" with name="edit" class="h-3 w-3" %}
-                              </a>
+                  <!-- Subcategories (Level 3) -->
+                  <div class="hidden pl-4 mt-2" id="subcategories-{{ parent_data.category.id }}">
+                    <div class="bg-gray-100 p-3 rounded-md">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {% for subcategory in parent_data.children %}
+                          <div class="border border-gray-100 rounded p-2 bg-white">
+                            <div class="flex justify-between items-start">
+                              <div class="max-w-[70%]">
+                                <h5 class="text-xs font-medium text-gray-800 break-words">{{ subcategory.category.name }}</h5>
+                                <div class="text-xs text-gray-500">{{ subcategory.story_count }} {{ subcategory.story_count|pluralize:"story,stories" }}</div>
+                              </div>
                               
-                              {% if subcategory.category.is_deletable %}
-                              <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                                {% include "components/ui/icons.html" with name="trash" class="h-3 w-3" %}
-                              </a>
-                              {% endif %}
+                              <!-- Keep the rest of your subcategory code here -->
+                              <div class="flex flex-col items-end">
+                                {% if not subcategory.category.is_active %}
+                                <span class="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full mb-1">Inactive</span>
+                                {% endif %}
+                                
+                                {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+                                <div class="flex space-x-1">
+                                  <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
+                                    {% include "components/ui/icons.html" with name="edit" class="h-3 w-3" %}
+                                  </a>
+                                  
+                                  {% if subcategory.category.is_deletable %}
+                                  <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
+                                    {% include "components/ui/icons.html" with name="trash" class="h-3 w-3" %}
+                                  </a>
+                                  {% endif %}
+                                </div>
+                                {% endif %}
+                              </div>
                             </div>
-                            {% endif %}
                           </div>
-                        </div>
+                        {% endfor %}
                       </div>
-                    {% endfor %}
+                    </div>
                   </div>
-                </div>
                 {% endif %}
               </div>
             {% endfor %}
@@ -229,94 +231,4 @@
   </div>
   {% endfor %}
 </div>
-
-<script type="text/javascript">
-  document.addEventListener('DOMContentLoaded', function() {
-    // Section toggles (content type accordions)
-    const sectionHeaders = document.querySelectorAll('.section-header');
-    sectionHeaders.forEach(header => {
-      const targetId = header.getAttribute('data-target');
-      const targetElement = document.getElementById(targetId);
-      const icon = header.querySelector('.toggle-icon');
-      
-      // Set initial state: expanded
-      if (targetElement && icon) {
-        targetElement.classList.remove('hidden');
-        icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-up" %}';
-      }
-      
-      header.addEventListener('click', function() {
-        if (targetElement && icon) {
-          if (targetElement.classList.contains('hidden')) {
-            targetElement.classList.remove('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-up" %}';
-          } else {
-            targetElement.classList.add('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
-          }
-        }
-      });
-    });
-    
-    // Children toggles (subcategories)
-    const childrenToggles = document.querySelectorAll('.children-toggle');
-    childrenToggles.forEach(toggle => {
-      toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const targetId = this.getAttribute('data-target');
-        const targetElement = document.getElementById(targetId);
-        const icon = this.querySelector('.children-icon');
-        const textSpan = this.querySelector('span');
-        
-        if (targetElement && icon) {
-          if (targetElement.classList.contains('hidden')) {
-            targetElement.classList.remove('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
-            if (textSpan) {
-              const count = textSpan.textContent.split(' ')[0];
-              textSpan.textContent = count + ' subcategories (hide)';
-            }
-          } else {
-            targetElement.classList.add('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-right" %}';
-            if (textSpan) {
-              const count = textSpan.textContent.split(' ')[0];
-              textSpan.textContent = count + ' subcategories';
-            }
-          }
-        }
-      });
-    });
-    
-    // Subcategory toggles
-    const subToggles = document.querySelectorAll('.subcategories-toggle');
-    subToggles.forEach(toggle => {
-      toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const targetId = this.getAttribute('data-target');
-        const targetElement = document.getElementById(targetId);
-        const icon = this.querySelector('.subcategories-icon');
-        const textSpan = this.querySelector('span');
-        
-        if (targetElement && icon) {
-          if (targetElement.classList.contains('hidden')) {
-            targetElement.classList.remove('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-down" %}';
-            if (textSpan) {
-              const count = textSpan.textContent.split(' ')[0];
-              textSpan.textContent = count + ' subcategories (hide)';
-            }
-          } else {
-            targetElement.classList.add('hidden');
-            icon.innerHTML = '{% include "components/ui/icons.html" with name="chevron-right" %}';
-            if (textSpan) {
-              const count = textSpan.textContent.split(' ')[0];
-              textSpan.textContent = count + ' subcategories';
-            }
-          }
-        }
-      });
-    });
-  });
-</script>
 {% endblock %}
