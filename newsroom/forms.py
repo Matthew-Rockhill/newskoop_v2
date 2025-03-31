@@ -11,7 +11,7 @@ class CategoryForm(forms.ModelForm):
 
     class Meta:
         model = Category
-        fields = ['name', 'slug', 'description', 'content_type', 'parent', 'is_active']
+        fields = ['name', 'description', 'content_type', 'parent', 'is_active']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -30,14 +30,6 @@ class CategoryForm(forms.ModelForm):
             self.fields['is_active'].widget.attrs.update({'class': 'form-check-input'})
 
         if self.is_editing and self.instance and self.instance.pk:
-            # Set the slug field to not required so that if it is missing from POST,
-            # the form will not immediately complain.
-            self.fields['slug'].required = False
-            # Use HiddenInput so its value is submitted.
-            self.fields['slug'].widget = forms.HiddenInput()
-            # Explicitly set the initial value of slug from the instance.
-            self.fields['slug'].initial = self.instance.slug
-            
             if self.instance.parent is None:
                 # For a parent category, disable content_type to prevent changes.
                 self.fields['content_type'].disabled = True
@@ -74,14 +66,31 @@ class CategoryForm(forms.ModelForm):
         self.fields['parent'].queryset = potential_parents
         self.fields['parent'].empty_label = "None (Top Level Category)"
 
-    def clean_slug(self):
-        # If the slug field comes in empty, use the instance slug or generate one from the name.
-        slug = self.cleaned_data.get('slug')
-        name = self.cleaned_data.get('name')
-        if not slug:
-            # Prefer the instance slug if available, otherwise auto-generate.
-            return self.instance.slug if self.instance and self.instance.slug else slugify(name)
-        return slugify(slug)
+    def save(self, commit=True):
+        # Get the instance, but don't save it yet
+        instance = super().save(commit=False)
+        
+        # Generate slug from name
+        original_slug = slugify(instance.name)
+        if not instance.pk:  # New category
+            instance.slug = original_slug
+        elif not instance.slug:  # Existing category with no slug
+            instance.slug = original_slug
+        
+        # Ensure uniqueness for the slug
+        counter = 1
+        temp_slug = instance.slug
+        while Category.objects.filter(slug=temp_slug).exclude(pk=instance.pk).exists():
+            temp_slug = f"{original_slug}-{counter}"
+            counter += 1
+        
+        instance.slug = temp_slug
+        
+        # Now save if commit is True
+        if commit:
+            instance.save()
+            
+        return instance
     
 class StoryForm(forms.ModelForm):
     """Form for creating and editing stories"""

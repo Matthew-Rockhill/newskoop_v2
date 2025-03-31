@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize audio file upload preview
   initAudioUpload();
+  
+  // Initialize category toggles
+  initCategoryToggles();
 });
 
 /**
@@ -122,6 +125,116 @@ function updateToggleAppearance(toggle, isChecked) {
     toggle.querySelector('span:not(.sr-only)').classList.remove('translate-x-5');
     toggle.querySelector('span:not(.sr-only)').classList.add('translate-x-0');
   }
+}
+
+/**
+ * Initialize all category toggles on the category list page
+ */
+function initCategoryToggles() {
+  // Function to update an icon with new SVG content
+  function updateIcon(icon, isExpanded) {
+    if (!icon) return;
+    
+    // We'll generate the correct SVG based on the expanded state
+    // This avoids relying on Django template tags in JavaScript
+    const iconSVG = isExpanded 
+      ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><polyline points="6 9 12 15 18 9"></polyline></svg>'
+      : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+      
+    icon.innerHTML = iconSVG;
+  }
+  
+  // Function to handle toggle clicks for any type of toggle
+  function setupToggle(toggleSelector, iconSelector) {
+    const toggles = document.querySelectorAll(toggleSelector);
+    
+    toggles.forEach(toggle => {
+      // Check if we already added an event listener to this element
+      if (toggle.getAttribute('data-toggle-initialized') === 'true') {
+        return;
+      }
+      
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent parent handlers from firing
+        
+        const targetId = this.getAttribute('data-target');
+        const targetElement = document.getElementById(targetId);
+        const icon = this.querySelector(iconSelector);
+        const textSpan = this.querySelector('span');
+        
+        if (!targetElement) {
+          console.error(`Target element with ID "${targetId}" not found`);
+          return;
+        }
+        
+        const isCurrentlyHidden = targetElement.classList.contains('hidden');
+        
+        // Toggle visibility
+        if (isCurrentlyHidden) {
+          targetElement.classList.remove('hidden');
+          updateIcon(icon, true);
+          
+          if (textSpan) {
+            const countText = textSpan.textContent.split(' ')[0];
+            textSpan.textContent = `${countText} subcategories (hide)`;
+          }
+        } else {
+          targetElement.classList.add('hidden');
+          updateIcon(icon, false);
+          
+          if (textSpan) {
+            const countText = textSpan.textContent.split(' ')[0];
+            textSpan.textContent = `${countText} subcategories`;
+          }
+        }
+      });
+      
+      // Mark as initialized to prevent duplicate event listeners
+      toggle.setAttribute('data-toggle-initialized', 'true');
+    });
+  }
+  
+  // Initialize section toggles (content type accordions)
+  const sectionHeaders = document.querySelectorAll('.section-header');
+  sectionHeaders.forEach(header => {
+    if (header.getAttribute('data-toggle-initialized') === 'true') {
+      return;
+    }
+    
+    const targetId = header.getAttribute('data-target');
+    const targetElement = document.getElementById(targetId);
+    const icon = header.querySelector('.toggle-icon');
+    
+    // Set initial state: expanded
+    if (targetElement && icon) {
+      targetElement.classList.remove('hidden');
+      updateIcon(icon, true);
+    }
+    
+    header.addEventListener('click', function() {
+      if (targetElement && icon) {
+        const isCurrentlyHidden = targetElement.classList.contains('hidden');
+        
+        if (isCurrentlyHidden) {
+          targetElement.classList.remove('hidden');
+          updateIcon(icon, true);
+        } else {
+          targetElement.classList.add('hidden');
+          updateIcon(icon, false);
+        }
+      }
+    });
+    
+    header.setAttribute('data-toggle-initialized', 'true');
+  });
+  
+  // Initialize parent category toggles
+  setupToggle('.children-toggle', '.children-icon');
+  
+  // Initialize subcategory toggles
+  setupToggle('.subcategories-toggle', '.subcategories-icon');
+  
+  console.log('Category toggles initialized');
 }
 
 /**
@@ -390,3 +503,18 @@ function formatFileSize(bytes) {
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// Make sure category forms submit properly
+document.addEventListener('DOMContentLoaded', function() {
+  const categoryForm = document.getElementById('category-form');
+  if (categoryForm) {
+    // Remove any existing event listeners that might interfere
+    const clonedForm = categoryForm.cloneNode(true);
+    categoryForm.parentNode.replaceChild(clonedForm, categoryForm);
+    
+    // Add a simple submit handler for logging
+    clonedForm.addEventListener('submit', function(e) {
+      console.log('Category form submitted');
+    });
+  }
+});

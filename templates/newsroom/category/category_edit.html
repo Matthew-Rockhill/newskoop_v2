@@ -35,6 +35,29 @@
     </div>
     
     <div class="p-6">
+      <!-- Form Error Summary -->
+      {% if form.errors %}
+      <div class="bg-danger-light p-4 rounded-lg mb-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            {% include "components/ui/icons.html" with name="warning" class="text-danger" %}
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-danger">Please correct the errors below</h3>
+            <ul class="mt-2 text-sm text-danger">
+              {% for field, errors in form.errors.items %}
+                {% if field != '__all__' %}
+                  {% for error in errors %}
+                    <li>{{ field|title }}: {{ error }}</li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
       <form id="category-form" method="post" class="space-y-6">
         {% csrf_token %}
         
