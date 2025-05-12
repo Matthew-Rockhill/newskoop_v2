@@ -121,10 +121,13 @@ class StoryForm(forms.ModelForm):
         
         # For interns and journalists, remove fields they shouldn't see
         if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
-            self.fields.pop('category', None)
-            self.fields.pop('religion_classification', None)
+            if 'category' in self.fields:
+                self.fields.pop('category', None)
+            if 'religion_classification' in self.fields:
+                self.fields.pop('religion_classification', None)
             # Remove tags field for non-editors
-            self.fields.pop('tags', None)
+            if 'tags' in self.fields:
+                self.fields.pop('tags', None)
             
         # Ensure the category field is available to editors and admins
         elif self.user and self.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
@@ -171,6 +174,10 @@ class StoryForm(forms.ModelForm):
         
         if commit:
             story.save()
+            
+            # Save the many-to-many relationships
+            if 'tags' in self.cleaned_data:
+                self._save_m2m()
             
         return story
 

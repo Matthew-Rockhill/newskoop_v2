@@ -148,70 +148,69 @@
     {% endif %}
     
     <!-- Story Revisions (Staff Only) - List Format with explicitly colored Current Badge -->
-    {% if user.user_type == 'STAFF' and revisions %}
-    <div class="bg-white rounded-lg shadow overflow-hidden" id="revisions">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="content" %}
-        </div>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">Revision History</h2>
-          <p class="text-sm text-gray-500">View previous versions</p>
-        </div>
-      </div>
-      <div class="p-6">
-        <div class="border rounded-md overflow-hidden">
-          <ul class="divide-y divide-gray-200">
-            {% for revision in revisions %}
-              {% with is_current=forloop.first %}
-              <li class="{% cycle 'bg-white' 'bg-gray-50' %}">
-                <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div class="flex items-center mb-2 sm:mb-0">
-                    <div class="h-8 w-8 rounded-full {% if is_current %}bg-success-50 text-success{% else %}bg-primary-50 text-primary{% endif %} flex items-center justify-center mr-3">
-                      <span class="text-xs font-medium">{{ revision.revision_number }}</span>
-                    </div>
-                    <div>
-                      <div class="flex items-center">
-                        <h3 class="font-medium text-gray-900">
-                          <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="hover:text-primary">
-                            Revision #{{ revision.revision_number }}
-                          </a>
-                        </h3>
-                        {% if is_current %}
-                          <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #d1fae5; color: #047857;">
-                            Current
-                          </span>
-                        {% endif %}
-                      </div>
-                      <div class="text-sm text-gray-500">
-                        <span>By {{ revision.created_by.get_full_name }}</span>
-                        <span class="mx-2">•</span>
-                        <span>{{ revision.created_at|date:"M d, Y, g:i a" }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="flex space-x-3">
-                    <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary">
-                      {% include "components/ui/icons.html" with name="eye" class="h-3.5 w-3.5 mr-1" %}
-                      View
-                    </a>
-                    {% if not is_current and user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' or user == story.author %}
-                      <a href="{% url 'newsroom:story_restore_revision' story_id=story.id revision_id=revision.id %}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-1 focus:ring-primary">
-                        {% include "components/ui/icons.html" with name="check-circle" class="h-3.5 w-3.5 mr-1" %}
-                        Restore
-                      </a>
-                    {% endif %}
-                  </div>
-                </div>
-              </li>
-              {% endwith %}
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
+{% if user.user_type == 'STAFF' and story.activities.exists %}
+<div class="bg-white rounded-lg shadow overflow-hidden" id="activity-log">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+      {% include "components/ui/icons.html" with name="activity" %}
     </div>
-    {% endif %}
+    <div>
+      <h2 class="text-lg font-semibold text-gray-800">Activity History</h2>
+      <p class="text-sm text-gray-500">Recent changes to this story</p>
+    </div>
   </div>
+  <div class="p-6">
+    <div class="space-y-4">
+      {% for activity in story.activities.all|slice:":10" %}
+        <div class="flex items-start border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+          <div class="flex-shrink-0 h-8 w-8 rounded-full 
+            {% if activity.activity_type == 'CREATE' %}bg-green-50 text-green-600
+            {% elif activity.activity_type == 'EDIT' %}bg-blue-50 text-blue-600
+            {% elif activity.activity_type == 'STATUS' %}bg-purple-50 text-purple-600
+            {% elif activity.activity_type == 'REVIEW' %}bg-yellow-50 text-yellow-600
+            {% elif activity.activity_type == 'APPROVE' %}bg-teal-50 text-teal-600
+            {% elif activity.activity_type == 'PUBLISH' %}bg-indigo-50 text-indigo-600
+            {% elif activity.activity_type == 'TRANSLATION' %}bg-pink-50 text-pink-600
+            {% else %}bg-gray-50 text-gray-600{% endif %}
+            flex items-center justify-center mr-4">
+            {% if activity.activity_type == 'CREATE' %}
+              {% include "components/ui/icons.html" with name="plus" %}
+            {% elif activity.activity_type == 'EDIT' %}
+              {% include "components/ui/icons.html" with name="edit" %}
+            {% elif activity.activity_type == 'STATUS' %}
+              {% include "components/ui/icons.html" with name="refresh-cw" %}
+            {% elif activity.activity_type == 'REVIEW' %}
+              {% include "components/ui/icons.html" with name="eye" %}
+            {% elif activity.activity_type == 'APPROVE' %}
+              {% include "components/ui/icons.html" with name="check" %}
+            {% elif activity.activity_type == 'PUBLISH' %}
+              {% include "components/ui/icons.html" with name="upload" %}
+            {% elif activity.activity_type == 'TRANSLATION' %}
+              {% include "components/ui/icons.html" with name="globe" %}
+            {% else %}
+              {% include "components/ui/icons.html" with name="activity" %}
+            {% endif %}
+          </div>
+          <div>
+            <div class="font-medium text-gray-900">{{ activity.get_activity_type_display }}</div>
+            <div class="text-sm text-gray-500">By {{ activity.user.get_full_name }} on {{ activity.created_at|date:"M d, Y, g:i a" }}</div>
+            {% if activity.description %}
+              <div class="text-sm text-gray-700 mt-1">{{ activity.description }}</div>
+            {% endif %}
+            {% if activity.old_status and activity.new_status %}
+              <div class="text-sm mt-1">
+                Status changed from 
+                <span class="font-medium">{{ activity.old_status }}</span> to 
+                <span class="font-medium">{{ activity.new_status }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
   
   <!-- Right Column (1/3 width) - Related Content and Metadata -->
   <div class="col-span-1 space-y-6">

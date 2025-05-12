@@ -533,7 +533,31 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Add to your main.js file
+/**
+ * Initialize select2 for tag selection
+ */
+function initTagSelect() {
+  // Initialize select2 for tag selection
+  $('.select2-tags').select2({
+    placeholder: 'Select or search for tags',
+    allowClear: true,
+    tags: false,  // Don't allow creating new tags inline
+    width: '100%'
+  });
+  
+  // Make sure the tags are properly saved on form submission
+  $('#story-form').on('submit', function() {
+    // Ensure all select2 changes are committed before form submission
+    $('.select2-tags').trigger('change');
+  });
+}
+
+// Call the function on document ready
+$(document).ready(function() {
+  if ($('.select2-tags').length) {
+    initTagSelect();
+  }
+});
 
 function initTagsMultiSelect() {
   const tagsSelects = document.querySelectorAll('select[multiple].tags-select');
