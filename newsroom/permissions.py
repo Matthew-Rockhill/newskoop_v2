@@ -92,7 +92,8 @@ def can_edit_story(view_func):
     """
     Decorator that ensures users can only edit stories if:
     1. They are the author, or
-    2. They are an editor or sub-editor
+    2. They are an editor or sub-editor, or
+    3. They have a review task for this story assigned to them
     """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
@@ -103,7 +104,7 @@ def can_edit_story(view_func):
         if not story_id:
             raise ValueError("Story ID not provided")
         
-        from .models import Story
+        from .models import Story, Task
         try:
             story = Story.objects.get(id=story_id)
         except Story.DoesNotExist:
@@ -114,7 +115,16 @@ def can_edit_story(view_func):
         is_author = story.author == request.user
         has_editor_role = request.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
         
-        if not (is_author or has_editor_role):
+        # Check if user has a review task for this story
+        has_review_task = False
+        if request.user.staff_role == 'JOURNALIST':
+            has_review_task = Task.objects.filter(
+                related_story=story,
+                task_type='STORY_REVIEW',
+                assigned_to=request.user
+            ).exists()
+        
+        if not (is_author or has_editor_role or has_review_task):
             messages.error(request, "You don't have permission to edit this story")
             return redirect('newsroom:story_detail', story_id=story_id)
         
@@ -250,3 +260,20 @@ def has_radio_access(user, story):
         return False
     
     return True
+
+def editor_or_subeditor_required(view_func):
+    """Decorator that ensures only editors, sub-editors and admins can access a view"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        
+        if request.user.user_type != CustomUser.UserType.STAFF:
+            raise PermissionDenied("Only staff users can access this page")
+        
+        allowed_roles = ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
+        if request.user.staff_role not in allowed_roles:
+            raise PermissionDenied("Only editors and sub-editors can access this page")
+        
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view

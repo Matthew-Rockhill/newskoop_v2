@@ -1,165 +1,135 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static tailwind_tags %}
 
-{% block title %}Create Task - Newsroom{% endblock %}
-{% block page_title %}Create New Task{% endblock %}
+{% block title %}Create Task - Newskoop{% endblock %}
+{% block page_title %}Create Task{% endblock %}
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  <button type="submit" form="task-form" class="btn btn-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-    </svg>
+  <button type="submit" form="task-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="check" class="mr-2" %}
     Create Task
   </button>
   
-  <a href="{% url 'newsroom:task_list' %}" class="btn btn-outline">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
-    Cancel
+  <a href="{% url 'newsroom:task_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back to Tasks
   </a>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">Task Details</h2>
-    </div>
-    
-    <div class="p-6">
-      <form id="task-form" method="post" class="space-y-6">
-        {% csrf_token %}
+<form id="task-form" method="post" class="space-y-6">
+  {% csrf_token %}
+  
+  <div class="grid grid-cols-3 gap-6">
+    <!-- Left Column (2/3 width): Task Details -->
+    <div class="col-span-2 space-y-6">
+      <!-- Task Content Section -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="check-circle" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Task Details</h2>
+            <p class="text-sm text-gray-500">Create a new task assignment</p>
+          </div>
+        </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="md:col-span-2">
-            <div class="form-group">
-              <label for="{{ form.title.id_for_label }}" class="form-label">Title <span class="text-danger">*</span></label>
-              <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control {% if form.title.errors %}is-invalid{% endif %}" value="{{ form.title.value|default:'' }}" required>
-              {% if form.title.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
-              {% endif %}
-            </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-danger">*</span></label>
+            <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" value="{{ form.title.value|default:'' }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+            {% if form.title.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.title.errors|first }}</div>
+            {% endif %}
           </div>
           
-          <div class="md:col-span-2">
-            <div class="form-group">
-              <label for="{{ form.description.id_for_label }}" class="form-label">Description <span class="text-danger">*</span></label>
-              <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="form-control {% if form.description.errors %}is-invalid{% endif %}" required>{{ form.description.value|default:'' }}</textarea>
-              {% if form.description.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
-              {% endif %}
-            </div>
+          <div class="mb-4">
+            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-danger">*</span></label>
+            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="5" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" required>{{ form.description.value|default:'' }}</textarea>
+            {% if form.description.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
+            {% endif %}
           </div>
           
-          <div>
-            <div class="form-group">
-              <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assign To <span class="text-danger">*</span></label>
-              <select name="{{ form.assigned_to.name }}" id="{{ form.assigned_to.id_for_label }}" class="form-control {% if form.assigned_to.errors %}is-invalid{% endif %}" required>
-                <option value="">Select a user</option>
-                {% for user in form.assigned_to.field.queryset %}
-                  <option value="{{ user.id }}" {% if form.assigned_to.value|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
-                    {{ user.get_full_name }} ({{ user.get_staff_role_display }})
-                  </option>
-                {% endfor %}
-              </select>
-              {% if form.assigned_to.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.assigned_to.errors|first }}</div>
-              {% endif %}
-            </div>
-          </div>
-          
-          <div>
-            <div class="form-group">
-              <label for="{{ form.related_story.id_for_label }}" class="form-label">Related Story</label>
-              <select name="{{ form.related_story.name }}" id="{{ form.related_story.id_for_label }}" class="form-control {% if form.related_story.errors %}is-invalid{% endif %}">
-                <option value="">None</option>
-                {% for story in form.related_story.field.queryset %}
-                  <option value="{{ story.id }}" {% if form.related_story.value|stringformat:"s" == story.id|stringformat:"s" %}selected{% endif %}>
-                    {{ story.title }} ({{ story.get_status_display }})
-                  </option>
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Related Story -->
+            <div>
+              <label for="{{ form.related_story.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Related Story</label>
+              <select name="{{ form.related_story.name }}" id="{{ form.related_story.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
+                <option value="">Select a story</option>
+                {% for value, text in form.related_story.field.choices %}
+                  {% if value %}
+                  <option value="{{ value }}" {% if form.related_story.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                  {% endif %}
                 {% endfor %}
               </select>
               {% if form.related_story.errors %}
                 <div class="text-danger text-sm mt-1">{{ form.related_story.errors|first }}</div>
               {% endif %}
+              <p class="text-xs text-gray-500 mt-1">Link this task to an existing story if applicable</p>
             </div>
-          </div>
-          
-          <div>
-            <div class="form-group">
-              <label for="{{ form.task_type.id_for_label }}" class="form-label">Task Type <span class="text-danger">*</span></label>
-              <select name="{{ form.task_type.name }}" id="{{ form.task_type.id_for_label }}" class="form-control {% if form.task_type.errors %}is-invalid{% endif %}" required>
-                {% for value, text in form.task_type.field.choices %}
-                  <option value="{{ value }}" {% if form.task_type.value == value %}selected{% endif %}>{{ text }}</option>
-                {% endfor %}
-              </select>
-              {% if form.task_type.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.task_type.errors|first }}</div>
-              {% endif %}
-            </div>
-          </div>
-          
-          <div>
-            <div class="form-group">
-              <label for="{{ form.priority.id_for_label }}" class="form-label">Priority <span class="text-danger">*</span></label>
-              <select name="{{ form.priority.name }}" id="{{ form.priority.id_for_label }}" class="form-control {% if form.priority.errors %}is-invalid{% endif %}" required>
-                {% for value, text in form.priority.field.choices %}
-                  <option value="{{ value }}" {% if form.priority.value == value %}selected{% endif %}>{{ text }}</option>
-                {% endfor %}
-              </select>
-              {% if form.priority.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.priority.errors|first }}</div>
-              {% endif %}
-            </div>
-          </div>
-          
-          <div>
-            <div class="form-group">
-              <label for="{{ form.status.id_for_label }}" class="form-label">Status <span class="text-danger">*</span></label>
-              <select name="{{ form.status.name }}" id="{{ form.status.id_for_label }}" class="form-control {% if form.status.errors %}is-invalid{% endif %}" required>
-                {% for value, text in form.status.field.choices %}
-                  <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ text }}</option>
-                {% endfor %}
-              </select>
-              {% if form.status.errors %}
-                <div class="text-danger text-sm mt-1">{{ form.status.errors|first }}</div>
-              {% endif %}
-            </div>
-          </div>
-          
-          <div>
-            <div class="form-group">
-              <label for="{{ form.due_date.id_for_label }}" class="form-label">Due Date</label>
-              <input type="date" name="{{ form.due_date.name }}" id="{{ form.due_date.id_for_label }}" class="form-control {% if form.due_date.errors %}is-invalid{% endif %}" value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}">
+            
+            <!-- Due Date -->
+            <div>
+              <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input type="datetime-local" name="{{ form.due_date.name }}" id="{{ form.due_date.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" value="{{ form.due_date.value|date:'Y-m-d\TH:i'|default:'' }}">
               {% if form.due_date.errors %}
                 <div class="text-danger text-sm mt-1">{{ form.due_date.errors|first }}</div>
               {% endif %}
+              <p class="text-xs text-gray-500 mt-1">When this task should be completed</p>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Right Column (1/3 width): Assignment Details -->
+    <div class="col-span-1 space-y-6">
+      <!-- Assignment Section -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="user" %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Assignment</h2>
+            <p class="text-sm text-gray-500">Task type and assignee</p>
           </div>
         </div>
         
-        <div class="bg-gray-50 p-4 rounded-lg">
-          <div class="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h4 class="font-medium">Task Guidelines</h4>
-              <ul class="text-sm mt-2 space-y-1">
-                <li>Provide a clear, descriptive title</li>
-                <li>Include specific details in the description</li>
-                <li>Set a realistic due date</li>
-                <li>Assign to the appropriate team member</li>
-                <li>Link to a related story if applicable</li>
-              </ul>
-            </div>
+        <div class="p-6">
+          <!-- Task Type -->
+          <div class="mb-4">
+            <label for="{{ form.task_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Task Type <span class="text-danger">*</span></label>
+            <select name="{{ form.task_type.name }}" id="{{ form.task_type.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" required>
+              {% for value, text in form.task_type.field.choices %}
+                <option value="{{ value }}" {% if form.task_type.value == value %}selected{% endif %}>{{ text }}</option>
+              {% endfor %}
+            </select>
+            {% if form.task_type.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.task_type.errors|first }}</div>
+            {% endif %}
+          </div>
+          
+          <!-- Assigned To -->
+          <div class="mb-4">
+            <label for="{{ form.assigned_to.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Assigned To <span class="text-danger">*</span></label>
+            <select name="{{ form.assigned_to.name }}" id="{{ form.assigned_to.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" required>
+              <option value="">Select a user</option>
+              {% for value, text in form.assigned_to.field.choices %}
+                <option value="{{ value }}" {% if form.assigned_to.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+              {% endfor %}
+            </select>
+            {% if form.assigned_to.errors %}
+              <div class="text-danger text-sm mt-1">{{ form.assigned_to.errors|first }}</div>
+            {% endif %}
           </div>
         </div>
-      </form>
+      </div>
     </div>
   </div>
-</div>
+</form>
 {% endblock %}

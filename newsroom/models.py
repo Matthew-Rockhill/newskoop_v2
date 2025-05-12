@@ -164,14 +164,17 @@ class Story(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     content = models.TextField()
+    tags = models.ManyToManyField('Tag', blank=True, related_name='stories')
+
     STATUS_CHOICES = [
         ('DRAFT', 'Draft'),
         ('REVIEW', 'In Review'),
-        ('APPROVED', 'Approved'),
+        ('PENDING_APPROVAL', 'Pending Approval'),
+        ('APPROVED', 'Approved'), 
         ('PUBLISHED', 'Published'),
         ('ARCHIVED', 'Archived'),
     ]
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='DRAFT')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
     category = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='stories')
     RELIGION_CHOICES = [
         ('GENERAL', 'General'),
@@ -218,6 +221,7 @@ class Story(models.Model):
         self.published_at = timezone.now()
         self.editor = editor
         self.save()
+
 class AudioClip(models.Model):
     """
     Audio clips attached to stories
@@ -266,6 +270,7 @@ class Task(models.Model):
     TYPE_CHOICES = [
         ('STORY_WRITING', 'Story Writing'),
         ('STORY_EDITING', 'Story Editing'),
+        ('STORY_REVIEW', 'Story Review'),
         ('FOLLOW_UP', 'Follow Up'),
         ('TRANSLATION', 'Translation'),
         ('AUDIO_RECORDING', 'Audio Recording'),
@@ -358,3 +363,30 @@ class StoryRevision(models.Model):
     
     def __str__(self):
         return f"Revision {self.revision_number} of {self.story.title}"
+    
+class Tag(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
+                                  null=True, related_name='created_tags')
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate slug if not provided.
+        if not self.slug:
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            while Tag.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)

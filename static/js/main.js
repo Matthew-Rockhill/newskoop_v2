@@ -243,7 +243,10 @@ function initCategoryToggles() {
 function initStoryEditor() {
   const editorContainer = document.getElementById('content-editor');
   const contentInput = document.getElementById('id_content');
+  
+  // Find the appropriate form - either story-form or translation-form
   const storyForm = document.getElementById('story-form');
+  const translationForm = document.getElementById('translation-form');
   
   if (editorContainer && contentInput) {
     // Configure Quill toolbar options
@@ -277,9 +280,12 @@ function initStoryEditor() {
       quill.root.innerHTML = contentInput.value;
     }
 
-    // When form is submitted, update the hidden input with Quill content
+    // Add form submission handling for story form
     if (storyForm) {
       storyForm.addEventListener('submit', function(e) {
+        // Existing story form handling code...
+        contentInput.value = quill.root.innerHTML;
+        
         // For story-create page, enhance submission process
         if (window.location.pathname.includes('/stories/create/')) {
           e.preventDefault();
@@ -344,15 +350,23 @@ function initStoryEditor() {
           contentInput.value = quill.root.innerHTML;
         }
       });
+    } 
+    
+    // Add form submission handling for translation form
+    if (translationForm) {
+      translationForm.addEventListener('submit', function(e) {
+        // Update the hidden input with Quill content
+        contentInput.value = quill.root.innerHTML;
+      });
     }
 
-    // Specifically handle the "Submit for Review" button click
+    // Handle "Submit for Review" button (keep this part if it's needed)
     const submitReviewBtn = document.querySelector('button[form="submit-review-form"]');
     const submitReviewForm = document.getElementById('submit-review-form');
 
     if (submitReviewBtn && submitReviewForm && quill) {
       submitReviewBtn.addEventListener('click', function(e) {
-        // Prevent the default form submission
+        // Existing Submit for Review handling code...
         e.preventDefault();
         
         // Update the content input in the submit-review-form with the current Quill content
@@ -518,3 +532,146 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Add to your main.js file
+
+function initTagsMultiSelect() {
+  const tagsSelects = document.querySelectorAll('select[multiple].tags-select');
+  
+  tagsSelects.forEach(select => {
+    // Create a container for our custom dropdown
+    const container = document.createElement('div');
+    container.className = 'custom-multiselect-container relative';
+    
+    // Create the input for searching
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'form-control w-full pr-8';
+    searchInput.placeholder = 'Search and select tags...';
+    
+    // Create dropdown for options
+    const dropdown = document.createElement('div');
+    dropdown.className = 'custom-multiselect-dropdown absolute w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto hidden';
+    
+    // Create selected items container
+    const selectedContainer = document.createElement('div');
+    selectedContainer.className = 'custom-multiselect-selected flex flex-wrap gap-1 mt-2';
+    
+    // Add the components to the container
+    container.appendChild(searchInput);
+    container.appendChild(dropdown);
+    select.parentNode.insertBefore(container, select);
+    container.appendChild(select);
+    container.appendChild(selectedContainer);
+    
+    // Hide the original select
+    select.style.display = 'none';
+    
+    // Populate the dropdown with options
+    const options = Array.from(select.options);
+    options.forEach(option => {
+      const optionElement = document.createElement('div');
+      optionElement.className = 'custom-multiselect-option p-2 hover:bg-gray-100 cursor-pointer';
+      optionElement.dataset.value = option.value;
+      optionElement.textContent = option.textContent;
+      
+      // If the option is selected, add it to the selected container
+      if (option.selected) {
+        addSelectedTag(option.value, option.textContent);
+      }
+      
+      // Add click event to select/deselect
+      optionElement.addEventListener('click', () => {
+        const optIndex = Array.from(select.options).findIndex(opt => opt.value === option.value);
+        select.options[optIndex].selected = !select.options[optIndex].selected;
+        
+        if (select.options[optIndex].selected) {
+          addSelectedTag(option.value, option.textContent);
+        } else {
+          removeSelectedTag(option.value);
+        }
+        
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        select.dispatchEvent(event);
+      });
+      
+      dropdown.appendChild(optionElement);
+    });
+    
+    // Function to add a tag to the selected container
+    function addSelectedTag(value, text) {
+      const tag = document.createElement('div');
+      tag.className = 'custom-multiselect-tag bg-primary-100 text-primary-800 px-2 py-1 rounded-md text-sm flex items-center';
+      tag.dataset.value = value;
+      
+      const tagText = document.createElement('span');
+      tagText.textContent = text;
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'ml-1 text-primary-600 hover:text-primary-800';
+      removeBtn.innerHTML = '×';
+      removeBtn.type = 'button';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSelectedTag(value);
+        
+        // Update the original select
+        const optIndex = Array.from(select.options).findIndex(opt => opt.value === value);
+        select.options[optIndex].selected = false;
+        
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        select.dispatchEvent(event);
+      });
+      
+      tag.appendChild(tagText);
+      tag.appendChild(removeBtn);
+      selectedContainer.appendChild(tag);
+    }
+    
+    // Function to remove a tag from the selected container
+    function removeSelectedTag(value) {
+      const tag = selectedContainer.querySelector(`.custom-multiselect-tag[data-value="${value}"]`);
+      if (tag) {
+        tag.remove();
+      }
+    }
+    
+    // Toggle dropdown on input focus/click
+    searchInput.addEventListener('focus', () => {
+      dropdown.classList.remove('hidden');
+    });
+    
+    // Filter options based on search input
+    searchInput.addEventListener('input', () => {
+      const searchValue = searchInput.value.toLowerCase();
+      Array.from(dropdown.children).forEach(option => {
+        const optionText = option.textContent.toLowerCase();
+        if (optionText.includes(searchValue)) {
+          option.classList.remove('hidden');
+        } else {
+          option.classList.add('hidden');
+        }
+      });
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!container.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  });
+}
+
+// Call the function when the document is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Your existing code...
+  
+  // Initialize multiselect for tags
+  initTagsMultiSelect();
+});
+
+
+

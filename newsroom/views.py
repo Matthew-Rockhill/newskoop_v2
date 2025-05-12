@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.utils.text import slugify
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.urls import reverse
@@ -17,15 +17,22 @@ from django.forms import inlineformset_factory
 from accounts.models import CustomUser
 from .models import (
     Story, Category, AudioClip, Task, TaskAttachment, 
-    TaskComment, StoryRevision
+    TaskComment, StoryRevision, Tag
 )
 from .forms import (
     StoryForm, CategoryForm, AudioClipForm, TaskForm, 
-    TaskCommentForm, TaskAttachmentForm, StoryPublishForm
+    TaskCommentForm, TaskAttachmentForm, StoryPublishForm, TagForm, StoryTagsForm
 )
 from .permissions import (
     staff_required, editor_required, publishing_rights_required,
-    can_edit_story, can_manage_task, can_manage_categories, has_radio_access
+    can_edit_story, can_manage_task, can_manage_categories, has_radio_access, editor_or_subeditor_required
+)
+
+# Import the template tag functions
+from .templatetags.story_actions import (
+    can_submit_for_review, can_submit_for_approval, can_approve_story, 
+    can_publish_story, can_download_story, can_assign_xhosa_translation,
+    can_edit_story as can_edit_story_tag
 )
 
 # Configure logging
@@ -91,18 +98,94 @@ def dashboard(request):
             assigned_by=request.user
         ).count()
         
+        # For interns - show draft stories they can submit for review
+        if request.user.staff_role == 'INTERN':
+            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
+            
+        # For journalists - show stories assigned for review and their own stories
+        if request.user.staff_role == 'JOURNALIST':
+            # Stories assigned to this journalist for review
+            context['review_tasks'] = Task.objects.filter(
+                assigned_to=request.user,
+                task_type='STORY_REVIEW',
+                status__in=['PENDING', 'IN_PROGRESS']
+            ).order_by('due_date')[:5]
+            
+            context['review_task_count'] = Task.objects.filter(
+                assigned_to=request.user,
+                task_type='STORY_REVIEW',
+                status__in=['PENDING', 'IN_PROGRESS']
+            ).count()
+            
+            # Their own stories that need further action
+            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
+            context['my_review_stories'] = my_stories.filter(status='REVIEW').order_by('-updated_at')[:5]
+            
+            # Translation tasks assigned to them
+            context['my_translation_tasks'] = Task.objects.filter(
+                assigned_to=request.user,
+                task_type='TRANSLATION',
+                status__in=['PENDING', 'IN_PROGRESS']
+            ).order_by('due_date')[:5]
+        
         # For editors and sub-editors
         if request.user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN', 'SUB_EDITOR']:
+            # Stories awaiting review
             context['awaiting_review'] = Story.objects.filter(status='REVIEW').count()
-            context['all_pending_tasks'] = Task.objects.filter(status='PENDING').count()
-            context['stories_for_review'] = Story.objects.filter(status='REVIEW').order_by('-created_at')[:5]
+            # Stories awaiting approval
+            context['awaiting_approval'] = Story.objects.filter(status='PENDING_APPROVAL').count()
+            # Stories awaiting publication (already approved)
+            context['awaiting_publication'] = Story.objects.filter(status='APPROVED').count()
             
-        # For journalists and interns
-        if request.user.staff_role in ['INTERN', 'JOURNALIST']:
-            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
-    
+            # All pending tasks across the system
+            context['all_pending_tasks'] = Task.objects.filter(status='PENDING').count()
+            
+            # Stories at different stages in the workflow
+            context['stories_for_review'] = Story.objects.filter(status='REVIEW').order_by('-created_at')[:5]
+            context['stories_for_approval'] = Story.objects.filter(status='PENDING_APPROVAL').order_by('-created_at')[:5]
+            context['stories_ready_for_publishing'] = Story.objects.filter(status='APPROVED').order_by('-created_at')[:5]
+            
+            # Translation tasks
+            context['translation_tasks'] = Task.objects.filter(
+                task_type='TRANSLATION',
+                status__in=['PENDING', 'IN_PROGRESS']
+            ).order_by('due_date')[:5]
+            
+            context['translation_task_count'] = Task.objects.filter(
+                task_type='TRANSLATION',
+                status__in=['PENDING', 'IN_PROGRESS']
+            ).count()
+            
+            # Translations needing approval
+            context['translations_for_approval'] = Story.objects.filter(
+                is_translation=True,
+                status='PENDING_APPROVAL'
+            ).order_by('-created_at')[:5]
+            
+            context['translation_approval_count'] = Story.objects.filter(
+                is_translation=True,
+                status='PENDING_APPROVAL'
+            ).count()
+            
+            # Track which English stories have incomplete translations
+            english_stories_with_translations = Story.objects.filter(
+                language='ENGLISH',
+                status__in=['APPROVED', 'PUBLISHED']
+            ).annotate(
+                translation_count=Count('tasks', filter=Q(tasks__task_type='TRANSLATION')),
+                completed_translation_count=Count('tasks', filter=Q(tasks__task_type='TRANSLATION', tasks__status='COMPLETED'))
+            ).filter(
+                translation_count__gt=0
+            ).order_by('-created_at')
+            
+            # Filter to stories with incomplete translations
+            context['incomplete_translations'] = [
+                story for story in english_stories_with_translations 
+                if story.translation_count > story.completed_translation_count
+            ][:5]
+            
     elif request.user.user_type == CustomUser.UserType.RADIO:
-        # [Radio station user logic remains unchanged]
+        # Radio station dashboard logic (keep as is)
         station = request.user.radio_station
         if station:
             query = Q(status='PUBLISHED')
@@ -204,16 +287,33 @@ def story_list(request):
             Q(author__last_name__icontains=search_query)
         )
     
+    # Fetch categories for filter dropdown
+    categories = Category.objects.filter(level__in=[2, 3]).order_by('name')
+    
     paginator = Paginator(stories.order_by('-created_at'), 15)
     page_number = request.GET.get('page')
     stories_page = paginator.get_page(page_number)
+    
+    # Define page actions
+    actions = []
+    
+    # New Story button (staff only)
+    if request.user.user_type == 'STAFF':
+        actions.append({
+            'label': 'New Story',
+            'url': reverse('newsroom:story_create'),
+            'icon': 'plus',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        })
     
     context = {
         'stories': stories_page,
         'status_filter': status_filter,
         'category_filter': category_filter,
         'language_filter': language_filter,
-        'search_query': search_query
+        'search_query': search_query,
+        'categories': categories,
+        'actions': actions
     }
     
     return render(request, 'newsroom/story/story_list.html', context)
@@ -225,57 +325,129 @@ def story_detail(request, story_id):
     if request.user.user_type == CustomUser.UserType.RADIO:
         if not has_radio_access(request.user, story):
             return HttpResponseForbidden("You don't have access to this content")
+    
     audio_clips = story.audio_clips.all()
     tasks = None
+    journalists = None
+    revisions = None
+    reviewer_task = None
+    
     if request.user.user_type == CustomUser.UserType.STAFF:
         tasks = Task.objects.filter(related_story=story)
-    revisions = None
-    if request.user.user_type == CustomUser.UserType.STAFF:
         revisions = story.revisions.all().order_by('-revision_number')
+        
+        # Get journalists for review assignment dropdown - only for interns
+        if story.status == 'DRAFT' and story.author == request.user and request.user.staff_role == 'INTERN':
+            journalists = CustomUser.objects.filter(
+                user_type='STAFF',
+                staff_role='JOURNALIST',  # Only journalists can review
+                is_active=True
+            ).exclude(id=request.user.id)
+        
+        # Check if current user is reviewing this story
+        reviewer_task = Task.objects.filter(
+            related_story=story,
+            task_type='STORY_REVIEW',
+            assigned_to=request.user,
+            status__in=['PENDING', 'IN_PROGRESS']
+        ).first()
+    
+    # Define page actions
+    actions = []
+    
+    # Edit Story button
+    if can_edit_story_tag({"user": request.user}, story):
+        actions.append({
+            'label': 'Edit Story',
+            'url': reverse('newsroom:story_edit', kwargs={'story_id': story.id}),
+            'icon': 'edit',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        })
+    
+    # Submit for Review button (Interns only)
+    if can_submit_for_review({"user": request.user}, story):
+        actions.append({
+            'label': 'Submit for Review',
+            'id': 'submit-for-review-btn',
+            'url': '#',  # This is handled by JavaScript to open modal
+            'icon': 'check-circle',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning'
+        })
+    
+    # Complete Review button (Journalists reviewing)
+    if reviewer_task:
+        actions.append({
+            'label': 'Complete Review',
+            'url': reverse('newsroom:story_complete_review', kwargs={'story_id': story.id, 'task_id': reviewer_task.id}),
+            'icon': 'check',
+            'form': True,
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Submit for Approval button
+    if can_submit_for_approval({"user": request.user}, story):
+        actions.append({
+            'label': 'Submit for Approval',
+            'url': reverse('newsroom:story_submit_approval', kwargs={'story_id': story.id}),
+            'icon': 'check',
+            'form': True,
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Approve Story button
+    if can_approve_story({"user": request.user}, story):
+        actions.append({
+            'label': 'Approve Story',
+            'url': reverse('newsroom:story_approve', kwargs={'story_id': story.id}),
+            'icon': 'check',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Publish button
+    if can_publish_story({"user": request.user}, story):
+        actions.append({
+            'label': 'Publish',
+            'url': reverse('newsroom:story_publish', kwargs={'story_id': story.id}),
+            'icon': 'check',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Assign Xhosa Translation button
+    if can_assign_xhosa_translation({"user": request.user}, story):
+        actions.append({
+            'label': 'Assign Xhosa Translation',
+            'url': f"{reverse('newsroom:task_create')}?type=TRANSLATION&story={story.id}&language=XHOSA",
+            'icon': 'globe',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        })
+    
+    # Download button
+    if can_download_story({"user": request.user}, story):
+        actions.append({
+            'label': 'Download',
+            'url': reverse('newsroom:story_download', kwargs={'story_id': story.id}),
+            'icon': 'download',
+            'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        })
+    
+    # Back to List button (always shown)
+    actions.append({
+        'label': 'Back to List',
+        'url': reverse('newsroom:story_list'),
+        'icon': 'arrow-left',
+        'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+    })
+    
     context = {
         'story': story,
         'audio_clips': audio_clips,
         'tasks': tasks,
         'revisions': revisions,
+        'journalists': journalists,
+        'reviewer_task': reviewer_task,
+        'actions': actions,
     }
     return render(request, 'newsroom/story/story_detail.html', context)
-
-def debug_story_create(original_view):
-    def wrapped_view(request, *args, **kwargs):
-        logger.info(f"---- Story creation attempt by {request.user} ----")
-        
-        if request.method == 'POST':
-            # Log POST data (excluding content which might be too large)
-            post_data = {k: v for k, v in request.POST.items() if k != 'content'}
-            logger.info(f"POST data: {json.dumps(post_data)}")
-            
-            # Log file info
-            file_info = []
-            for key, file in request.FILES.items():
-                file_info.append({
-                    'name': key,
-                    'file_name': file.name,
-                    'size': file.size,
-                    'content_type': file.content_type
-                })
-            logger.info(f"FILES data: {json.dumps(file_info)}")
-        
-        try:
-            return original_view(request, *args, **kwargs)
-        except Exception as e:
-            logger.error(f"Exception in story_create: {str(e)}")
-            logger.error(traceback.format_exc())
-            messages.error(request, "An error occurred while saving your story. Please try again.")
-            
-            # Re-render the form with error message
-            story_form = StoryForm(request.POST, user=request.user, is_new=True)
-            context = {
-                'form': story_form,
-                'is_new': True,
-            }
-            return render(request, 'newsroom/story/story_create.html', context)
-    
-    return wrapped_view
 
 @staff_required
 def story_create(request):
@@ -344,8 +516,6 @@ def story_create(request):
     }
     return render(request, 'newsroom/story/story_create.html', context)
 
-story_create = debug_story_create(story_create)
-
 @staff_required
 @can_edit_story
 def story_edit(request, story_id, story=None):
@@ -412,12 +582,145 @@ def story_edit(request, story_id, story=None):
     else:
         story_form = StoryForm(instance=story, user=request.user, is_new=False)
     
+    # Define page actions
+    actions = []
+    
+    # Save Changes button
+    actions.append({
+        'label': 'Save Changes',
+        'form': True,
+        'id': 'story-form-submit',
+        'icon': 'save',
+        'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+    })
+    
+    # Publish button
+    if can_publish_story({"user": request.user}, story):
+        actions.append({
+            'label': 'Publish',
+            'url': reverse('newsroom:story_publish', kwargs={'story_id': story.id}),
+            'icon': 'check',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Submit for Review button (interns only)
+    if story.author == request.user and story.status == 'DRAFT' and request.user.staff_role == 'INTERN':
+        actions.append({
+            'label': 'Submit for Review',
+            'form': True,
+            'id': 'submit-review-form-submit',
+            'url': '#',  # Will be handled by JavaScript
+            'icon': 'check-circle',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning'
+        })
+    
+    # Submit for Approval button (journalists/other staff)
+    if can_submit_for_approval({"user": request.user}, story):
+        actions.append({
+            'label': 'Submit for Approval',
+            'form': True,
+            'hidden_fields': {'status': 'PENDING_APPROVAL'},
+            'icon': 'check-circle',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
+        })
+    
+    # Cancel button
+    actions.append({
+        'label': 'Cancel',
+        'url': reverse('newsroom:story_detail', kwargs={'story_id': story.id}),
+        'icon': 'arrow-left',
+        'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+    })
+    
     context = {
         'form': story_form,
         'story': story,
-        'is_new': False
+        'is_new': False,
+        'actions': actions
     }
     return render(request, 'newsroom/story/story_edit.html', context)
+
+@staff_required
+@can_edit_story
+def story_submit_review(request, story_id, story=None):
+    """Submit a story for review to a specific journalist"""
+    if request.method == 'POST':
+        # Only allow drafts to be submitted for review
+        if story.status != 'DRAFT':
+            messages.error(request, "Only draft stories can be submitted for review")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Get the selected reviewer
+        reviewer_id = request.POST.get('reviewer')
+        if not reviewer_id:
+            messages.error(request, "Please select a reviewer")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        try:
+            reviewer = CustomUser.objects.get(id=reviewer_id, user_type='STAFF', 
+                                            staff_role__in=['JOURNALIST', 'EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN'])
+        except CustomUser.DoesNotExist:
+            messages.error(request, "Selected reviewer not found")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Get optional review notes
+        review_notes = request.POST.get('review_notes', '')
+        
+        # Update story status
+        story.status = 'REVIEW'
+        story.save()
+        
+        # Create a review task
+        task = Task.objects.create(
+            title=f"Review: {story.title}",
+            description=f"Please review this story submitted by {story.author.get_full_name()}.\n\n" + review_notes,
+            task_type='STORY_REVIEW',  # We'll need to add this task type to the model
+            priority='MEDIUM',
+            assigned_by=request.user,
+            assigned_to=reviewer,
+            related_story=story,
+            status='PENDING',
+            due_date=timezone.now() + timezone.timedelta(days=2)  # Default 2-day deadline
+        )
+        
+        # Create an initial revision if one doesn't exist
+        revision_count = StoryRevision.objects.filter(story=story).count()
+        if revision_count == 0:
+            StoryRevision.objects.create(
+                story=story,
+                content=story.content,
+                revision_number=1,
+                created_by=request.user
+            )
+        
+        messages.success(request, f"Story submitted for review to {reviewer.get_full_name()}")
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # If not POST, redirect to story detail
+    return redirect('newsroom:story_detail', story_id=story.id)
+
+@staff_required
+def api_list_journalists(request):
+    """API endpoint to list journalists for the reviewer dropdown"""
+    # Get journalists and editors
+    users = CustomUser.objects.filter(
+        user_type='STAFF',
+        staff_role__in=['JOURNALIST', 'EDITOR', 'SUB_EDITOR'],
+        is_active=True
+    ).exclude(id=request.user.id)  # Exclude the current user
+    
+    # Format the data for the dropdown
+    data = [
+        {
+            'id': str(user.id),
+            'full_name': user.get_full_name(),
+            'role': user.get_staff_role_display()
+        }
+        for user in users
+    ]
+    
+    return JsonResponse(data, safe=False)
+
 
 @staff_required
 @publishing_rights_required
@@ -427,6 +730,50 @@ def story_publish(request, story_id, story=None):
     if story.status == 'PUBLISHED':
         messages.info(request, "This story is already published")
         return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # Check if the story is approved
+    if story.status != 'APPROVED':
+        messages.error(request, "Only approved stories can be published")
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # Check for translations if this is an English story
+    if story.language == 'ENGLISH':
+        # Check for incomplete translation tasks
+        pending_translations = Task.objects.filter(
+            related_story=story,
+            task_type='TRANSLATION',
+            status__in=['PENDING', 'IN_PROGRESS', 'REVIEW']
+        )
+        
+        if pending_translations.exists():
+            translation_info = ", ".join([t.get_status_display() for t in pending_translations])
+            messages.error(request, f"Cannot publish: {pending_translations.count()} translation tasks still pending ({translation_info})")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Check if all translated stories are approved
+        completed_translation_tasks = Task.objects.filter(
+            related_story=story,
+            task_type='TRANSLATION',
+            status='COMPLETED'
+        )
+        
+        for task in completed_translation_tasks:
+            # Find the corresponding translated stories
+            translated_stories = Story.objects.filter(
+                author=task.assigned_to,
+                is_translation=True,
+                language__in=['AFRIKAANS', 'XHOSA']
+            ).filter(
+                Q(title__contains=story.title) | 
+                Q(title__startswith=f"[AFRIKAANS] {story.title}") | 
+                Q(title__startswith=f"[XHOSA] {story.title}")
+            )
+            
+            # Check if any translations are not approved
+            unapproved = translated_stories.exclude(status='APPROVED')
+            if unapproved.exists():
+                messages.error(request, f"Cannot publish: Translation '{unapproved.first().title}' is not yet approved")
+                return redirect('newsroom:story_detail', story_id=story.id)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -457,6 +804,30 @@ def story_publish(request, story_id, story=None):
             # Save the changes
             story.save()
             
+            # Also publish any approved translations
+            if story.language == 'ENGLISH':
+                # Find the associated translations (they would be different stories linked by tasks)
+                translation_tasks = Task.objects.filter(
+                    related_story=story,
+                    task_type='TRANSLATION',
+                    status='COMPLETED'
+                )
+                
+                for task in translation_tasks:
+                    # The translated story would have been created and attached to the task
+                    # This is a simplified approach - in a real implementation you'd need to track
+                    # the relationship between original stories and their translations more explicitly
+                    translated_stories = Story.objects.filter(
+                        tasks__in=[task.id],
+                        status='APPROVED'
+                    )
+                    
+                    for translated_story in translated_stories:
+                        translated_story.status = 'PUBLISHED'
+                        translated_story.published_at = published_at
+                        translated_story.editor = request.user
+                        translated_story.save()
+            
             # Log the editorial notes if provided
             if editorial_notes:
                 # You might want to store these notes in a separate model
@@ -476,9 +847,18 @@ def story_publish(request, story_id, story=None):
     # For GET requests, prepare the form context
     now = timezone.now()
     
+    # Get translation status for display
+    translation_tasks = []
+    if story.language == 'ENGLISH':
+        translation_tasks = Task.objects.filter(
+            related_story=story,
+            task_type='TRANSLATION'
+        ).select_related('assigned_to')
+    
     context = {
         'story': story,
         'now': now,
+        'translation_tasks': translation_tasks,
     }
     return render(request, 'newsroom/story/story_publish.html', context)
 
@@ -1017,3 +1397,391 @@ def story_restore_revision(request, story_id, revision_id, story=None):
     }
     
     return render(request, 'newsroom/story/story_restore_revision.html', context)
+
+@staff_required
+@editor_or_subeditor_required
+@can_edit_story
+def story_approve(request, story_id, story=None):
+    """Approve a story that has been reviewed and create translation tasks"""
+    if request.method == 'POST':
+        # Check if story is in pending approval status
+        if story.status != 'PENDING_APPROVAL':
+            messages.error(request, "Only stories pending approval can be approved")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Update story status to approved
+        story.status = 'APPROVED'
+        story.save()
+        
+        # Create translation tasks if the original is in English
+        if story.language == 'ENGLISH':
+            # Create task for Afrikaans translation only
+            Task.objects.create(
+                title=f"Translate to Afrikaans: {story.title}",
+                description=f"Translate this story from English to Afrikaans.\n\nOriginal Title: {story.title}",
+                task_type='TRANSLATION',
+                priority='MEDIUM',
+                assigned_by=request.user,
+                assigned_to=request.user,  # Default to the current editor, can be reassigned
+                related_story=story,
+                status='PENDING',
+                due_date=timezone.now() + timezone.timedelta(days=3)  # Default 3-day deadline
+            )
+            
+            messages.success(request, "Story approved and Afrikaans translation task created. Remember to manually assign Xhosa translation if needed.")
+        else:
+            messages.success(request, "Story approved")
+        
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # GET request shows approval confirmation page
+    return render(request, 'newsroom/story/story_approve.html', {'story': story})
+
+@staff_required
+def submit_translation(request, task_id):
+    """Create or update a translation based on a translation task"""
+    # Get the translation task
+    task = get_object_or_404(Task, id=task_id, task_type='TRANSLATION')
+    
+    # Get the original story
+    original_story = task.related_story
+    if not original_story:
+        messages.error(request, "Original story not found for this translation task")
+        return redirect('newsroom:task_detail', task_id=task.id)
+    
+    # Determine target language from task title
+    target_language = None
+    if "Afrikaans" in task.title:
+        target_language = 'AFRIKAANS'
+    elif "Xhosa" in task.title:
+        target_language = 'XHOSA'
+    
+    if not target_language:
+        messages.error(request, "Could not determine target language for translation")
+        return redirect('newsroom:task_detail', task_id=task.id)
+    
+    # Check if translation story already exists
+    translation_story = None
+    translation_stories = Story.objects.filter(
+        title__startswith=f"[{target_language}] {original_story.title}",
+        is_translation=True
+    )
+    
+    if translation_stories.exists():
+        translation_story = translation_stories.first()
+    
+    if request.method == 'POST':
+        # Process the form submission
+        translation_title = request.POST.get('title')
+        translation_content = request.POST.get('content')
+        
+        if not translation_title or not translation_content:
+            messages.error(request, "Title and content are required")
+            return redirect('newsroom:submit_translation', task_id=task.id)
+        
+        if translation_story:
+            # Update existing translation
+            translation_story.title = translation_title
+            translation_story.content = translation_content
+            translation_story.save()
+            
+            # Create a new revision
+            latest_revision = StoryRevision.objects.filter(story=translation_story).order_by('-revision_number').first()
+            new_revision_number = 1 if not latest_revision else latest_revision.revision_number + 1
+            
+            StoryRevision.objects.create(
+                story=translation_story,
+                content=translation_content,
+                revision_number=new_revision_number,
+                created_by=request.user
+            )
+        else:
+            # Create new translation story
+            translation_story = Story.objects.create(
+                title=translation_title,
+                content=translation_content,
+                category=original_story.category,
+                religion_classification=original_story.religion_classification,
+                language=target_language,
+                is_translation=True,
+                author=request.user,
+                status='REVIEW'  # Start in review status
+            )
+            
+            # Create initial revision
+            StoryRevision.objects.create(
+                story=translation_story,
+                content=translation_content,
+                revision_number=1,
+                created_by=request.user
+            )
+        
+        # Update task status
+        task.status = 'COMPLETED'
+        task.completed_at = timezone.now()
+        task.save()
+        
+        # Add a comment
+        TaskComment.objects.create(
+            task=task,
+            author=request.user,
+            content=f"Translation completed and submitted for review."
+        )
+        
+        messages.success(request, "Translation submitted successfully")
+        return redirect('newsroom:story_detail', story_id=translation_story.id)
+    
+    # For GET requests, show the translation form
+    context = {
+        'task': task,
+        'original_story': original_story,
+        'translation_story': translation_story,
+        'target_language': target_language,
+    }
+    return render(request, 'newsroom/story/submit_translation.html', context)
+
+# Add to newsroom/views.py
+
+@staff_required
+@editor_or_subeditor_required
+def translation_status_report(request):
+    """View to display the status of all translations"""
+    
+    # Get all English stories that have translation tasks
+    stories_with_translations = Story.objects.filter(
+        language='ENGLISH',
+        tasks__task_type='TRANSLATION'
+    ).distinct()
+    
+    # Get status information for each story
+    stories_data = []
+    for story in stories_with_translations:
+        # Get translation tasks
+        translation_tasks = Task.objects.filter(
+            related_story=story,
+            task_type='TRANSLATION'
+        ).select_related('assigned_to')
+        
+        # Count tasks by status
+        task_counts = {
+            'PENDING': 0,
+            'IN_PROGRESS': 0,
+            'REVIEW': 0,
+            'COMPLETED': 0,
+            'CANCELLED': 0,
+            'total': len(translation_tasks)
+        }
+        
+        for task in translation_tasks:
+            if task.status in task_counts:
+                task_counts[task.status] += 1
+        
+        # Determine overall status
+        overall_status = 'complete' if task_counts['COMPLETED'] == task_counts['total'] else 'incomplete'
+        
+        # Add to stories data
+        stories_data.append({
+            'story': story,
+            'tasks': translation_tasks,
+            'task_counts': task_counts,
+            'overall_status': overall_status
+        })
+    
+    context = {
+        'stories_data': stories_data,
+        'pending_count': sum(data['task_counts']['PENDING'] for data in stories_data),
+        'in_progress_count': sum(data['task_counts']['IN_PROGRESS'] for data in stories_data),
+        'review_count': sum(data['task_counts']['REVIEW'] for data in stories_data),
+        'completed_count': sum(data['task_counts']['COMPLETED'] for data in stories_data),
+        'total_count': sum(data['task_counts']['total'] for data in stories_data),
+        'complete_stories': sum(1 for data in stories_data if data['overall_status'] == 'complete')
+    }
+    
+    return render(request, 'newsroom/reports/translation_status.html', context)
+
+@staff_required
+@can_edit_story
+def story_submit_approval(request, story_id, story=None):
+    """Submit a story for approval by editors"""
+    if request.method == 'POST':
+        # Check if story is in draft or review status
+        if story.status not in ['DRAFT', 'REVIEW']:
+            messages.error(request, "Only draft or reviewed stories can be submitted for approval")
+            return redirect('newsroom:story_detail', story_id=story.id)
+        
+        # Update story status to PENDING_APPROVAL
+        story.status = 'PENDING_APPROVAL'
+        story.save()
+        
+        # If there's a review task for this user, mark it as completed
+        review_task = Task.objects.filter(
+            related_story=story,
+            task_type='STORY_REVIEW',
+            assigned_to=request.user
+        ).first()
+        
+        if review_task:
+            review_task.status = 'COMPLETED'
+            review_task.completed_at = timezone.now()
+            review_task.save()
+            
+            # Add a comment to the task
+            TaskComment.objects.create(
+                task=review_task,
+                author=request.user,
+                content="Review completed and submitted for approval"
+            )
+        
+        messages.success(request, "Story submitted for approval")
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # If not POST, redirect to story detail
+    return redirect('newsroom:story_detail', story_id=story.id)
+
+@staff_required
+@can_edit_story
+def story_complete_review(request, story_id, task_id, story=None):
+    """Mark a review task as completed"""
+    if request.method == 'POST':
+        # Get the task
+        task = get_object_or_404(Task, id=task_id, related_story=story, task_type='STORY_REVIEW', assigned_to=request.user)
+        
+        # Update the task status
+        task.status = 'COMPLETED'
+        task.completed_at = timezone.now()
+        task.save()
+        
+        # Add a comment
+        TaskComment.objects.create(
+            task=task,
+            author=request.user,
+            content=f"Review completed by {request.user.get_full_name()}."
+        )
+        
+        messages.success(request, "Review completed. You can now submit the story for approval.")
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    return redirect('newsroom:story_detail', story_id=story.id)
+
+@staff_required
+@editor_or_subeditor_required
+def tag_list(request):
+    """List all tags"""
+    tags = Tag.objects.all().order_by('name')
+    
+    # Define page actions
+    actions = [{
+        'label': 'Create Tag',
+        'url': reverse('newsroom:tag_create'),
+        'icon': 'plus',
+        'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+    }]
+    
+    context = {
+        'tags': tags,
+        'actions': actions
+    }
+    
+    return render(request, 'newsroom/tag/tag_list.html', context)
+
+@staff_required
+@editor_or_subeditor_required
+def tag_create(request):
+    """Create a new tag"""
+    if request.method == 'POST':
+        form = TagForm(request.POST)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            tag.created_by = request.user
+            tag.save()
+            messages.success(request, "Tag created successfully")
+            return redirect('newsroom:tag_list')
+        else:
+            logging.error("TagForm errors: %s", form.errors)
+            messages.error(request, "Please correct the errors below")
+    else:
+        form = TagForm()
+    
+    context = {
+        'form': form,
+        'is_new': True
+    }
+    
+    return render(request, 'newsroom/tag/tag_create.html', context)
+
+@staff_required
+@editor_or_subeditor_required
+def tag_edit(request, tag_id):
+    """Edit an existing tag"""
+    tag = get_object_or_404(Tag, id=tag_id)
+    
+    if request.method == 'POST':
+        form = TagForm(request.POST, instance=tag)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Tag updated successfully")
+            return redirect('newsroom:tag_list')
+        else:
+            logging.error("TagForm errors for tag %s: %s", tag.id, form.errors)
+            messages.error(request, "Please correct the errors below")
+    else:
+        form = TagForm(instance=tag)
+    
+    context = {
+        'form': form,
+        'tag': tag,
+        'is_new': False
+    }
+    
+    return render(request, 'newsroom/tag/tag_edit.html', context)
+
+@staff_required
+@editor_or_subeditor_required
+def tag_delete(request, tag_id):
+    """Delete a tag"""
+    tag = get_object_or_404(Tag, id=tag_id)
+    
+    # Get count of stories using this tag
+    story_count = tag.stories.count()
+    
+    if request.method == 'POST':
+        # Delete the tag (it will be removed from all stories automatically)
+        tag.delete()
+        messages.success(request, "Tag deleted successfully")
+        return redirect('newsroom:tag_list')
+    
+    context = {
+        'tag': tag,
+        'story_count': story_count
+    }
+    
+    return render(request, 'newsroom/tag/tag_delete.html', context)
+
+@staff_required
+@editor_or_subeditor_required
+@can_edit_story
+def story_manage_tags(request, story_id, story=None):
+    """Add or remove tags from a story"""
+    if request.method == 'POST':
+        form = StoryTagsForm(request.POST)
+        if form.is_valid():
+            # Get the selected tags
+            selected_tags = form.cleaned_data['tags']
+            
+            # Clear existing tags and add the selected ones
+            story.tags.clear()
+            for tag in selected_tags:
+                story.tags.add(tag)
+            
+            messages.success(request, "Story tags updated successfully")
+            return redirect('newsroom:story_detail', story_id=story.id)
+    else:
+        # Pre-select the story's current tags
+        form = StoryTagsForm(initial={'tags': story.tags.all()})
+    
+    context = {
+        'form': form,
+        'story': story
+    }
+    
+    return render(request, 'newsroom/story/story_manage_tags.html', context)

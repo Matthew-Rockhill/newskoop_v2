@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Translation Status Report - Newskoop{% endblock %}
+{% block page_title %}Translation Status Report{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <a href="{% url 'newsroom:dashboard' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back to Dashboard
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Summary Stats -->
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-primary-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="clipboard" class="h-6 w-6 text-primary" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Total Tasks</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ total_count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-gray-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="clock" class="h-6 w-6 text-gray-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ pending_count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-blue-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="refresh-cw" class="h-6 w-6 text-blue-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">In Progress</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ in_progress_count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-yellow-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="eye" class="h-6 w-6 text-yellow-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">In Review</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ review_count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-green-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="check-circle" class="h-6 w-6 text-green-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Completed</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ completed_count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Translation Status Table -->
+  <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-800">Translation Status by Story</h2>
+        <p class="text-sm text-gray-500">{{ stories_data|length }} stories with translations, {{ complete_stories }} complete</p>
+      </div>
+      <div>
+        <span class="relative inline-flex rounded-md shadow-sm">
+          <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            {% include "components/ui/icons.html" with name="download" class="mr-2 h-4 w-4" %}
+            Export
+          </button>
+        </span>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Story</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Afrikaans</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Xhosa</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for data in stories_data %}
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">
+                      <a href="{% url 'newsroom:story_detail' story_id=data.story.id %}" class="hover:text-primary">
+                        {{ data.story.title }}
+                      </a>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                      {{ data.story.author.get_full_name }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% include "components/ui/status_badges.html" with status=data.story.status|lower text=data.story.get_status_display %}
+              </td>
+              
+              <!-- Afrikaans Translation Status -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% for task in data.tasks %}
+                  {% if 'Afrikaans' in task.title %}
+                    {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
+                    <div class="text-xs text-gray-500 mt-1">
+                      Assigned to: {{ task.assigned_to.get_full_name }}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </td>
+              
+              <!-- Xhosa Translation Status -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% for task in data.tasks %}
+                  {% if 'Xhosa' in task.title %}
+                    {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
+                    <div class="text-xs text-gray-500 mt-1">
+                      Assigned to: {{ task.assigned_to.get_full_name }}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </td>
+              
+              <!-- Progress Bar -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  {% with completion_percentage=data.task_counts.COMPLETED|floatformat:0|add:0 %}
+                  <div class="bg-primary h-2.5 rounded-full" style="width: {{ completion_percentage }}%"></div>
+                  {% endwith %}
+                </div>
+                <span class="text-xs text-gray-500 mt-1">
+                  {{ data.task_counts.COMPLETED }}/{{ data.task_counts.total }} complete
+                </span>
+              </td>
+              
+              <!-- Actions -->
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <a href="{% url 'newsroom:story_detail' story_id=data.story.id %}" class="text-primary hover:text-primary-dark mr-3">
+                  View Story
+                </a>
+                {% if data.overall_status == 'complete' and data.story.status == 'APPROVED' %}
+                <a href="{% url 'newsroom:story_publish' story_id=data.story.id %}" class="text-success hover:text-success-dark">
+                  Publish
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+                No translation tasks found. Create English stories and approve them to generate translation tasks.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

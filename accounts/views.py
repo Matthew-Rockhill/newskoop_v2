@@ -315,6 +315,13 @@ def station_edit(request, station_id):
                     affected_users.update(is_active=False)
                     if count > 0:
                         messages.info(request, f'{count} users associated with this station have been deactivated.')
+                # For activating a station, reactivate all its users
+                else:
+                    affected_users = CustomUser.objects.filter(radio_station=updated_station, is_active=False)
+                    count = affected_users.count()
+                    affected_users.update(is_active=True)
+                    if count > 0:
+                        messages.info(request, f'{count} users associated with this station have been reactivated.')
             
             messages.success(request, f'Station "{station.name}" updated successfully.')
             return redirect('accounts:station_detail', station_id=station.id)

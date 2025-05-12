@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Approve Story: {{ story.title }} - Newskoop{% endblock %}
+{% block page_title %}Approve Story{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
+      {% include "components/ui/icons.html" with name="check" class="mr-2" %}
+      Approve Story
+    </button>
+  </form>
+  
+  <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="edit" class="mr-2" %}
+    Edit First
+  </a>
+  
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Approval Info Card -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 bg-success-50 flex items-center">
+      <div class="flex-shrink-0 h-10 w-10 rounded-full bg-success-100 flex items-center justify-center text-success mr-4">
+        {% include "components/ui/icons.html" with name="check" %}
+      </div>
+      <div>
+        <h2 class="text-lg font-semibold text-success-600">Approve Story for Translation</h2>
+        <p class="text-sm text-success-500">This will mark the story as approved and create translation tasks</p>
+      </div>
+    </div>
+    
+    <div class="p-6">
+      <div class="prose max-w-none">
+        <p>You are about to approve this story. This will:</p>
+        <ul>
+          <li>Change the story status from "In Review" to "Approved"</li>
+          {% if story.language == 'ENGLISH' %}
+          <li>Create translation tasks for Afrikaans and Xhosa versions</li>
+          <li>Allow the story to be published once translations are completed</li>
+          {% else %}
+          <li>Make the story eligible for publishing immediately</li>
+          {% endif %}
+        </ul>
+        
+        <div class="bg-gray-50 p-4 rounded-lg my-4 border border-gray-200">
+          <p class="font-medium text-gray-900">Before approving, please confirm:</p>
+          <div class="mt-2 space-y-2">
+            <div class="flex items-start">
+              <input id="check-content" type="checkbox" class="h-4 w-4 mt-1 rounded text-primary focus:ring-primary">
+              <label for="check-content" class="ml-2 text-gray-700">
+                The content has been thoroughly reviewed for accuracy and quality
+              </label>
+            </div>
+            <div class="flex items-start">
+              <input id="check-formatting" type="checkbox" class="h-4 w-4 mt-1 rounded text-primary focus:ring-primary">
+              <label for="check-formatting" class="ml-2 text-gray-700">
+                The formatting and structure are consistent with style guidelines
+              </label>
+            </div>
+            <div class="flex items-start">
+              <input id="check-metadata" type="checkbox" class="h-4 w-4 mt-1 rounded text-primary focus:ring-primary">
+              <label for="check-metadata" class="ml-2 text-gray-700">
+                The title, category, and other metadata are appropriate
+              </label>
+            </div>
+            {% if story.language == 'ENGLISH' %}
+            <div class="flex items-start">
+              <input id="check-translation" type="checkbox" class="h-4 w-4 mt-1 rounded text-primary focus:ring-primary">
+              <label for="check-translation" class="ml-2 text-gray-700">
+                The content is ready for translation to Afrikaans and Xhosa
+              </label>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Story Preview Card -->
+      <div class="mt-6 border border-gray-200 rounded-lg p-4">
+        <div class="flex justify-between items-start">
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">{{ story.title }}</h1>
+            <div class="mt-2 flex flex-wrap items-center text-sm text-gray-500 gap-x-4 gap-y-2">
+              <span>
+                {% include "components/ui/icons.html" with name="user" class="h-4 w-4 inline mr-1" %}
+                By {{ story.author.get_full_name }}
+              </span>
+              <span>
+                {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 inline mr-1" %}
+                {{ story.category.name }}
+              </span>
+              <span>
+                {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 inline mr-1" %}
+                {{ story.get_language_display }}
+              </span>
+            </div>
+          </div>
+          {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+        </div>
+        
+        <div class="mt-4 prose max-w-none">
+          {{ story.content|safe|truncatewords_html:100 }}
+          {% if story.content|wordcount > 100 %}
+            <div class="flex justify-center mt-4">
+              <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-primary hover:underline">
+                View full story...
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

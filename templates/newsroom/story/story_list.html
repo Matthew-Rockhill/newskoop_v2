@@ -5,14 +5,7 @@
 {% block page_title %}Stories{% endblock %}
 
 {% block page_actions %}
-<div class="flex space-x-3">
-  {% if user.user_type == 'STAFF' %}
-  <a href="{% url 'newsroom:story_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
-    New Story
-  </a>
-  {% endif %}
-</div>
+{% include "components/page_actions.html" with actions=actions %}
 {% endblock %}
 
 {% block content %}
@@ -114,6 +107,9 @@
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Date
             </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Tags
+            </th>
             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
             </th>
@@ -167,6 +163,20 @@
                   {{ story.published_at|date:"M d, Y" }}
                 {% else %}
                   {{ story.created_at|date:"M d, Y" }}
+                {% endif %}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex flex-wrap gap-1">
+                {% for tag in story.tags.all|slice:":3" %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                    {{ tag.name }}
+                  </span>
+                {% endfor %}
+                {% if story.tags.count > 3 %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    +{{ story.tags.count|add:"-3" }}
+                  </span>
                 {% endif %}
               </div>
             </td>

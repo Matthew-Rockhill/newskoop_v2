@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Tags: {{ story.title }} - Newskoop{% endblock %}
+{% block page_title %}Manage Tags{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-3">
+  <button type="submit" form="tags-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
+    Save Tags
+  </button>
+  
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back to Story
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-3 gap-6">
+  <!-- Left Column (2/3 width) -->
+  <div class="col-span-2 space-y-6">
+    <!-- Tags Selection -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="tag" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Manage Tags</h2>
+          <p class="text-sm text-gray-500">Select tags to associate with this story</p>
+        </div>
+      </div>
+      
+      <div class="p-6">
+        <form id="tags-form" method="post">
+          {% csrf_token %}
+          
+          <div class="mb-4">
+            <div class="flex justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">Available Tags</label>
+              <a href="{% url 'newsroom:tag_create' %}" class="text-sm text-primary hover:underline inline-flex items-center">
+                {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
+                Create New Tag
+              </a>
+            </div>
+            
+            {% if form.tags.errors %}
+              <div class="text-danger text-sm mb-2">{{ form.tags.errors|first }}</div>
+            {% endif %}
+            
+            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 max-h-96 overflow-y-auto">
+              {% if form.tags.field.queryset.exists %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {% for tag_choice in form.tags %}
+                    <div class="flex items-center">
+                      {{ tag_choice.tag }}
+                      <label for="{{ tag_choice.id_for_label }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                        {{ tag_choice.choice_label }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-sm text-gray-500 text-center py-4">
+                  No tags available. <a href="{% url 'newsroom:tag_create' %}" class="text-primary hover:underline">Create your first tag</a>.
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded border border-gray-200 mt-6">
+            <div class="flex items-start">
+              {% include "components/ui/icons.html" with name="info" class="h-5 w-5 text-gray-400 mr-2 mt-0.5" %}
+              <div>
+                <p class="text-sm text-gray-600">Tags help organize stories and make them easier to find. You can apply multiple tags to each story.</p>
+                <ul class="mt-2 text-xs text-gray-500 list-disc list-inside">
+                  <li>Use tags consistently across all stories</li>
+                  <li>Tags can be used to group stories by topic, event, location, etc.</li>
+                  <li>Well-tagged stories are easier for radio stations to discover</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Right Column (1/3 width) - Story Info -->
+  <div class="col-span-1 space-y-6">
+    <!-- Story Details Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+      </div>
+      
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">{{ story.title }}</h3>
+        
+        <dl class="divide-y divide-gray-200">
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Status</dt>
+            <dd class="text-sm">
+              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+            </dd>
+          </div>
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Category</dt>
+            <dd class="text-sm text-gray-900">{{ story.category.name }}</dd>
+          </div>
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Language</dt>
+            <dd class="text-sm text-gray-900">{{ story.get_language_display }}</dd>
+          </div>
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Author</dt>
+            <dd class="text-sm text-gray-900">{{ story.author.get_full_name }}</dd>
+          </div>
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Created</dt>
+            <dd class="text-sm text-gray-900">{{ story.created_at|date:"F j, Y" }}</dd>
+          </div>
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Current Tags</dt>
+            <dd class="text-sm text-gray-900">
+              {% if story.tags.exists %}
+                <div class="flex flex-wrap gap-2">
+                  {% for tag in story.tags.all %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                      {{ tag.name }}
+                    </span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-gray-500">No tags</span>
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

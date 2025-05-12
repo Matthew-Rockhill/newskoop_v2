@@ -70,6 +70,13 @@ module.exports = {
             DEFAULT: '#3b82f6',
             light: '#dbeafe',
           },
+          // Custom color classes
+          bg: {
+            warning: '#fef3c7',
+            info: '#dbeafe',
+            success: '#d1fae5',
+            danger: '#fee2e2',
+          },
         },
         fontFamily: {
           sans: [
