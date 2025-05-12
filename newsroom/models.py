@@ -390,3 +390,51 @@ class Tag(models.Model):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+        
+# Add to models.py
+class StoryActivity(models.Model):
+    """
+    Track major activity on stories without storing full content revisions
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='activities')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    
+    # Activity types
+    ACTIVITY_TYPES = [
+        ('CREATE', 'Created'),
+        ('EDIT', 'Edited'),
+        ('STATUS', 'Status Changed'),
+        ('REVIEW', 'Submitted for Review'),
+        ('APPROVE', 'Approved'),
+        ('PUBLISH', 'Published'),
+        ('TRANSLATION', 'Translation Added'),
+    ]
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
+    
+    # Additional activity data
+    old_status = models.CharField(max_length=20, blank=True, null=True)
+    new_status = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = "Story Activities"
+    
+    def __str__(self):
+        return f"{self.get_activity_type_display()} by {self.user.get_full_name()} on {self.created_at.strftime('%Y-%m-%d')}"
+
+# Add helper function for recording activity
+def record_story_activity(story, user, activity_type, old_status=None, new_status=None, description=None):
+    """Helper function to record story activity"""
+    activity = StoryActivity.objects.create(
+        story=story,
+        user=user,
+        activity_type=activity_type,
+        old_status=old_status,
+        new_status=new_status,
+        description=description
+    )
+    return activity

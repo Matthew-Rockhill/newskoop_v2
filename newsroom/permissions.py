@@ -89,12 +89,6 @@ def publishing_rights_required(view_func):
     return _wrapped_view
 
 def can_edit_story(view_func):
-    """
-    Decorator that ensures users can only edit stories if:
-    1. They are the author, or
-    2. They are an editor or sub-editor, or
-    3. They have a review task for this story assigned to them
-    """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -104,37 +98,41 @@ def can_edit_story(view_func):
         if not story_id:
             raise ValueError("Story ID not provided")
         
-        from .models import Story, Task
         try:
             story = Story.objects.get(id=story_id)
         except Story.DoesNotExist:
             messages.error(request, "Story not found")
             return redirect('newsroom:story_list')
         
-        # Check if user is author or has editor/sub-editor role
+        # Rule 1: Editors/Admins can edit anything
+        is_editor = request.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
+        if is_editor:
+            # Allow edit, but attach story to kwargs for the view
+            kwargs['story'] = story
+            return view_func(request, *args, **kwargs)
+            
+        # Rule 2: Author can edit if in DRAFT stage
         is_author = story.author == request.user
-        has_editor_role = request.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
+        if is_author and story.status == 'DRAFT':
+            kwargs['story'] = story
+            return view_func(request, *args, **kwargs)
+            
+        # Rule 3: Journalists can edit stories assigned to them for review
+        has_review_task = Task.objects.filter(
+            related_story=story,
+            task_type='STORY_REVIEW',
+            assigned_to=request.user,
+            status__in=['PENDING', 'IN_PROGRESS']
+        ).exists()
         
-        # Check if user has a review task for this story
-        has_review_task = False
-        if request.user.staff_role == 'JOURNALIST':
-            has_review_task = Task.objects.filter(
-                related_story=story,
-                task_type='STORY_REVIEW',
-                assigned_to=request.user
-            ).exists()
+        if has_review_task and story.status == 'REVIEW':
+            kwargs['story'] = story
+            return view_func(request, *args, **kwargs)
         
-        if not (is_author or has_editor_role or has_review_task):
-            messages.error(request, "You don't have permission to edit this story")
-            return redirect('newsroom:story_detail', story_id=story_id)
-        
-        # Don't allow editing of published stories unless user is an editor
-        if story.status == 'PUBLISHED' and not has_editor_role:
-            messages.error(request, "Published stories can only be edited by editors")
-            return redirect('newsroom:story_detail', story_id=story_id)
-        
-        kwargs['story'] = story  # Add story to kwargs for the view
-        return view_func(request, *args, **kwargs)
+        # No permission to edit
+        messages.error(request, "You don't have permission to edit this story at its current stage")
+        return redirect('newsroom:story_detail', story_id=story_id)
+    
     return _wrapped_view
 
 def can_manage_categories(view_func):
