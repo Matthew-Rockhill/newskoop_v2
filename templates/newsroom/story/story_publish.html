@@ -5,22 +5,7 @@
 {% block page_title %}Publish Story{% endblock %}
 
 {% block page_actions %}
-<div class="flex space-x-3">
-  <button type="submit" form="publish-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
-    {% include "components/ui/icons.html" with name="check" class="mr-2" %}
-    Publish Story
-  </button>
-  
-  <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="edit" class="mr-2" %}
-    Edit Content
-  </a>
-  
-  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
-  </a>
-</div>
+{% include "components/page_actions.html" with actions=actions %}
 {% endblock %}
 
 {% block content %}
@@ -183,6 +168,57 @@
             </label>
           </li>
         </ul>
+
+        {% if translation_tasks %}
+          <div class="mt-6 border-t border-gray-200 pt-6">
+            <h3 class="font-medium text-gray-800 mb-4">Translations Status</h3>
+            <div class="space-y-3">
+              {% for task in translation_tasks %}
+                <div class="border rounded-md p-3">
+                  <div class="flex justify-between items-center">
+                    <h4 class="font-medium text-sm">{{ task.title }}</h4>
+                    {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
+                  </div>
+                  <div class="mt-1 text-sm text-gray-600 flex items-center justify-between">
+                    <div>
+                      <span>Assigned to: {{ task.assigned_to.get_full_name }}</span>
+                    </div>
+                    {% if task.status == 'COMPLETED' %}
+                    <span class="text-success flex items-center">
+                      {% include "components/ui/icons.html" with name="check-circle" class="h-4 w-4 mr-1" %}
+                      Ready for publishing
+                    </span>
+                    {% elif task.status == 'PENDING' or task.status == 'IN_PROGRESS' %}
+                    <span class="text-warning flex items-center">
+                      {% include "components/ui/icons.html" with name="clock" class="h-4 w-4 mr-1" %}
+                      Pending completion
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            
+            {% if all_translations_complete %}
+            <div class="mt-4 bg-success-50 p-3 rounded-md border border-success-200 text-success-700">
+              <div class="flex items-start">
+                {% include "components/ui/icons.html" with name="check-circle" class="h-5 w-5 text-success mr-2 mt-0.5" %}
+                <p>All translations are complete and ready for publishing.</p>
+              </div>
+            </div>
+            {% else %}
+            <div class="mt-4 bg-warning-50 p-3 rounded-md border border-warning-200 text-warning-700">
+              <div class="flex items-start">
+                {% include "components/ui/icons.html" with name="warning" class="h-5 w-5 text-warning mr-2 mt-0.5" %}
+                <div>
+                  <p>Some translations are not yet complete. You should wait until all translations are ready before publishing.</p>
+                  <p class="mt-1 text-sm">If you need to publish urgently, you can assign the translation tasks to different translators or follow up with the current assignees.</p>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
         
         {% if story.audio_clips.exists %}
         <div class="mt-6 border-t border-gray-200 pt-6">

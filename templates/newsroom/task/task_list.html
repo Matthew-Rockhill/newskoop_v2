@@ -1,36 +1,135 @@
 {% extends "base.html" %}
 {% load static %}
+{% load task_extras %}
 
-{% block title %}Tasks - Newsroom{% endblock %}
+{% block title %}Tasks - Newskoop{% endblock %}
 {% block page_title %}Tasks{% endblock %}
 
 {% block page_actions %}
-<a href="{% url 'newsroom:task_create' %}" class="btn btn-primary">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-  </svg>
+<a href="{% url 'newsroom:task_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+  {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
   New Task
 </a>
 {% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-  <!-- Filters and View Selector -->
-  <div class="bg-white rounded-lg shadow">
+  <!-- Task Stats -->
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- Total Tasks Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-primary-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="clipboard" class="h-6 w-6 text-primary" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Total Tasks</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">{{ tasks.paginator.count }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Tasks Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-gray-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="clock" class="h-6 w-6 text-gray-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">
+                  <a href="{% url 'newsroom:task_list' %}?view={{ view_mode }}&status=PENDING" class="hover:text-primary">
+                    {% with pending_count=0 %}
+                      {{ pending_count }}
+                    {% endwith %}
+                  </a>
+                </div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- In Progress Tasks Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-blue-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="refresh-cw" class="h-6 w-6 text-blue-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">In Progress</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">
+                  <a href="{% url 'newsroom:task_list' %}?view={{ view_mode }}&status=IN_PROGRESS" class="hover:text-primary">
+                    {% with in_progress_count=0 %}
+                      {{ in_progress_count }}
+                    {% endwith %}
+                  </a>
+                </div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Tasks Card -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-green-50 rounded-md p-3">
+            {% include "components/ui/icons.html" with name="check-circle" class="h-6 w-6 text-green-500" %}
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Completed</dt>
+              <dd>
+                <div class="text-lg font-medium text-gray-900">
+                  <a href="{% url 'newsroom:task_list' %}?view={{ view_mode }}&status=COMPLETED" class="hover:text-primary">
+                    {% with completed_count=0 %}
+                      {{ completed_count }}
+                    {% endwith %}
+                  </a>
+                </div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Mode and Search -->
+  <div class="bg-white shadow rounded-lg">
     <div class="px-6 py-4 border-b border-gray-200">
       <div class="flex flex-wrap items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">Filter Tasks</h2>
+        <h2 class="text-lg font-semibold text-gray-800">Task Management</h2>
         
-        <!-- View Mode Selector -->
-        <div class="flex bg-gray-100 rounded-lg p-1">
-          <a href="{% url 'newsroom:task_list' %}?view=assigned{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1 text-sm rounded-md {% if view_mode == 'assigned' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+        <!-- View Mode Tabs -->
+        <div class="flex bg-gray-100 rounded-lg p-1 mt-2 sm:mt-0">
+          <a href="{% url 'newsroom:task_list' %}?view=assigned{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 text-sm rounded-md {% if view_mode == 'assigned' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+            {% include "components/ui/icons.html" with name="inbox" class="h-4 w-4 inline mr-1" %}
             Assigned to Me
           </a>
-          <a href="{% url 'newsroom:task_list' %}?view=created{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1 text-sm rounded-md {% if view_mode == 'created' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+          <a href="{% url 'newsroom:task_list' %}?view=created{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 text-sm rounded-md {% if view_mode == 'created' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+            {% include "components/ui/icons.html" with name="send" class="h-4 w-4 inline mr-1" %}
             Created by Me
           </a>
           {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-          <a href="{% url 'newsroom:task_list' %}?view=all{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1 text-sm rounded-md {% if view_mode == 'all' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+          <a href="{% url 'newsroom:task_list' %}?view=all{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3 py-1.5 text-sm rounded-md {% if view_mode == 'all' %}bg-white shadow text-primary font-medium{% else %}text-gray-600 hover:text-gray-800{% endif %}">
+            {% include "components/ui/icons.html" with name="list" class="h-4 w-4 inline mr-1" %}
             All Tasks
           </a>
           {% endif %}
@@ -38,25 +137,24 @@
       </div>
     </div>
     
+    <!-- Search and Filters -->
     <div class="p-6">
-      <form method="get" class="space-y-4 md:space-y-0 md:flex md:flex-wrap md:items-end md:gap-4">
+      <form method="get" class="grid grid-cols-1 gap-y-4 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 items-end">
         <input type="hidden" name="view" value="{{ view_mode }}">
         
-        <div class="flex-1 min-w-0">
+        <div class="sm:col-span-2 lg:col-span-1">
           <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <div class="relative rounded-md shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              {% include "components/ui/icons.html" with name="search" class="text-gray-400" %}
             </div>
-            <input type="text" name="q" id="search" class="form-control pl-10" placeholder="Search tasks..." value="{{ search_query }}">
+            <input type="text" name="q" id="search" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 pl-10" placeholder="Search tasks..." value="{{ search_query }}">
           </div>
         </div>
         
-        <div class="w-full md:w-1/6">
+        <div>
           <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select name="status" id="status" class="form-control">
+          <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
             <option value="">All Statuses</option>
             <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
             <option value="IN_PROGRESS" {% if status_filter == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
@@ -66,9 +164,9 @@
           </select>
         </div>
         
-        <div class="w-full md:w-1/6">
+        <div>
           <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-          <select name="type" id="type" class="form-control">
+          <select name="type" id="type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
             <option value="">All Types</option>
             <option value="STORY_WRITING" {% if type_filter == 'STORY_WRITING' %}selected{% endif %}>Story Writing</option>
             <option value="STORY_EDITING" {% if type_filter == 'STORY_EDITING' %}selected{% endif %}>Story Editing</option>
@@ -79,9 +177,9 @@
           </select>
         </div>
         
-        <div class="w-full md:w-1/6">
+        <div>
           <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-          <select name="priority" id="priority" class="form-control">
+          <select name="priority" id="priority" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50">
             <option value="">All Priorities</option>
             <option value="LOW" {% if priority_filter == 'LOW' %}selected{% endif %}>Low</option>
             <option value="MEDIUM" {% if priority_filter == 'MEDIUM' %}selected{% endif %}>Medium</option>
@@ -90,196 +188,192 @@
           </select>
         </div>
         
-        <div class="md:pb-1">
-          <button type="submit" class="btn btn-primary w-full md:w-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            Filter
+        <div class="sm:col-span-2 lg:col-span-4 flex space-x-3">
+          <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            {% include "components/ui/icons.html" with name="filter" class="mr-2" %}
+            Apply Filters
           </button>
+          
+          <a href="{% url 'newsroom:task_list' %}?view={{ view_mode }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            {% include "components/ui/icons.html" with name="x" class="mr-2" %}
+            Clear Filters
+          </a>
         </div>
       </form>
     </div>
   </div>
-  
-  <!-- Tasks List -->
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <h2 class="text-lg font-semibold text-gray-800">
-        {% if view_mode == 'assigned' %}
-          Tasks Assigned to Me
-        {% elif view_mode == 'created' %}
-          Tasks Created by Me
-        {% else %}
-          All Tasks
-        {% endif %}
-      </h2>
-      <span class="text-sm text-gray-500">{{ tasks.paginator.count }} tasks found</span>
-    </div>
-    
-    {% if tasks %}
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Title / Details
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Assignee
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Type
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Priority
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Due Date
-            </th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          {% for task in tasks %}
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">
-              <div class="flex items-center">
-                <div>
-                  <div class="text-sm font-medium text-gray-900">
-                    <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="hover:text-primary">
-                      {{ task.title }}
-                    </a>
-                  </div>
-                  <div class="text-sm text-gray-500">
-                    Created {{ task.created_at|date:"M d, Y" }} by {{ task.assigned_by.get_full_name }}
-                  </div>
-                  {% if task.related_story %}
-                  <div class="text-xs text-gray-500 mt-1">
-                    <span>Related to:</span>
-                    <a href="{% url 'newsroom:story_detail' story_id=task.related_story.id %}" class="text-primary hover:underline">
-                      {{ task.related_story.title|truncatechars:40 }}
-                    </a>
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ task.assigned_to.get_full_name }}</div>
-              <div class="text-xs text-gray-500">{{ task.assigned_to.get_staff_role_display }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ task.get_task_type_display }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="text-sm task-priority-{{ task.priority|lower }}">
-                {{ task.get_priority_display }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full task-status-{{ task.status|lower }}">
-                {{ task.get_status_display }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              {% if task.due_date %}
-                <div class="text-sm {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}text-danger font-medium{% else %}text-gray-500{% endif %}">
-                  {{ task.due_date|date:"M d, Y" }}
-                </div>
-                {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}
-                <div class="text-xs text-danger">Overdue</div>
-                {% endif %}
-              {% else %}
-                <div class="text-xs text-gray-500">No due date</div>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <div class="flex justify-end space-x-2">
-                {% if task.assigned_to == user or task.assigned_by == user or user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-                <a href="{% url 'newsroom:task_edit' task_id=task.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </a>
-                {% endif %}
-                
-                <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="text-gray-600 hover:text-primary" title="View">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    
-<!-- Pagination -->
-{% if tasks.paginator.num_pages > 1 %}
-<div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-  <div class="text-sm text-gray-700">
-    Showing
-    <span class="font-medium">{{ tasks.start_index }}</span>
-    to
-    <span class="font-medium">{{ tasks.end_index }}</span>
-    of
-    <span class="font-medium">{{ tasks.paginator.count }}</span>
-    results
-  </div>
-  <div class="flex space-x-2">
-    {% if tasks.has_previous %}
-    <a href="?page={{ tasks.previous_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}" class="btn btn-sm btn-outline">
-      Previous
-    </a>
-    {% endif %}
-    
-    {% if tasks.has_next %}
-    <a href="?page={{ tasks.next_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}" class="btn btn-sm btn-outline">
-      Next
-    </a>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
 
-{% else %}
-<div class="px-6 py-12 text-center">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-  </svg>
-  <h3 class="mt-4 text-lg font-medium text-gray-900">No tasks found</h3>
-  <p class="mt-2 text-sm text-gray-500">
-    {% if search_query or status_filter or type_filter or priority_filter %}
-      Try adjusting your search or filter criteria.
-    {% else %}
-      {% if view_mode == 'assigned' %}
-        No tasks have been assigned to you yet.
-      {% elif view_mode == 'created' %}
-        You haven't created any tasks yet.
-      {% else %}
-        No tasks have been created yet.
-      {% endif %}
+  <!-- Task List -->
+  <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Task List</h2>
+    </div>
+    
+    <ul role="list" class="divide-y divide-gray-200">
+      {% for task in tasks %}
+      <li>
+        <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="block hover:bg-gray-50">
+          <div class="px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap sm:flex-nowrap">
+              <div class="flex items-center space-x-3 mb-2 sm:mb-0">
+                <div class="flex-shrink-0">
+                  <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg 
+                    {% if task.task_type == 'STORY_WRITING' %}bg-blue-100 text-blue-700
+                    {% elif task.task_type == 'STORY_EDITING' %}bg-purple-100 text-purple-700
+                    {% elif task.task_type == 'FOLLOW_UP' %}bg-orange-100 text-orange-700
+                    {% elif task.task_type == 'TRANSLATION' %}bg-green-100 text-green-700
+                    {% elif task.task_type == 'AUDIO_RECORDING' %}bg-red-100 text-red-700
+                    {% else %}bg-gray-100 text-gray-700
+                    {% endif %}">
+                    {% if task.task_type == 'STORY_WRITING' %}
+                      {% include "components/ui/icons.html" with name="edit" %}
+                    {% elif task.task_type == 'STORY_EDITING' %}
+                      {% include "components/ui/icons.html" with name="edit-3" %}
+                    {% elif task.task_type == 'FOLLOW_UP' %}
+                      {% include "components/ui/icons.html" with name="refresh-cw" %}
+                    {% elif task.task_type == 'TRANSLATION' %}
+                      {% include "components/ui/icons.html" with name="globe" %}
+                    {% elif task.task_type == 'AUDIO_RECORDING' %}
+                      {% include "components/ui/icons.html" with name="mic" %}
+                    {% else %}
+                      {% include "components/ui/icons.html" with name="check-circle" %}
+                    {% endif %}
+                  </span>
+                </div>
+                <div>
+                  <p class="text-base font-medium text-gray-900">{{ task.title }}</p>
+                  <p class="truncate text-sm text-gray-500 max-w-md">{{ task.description|truncatechars:120 }}</p>
+                </div>
+              </div>
+              <div class="flex-shrink-0 flex items-center space-x-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                  {% if task.status == 'PENDING' %}bg-gray-100 text-gray-800
+                  {% elif task.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-800
+                  {% elif task.status == 'REVIEW' %}bg-yellow-100 text-yellow-800
+                  {% elif task.status == 'COMPLETED' %}bg-green-100 text-green-800
+                  {% elif task.status == 'CANCELLED' %}bg-red-100 text-red-800
+                  {% endif %}">
+                  {{ task.get_status_display }}
+                </span>
+                
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  {% if task.priority == 'LOW' %}bg-gray-100 text-gray-800
+                  {% elif task.priority == 'MEDIUM' %}bg-blue-100 text-blue-800
+                  {% elif task.priority == 'HIGH' %}bg-yellow-100 text-yellow-800
+                  {% elif task.priority == 'URGENT' %}bg-red-100 text-red-800
+                  {% endif %}">
+                  {{ task.get_priority_display }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
+              <div class="flex items-center text-sm text-gray-500">
+                <div class="flex items-center">
+                  {% include "components/ui/icons.html" with name="user" class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" %}
+                  <span>Assigned to: {{ task.assigned_to.get_full_name }}</span>
+                </div>
+              </div>
+              
+              {% if task.related_story %}
+              <div class="flex items-center text-sm text-gray-500">
+                {% include "components/ui/icons.html" with name="book-open" class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" %}
+                <span class="truncate">{{ task.related_story.title|truncatechars:30 }}</span>
+              </div>
+              {% endif %}
+              
+              {% if task.due_date %}
+              <div class="flex items-center text-sm {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}text-danger font-medium{% else %}text-gray-500{% endif %}">
+                {% include "components/ui/icons.html" with name="calendar" class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" %}
+                <span>Due {{ task.due_date|date:"M d, Y" }}</span>
+                {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}
+                  <span class="text-xs text-danger ml-2">(Overdue)</span>
+                {% endif %}
+              </div>
+              {% endif %}
+              
+              <div class="flex items-center text-sm text-gray-500">
+                {% include "components/ui/icons.html" with name="clock" class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" %}
+                <span>Created {{ task.created_at|date:"M d, Y" }}</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      </li>
+      {% empty %}
+      <li class="px-6 py-12 text-center">
+        <div class="flex flex-col items-center">
+          {% include "components/ui/icons.html" with name="inbox" class="h-12 w-12 text-gray-400 mb-4" %}
+          <h3 class="text-lg font-medium text-gray-900">No tasks found</h3>
+          {% if search_query or status_filter or type_filter or priority_filter %}
+            <p class="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
+            <div class="mt-6">
+              <a href="{% url 'newsroom:task_list' %}?view={{ view_mode }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% include "components/ui/icons.html" with name="x" class="mr-2 h-4 w-4" %}
+                Clear All Filters
+              </a>
+            </div>
+          {% else %}
+            <p class="mt-1 text-sm text-gray-500">Get started by creating your first task.</p>
+            <div class="mt-6">
+              <a href="{% url 'newsroom:task_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% include "components/ui/icons.html" with name="plus" class="mr-2 h-4 w-4" %}
+                Create New Task
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    
+    <!-- Pagination -->
+    {% if tasks.paginator.num_pages > 1 %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+      <div class="flex-1 flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ tasks.start_index }}</span> to <span class="font-medium">{{ tasks.end_index }}</span> of <span class="font-medium">{{ tasks.paginator.count }}</span> tasks
+          </p>
+        </div>
+        <div>
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if tasks.has_previous %}
+            <a href="?page={{ tasks.previous_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              {% include "components/ui/icons.html" with name="chevron-left" class="h-5 w-5" %}
+              <span class="sr-only">Previous</span>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+              {% include "components/ui/icons.html" with name="chevron-left" class="h-5 w-5" %}
+              <span class="sr-only">Previous</span>
+            </span>
+            {% endif %}
+            
+            {% for i in tasks.paginator.page_range %}
+              {% if tasks.number == i %}
+              <span class="relative inline-flex items-center px-4 py-2 border border-primary bg-primary-50 text-sm font-medium text-primary">{{ i }}</span>
+              {% elif i > tasks.number|add:"-3" and i < tasks.number|add:"3" %}
+              <a href="?page={{ i }}{% if view_mode %}&view={{ view_mode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ i }}</a>
+              {% endif %}
+            {% endfor %}
+            
+            {% if tasks.has_next %}
+            <a href="?page={{ tasks.next_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              {% include "components/ui/icons.html" with name="chevron-right" class="h-5 w-5" %}
+              <span class="sr-only">Next</span>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+              {% include "components/ui/icons.html" with name="chevron-right" class="h-5 w-5" %}
+              <span class="sr-only">Next</span>
+            </span>
+            {% endif %}
+          </nav>
+        </div>
+      </div>
+    </div>
     {% endif %}
-  </p>
-  <div class="mt-6">
-    <a href="{% url 'newsroom:task_create' %}" class="btn btn-primary">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-      </svg>
-      Create Task
-    </a>
   </div>
-</div>
-{% endif %}
-</div>
 </div>
 {% endblock %}

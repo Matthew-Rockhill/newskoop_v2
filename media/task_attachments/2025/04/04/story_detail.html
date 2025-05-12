@@ -5,7 +5,61 @@
 {% block page_title %}Story Details{% endblock %}
 
 {% block page_actions %}
-{% include "components/page_actions.html" with actions=actions %}
+<div class="flex space-x-3">
+  {% if user.user_type == 'STAFF' %}
+    {# Show Edit button to author or editors if not published #}
+    {% if story.status != 'PUBLISHED' or user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+    <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+      {% include "components/ui/icons.html" with name="edit" class="mr-2" %}
+      Edit Story
+    </a>
+    {% endif %}
+    
+    {% if story.status == 'DRAFT' and story.author == user %}
+    <form method="post" action="{% url 'newsroom:story_edit' story_id=story.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="status" value="REVIEW">
+      <input type="hidden" name="title" value="{{ story.title }}">
+      <input type="hidden" name="content" value="{{ story.content|escapejs }}">
+      {% if story.category %}
+        <input type="hidden" name="category" value="{{ story.category.id }}">
+      {% endif %}
+      {% if story.religion_classification %}
+        <input type="hidden" name="religion_classification" value="{{ story.religion_classification }}">
+      {% endif %}
+      <input type="hidden" name="language" value="{{ story.language }}">
+      <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+        {% include "components/ui/icons.html" with name="check-circle" class="mr-2" %}
+        Submit for Review
+      </button>
+    </form>
+    {% endif %}
+    
+    {# Publish button for editors/sub-editors #}
+    {% if story.status == 'DRAFT' or story.status == 'REVIEW' or story.status == 'APPROVED' %}
+      {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+      <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success">
+        {% include "components/ui/icons.html" with name="check" class="mr-2" %}
+        Publish
+      </a>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  
+  {# Download button for published stories #}
+  {% if story.status == 'PUBLISHED' %}
+  <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="download" class="mr-2" %}
+    Download
+  </a>
+  {% endif %}
+  
+  {# Back to List button (always shown) #}
+  <a href="{% url 'newsroom:story_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back to List
+  </a>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -67,29 +121,7 @@
         </div>
         {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
       </div>
-
-      {% if story.tags.exists %}
-      <div class="mt-4">
-        <h4 class="text-sm font-medium text-gray-500 mb-2">Tags</h4>
-        <div class="flex flex-wrap gap-2">
-          {% for tag in story.tags.all %}
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-              {{ tag.name }}
-            </span>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if user.user_type == 'STAFF' and user.staff_role in 'SUB_EDITOR,EDITOR,SUPERADMIN,ADMIN' %}
-      <div class="mt-2">
-        <a href="{% url 'newsroom:story_manage_tags' story_id=story.id %}" class="text-sm text-primary hover:underline inline-flex items-center">
-          {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 mr-1" %}
-          {% if story.tags.exists %}Manage Tags{% else %}Add Tags{% endif %}
-        </a>
-      </div>
-      {% endif %}
-            
+      
       <div class="p-6">
         <div class="story-content prose max-w-none">
           {{ story.content|safe }}
@@ -211,7 +243,7 @@
       </div>
     </div>
     {% endif %}
-  </div>
+    </div>
   
   <!-- Right Column (1/3 width) - Related Content and Metadata -->
   <div class="col-span-1 space-y-6">
@@ -314,15 +346,6 @@
                   <span class="ml-2">Due: {{ task.due_date|date:"M d, Y" }}</span>
                 {% endif %}
               </div>
-              
-              {% if task.task_type == 'TRANSLATION' and task.status != 'COMPLETED' %}
-                <div class="mt-2">
-                  <a href="{% url 'newsroom:submit_translation' task_id=task.id %}" class="inline-flex items-center text-sm text-primary hover:underline">
-                    {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 mr-1" %}
-                    Submit Translation
-                  </a>
-                </div>
-              {% endif %}
             </div>
           {% endfor %}
         </div>
@@ -331,82 +354,4 @@
     {% endif %}
   </div>
 </div>
-
-<!-- Review Assignment Modal -->
-<div id="review-modal" class="fixed inset-0 hidden z-50 overflow-y-auto">
-  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-      <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-    </div>
-
-    <!-- Modal panel -->
-    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-      <form id="submit-review-form" method="post" action="{% url 'newsroom:story_submit_review' story_id=story.id %}">
-        {% csrf_token %}
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-warning-100 sm:mx-0 sm:h-10 sm:w-10">
-              {% include "components/ui/icons.html" with name="check-circle" class="h-6 w-6 text-warning" %}
-            </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">Submit for Review</h3>
-              <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                  Select a journalist to review this story. They will be notified and assigned a review task.
-                </p>
-
-                <!-- Reviewer selection dropdown -->
-                <div class="mt-4">
-                  <label for="reviewer" class="block text-sm font-medium text-gray-700">Select Reviewer</label>
-                  <select id="reviewer" name="reviewer" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
-                    <option value="">Select a journalist</option>
-                    {% for journalist in journalists %}
-                      <option value="{{ journalist.id }}">{{ journalist.get_full_name }} ({{ journalist.get_staff_role_display }})</option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                <!-- Comments field -->
-                <div class="mt-4">
-                  <label for="review_notes" class="block text-sm font-medium text-gray-700">Notes for Reviewer (optional)</label>
-                  <textarea id="review_notes" name="review_notes" rows="3" class="shadow-sm focus:ring-primary focus:border-primary mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-warning text-base font-medium text-white hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning sm:ml-3 sm:w-auto sm:text-sm">
-            Submit for Review
-          </button>
-          <button type="button" onclick="closeReviewModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Add the modal control script -->
-<script>
-  function openReviewModal() {
-    document.getElementById('review-modal').classList.remove('hidden');
-  }
-
-  function closeReviewModal() {
-    document.getElementById('review-modal').classList.add('hidden');
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    // Replace the direct form submission with modal opening
-    const submitForReviewBtn = document.getElementById('submit-for-review-btn');
-    if (submitForReviewBtn) {
-      submitForReviewBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        openReviewModal();
-      });
-    }
-  });
-</script>
 {% endblock %}

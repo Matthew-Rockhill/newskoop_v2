@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from django_quill.fields import QuillFormField
 
-from .models import Story, Category, Task, AudioClip, TaskComment, TaskAttachment
+from .models import Story, Category, Task, AudioClip, TaskComment, TaskAttachment, Tag
 
 class CategoryForm(forms.ModelForm):
     """Form for creating and editing categories"""
@@ -96,15 +96,19 @@ class StoryForm(forms.ModelForm):
     """Form for creating and editing stories"""
     content = QuillFormField(required=True)
     
+class StoryForm(forms.ModelForm):
+    """Form for creating and editing stories"""
+    content = QuillFormField(required=True)
+    
     class Meta:
         model = Story
-        # Remove 'slug' from the fields; it will be auto-generated.
-        fields = ['title', 'content', 'category', 'religion_classification', 'language']
+        fields = ['title', 'content', 'category', 'religion_classification', 'language', 'tags']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'religion_classification': forms.Select(attrs={'class': 'form-control'}),
             'language': forms.Select(attrs={'class': 'form-control'}),
+            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -115,10 +119,12 @@ class StoryForm(forms.ModelForm):
         # Set the content field as required
         self.fields['content'].required = True
         
-        # For interns and journalists, remove fields they shouldn't set
+        # For interns and journalists, remove fields they shouldn't see
         if self.user and self.user.staff_role in ['INTERN', 'JOURNALIST']:
             self.fields.pop('category', None)
             self.fields.pop('religion_classification', None)
+            # Remove tags field for non-editors
+            self.fields.pop('tags', None)
             
         # Ensure the category field is available to editors and admins
         elif self.user and self.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
@@ -326,3 +332,43 @@ class StoryPublishForm(forms.Form):
         if not confirm:
             raise ValidationError("You must confirm that the story is ready for publication")
         return confirm
+    
+    # Add to forms.py
+class TagForm(forms.ModelForm):
+    """Form for creating and editing tags"""
+    
+    class Meta:
+        model = Tag
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+    
+    def save(self, commit=True):
+        # Get the instance, but don't save it yet
+        instance = super().save(commit=False)
+        
+        # Generate slug from name if not provided
+        if not instance.slug:
+            original_slug = slugify(instance.name)
+            slug = original_slug
+            counter = 1
+            while Tag.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
+                slug = f"{original_slug}-{counter}"
+                counter += 1
+            instance.slug = slug
+        
+        # Now save if commit is True
+        if commit:
+            instance.save()
+            
+        return instance
+
+class StoryTagsForm(forms.Form):
+    """Form for managing tags on a story"""
+    tags = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.all().order_by('name'),
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )

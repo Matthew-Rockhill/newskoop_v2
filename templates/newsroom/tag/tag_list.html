@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+  Tags - Newskoop
+{% endblock %}
+
+{% block page_title %}
+  Tags
+{% endblock %}
+
+{% block page_actions %}
+  {% include "components/page_actions.html" with actions=actions %}
+{% endblock %}
+
+{% block content %}
+  <div class="space-y-6">
+    <!-- Tags List -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-gray-800">
+          All Tags
+        </h2>
+        <span class="text-sm text-gray-500">
+          {{ tags.count }} tags
+        </span>
+      </div>
+
+      {% if tags %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tag Name
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Slug
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stories
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created By
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for tag in tags %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ tag.name }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">
+                      {{ tag.slug }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900">
+                      {{ tag.description|truncatechars:50 }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                      {{ tag.stories.count }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                      {{ tag.created_by.get_full_name }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                      <a href="{% url 'newsroom:tag_edit' tag_id=tag.id %}"
+                         class="text-gray-600 hover:text-primary"
+                         title="Edit">
+                        {% include "components/ui/icons.html" with name="edit" %}
+                      </a>
+                      <a href="{% url 'newsroom:tag_delete' tag_id=tag.id %}"
+                         class="text-gray-600 hover:text-danger"
+                         title="Delete">
+                        {% include "components/ui/icons.html" with name="trash" %}
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="px-6 py-12 text-center">
+          {% include "components/ui/icons.html" with name="tag" size=48 class="mx-auto text-gray-400" %}
+          <h3 class="mt-4 text-lg font-medium text-gray-900">
+            No tags found
+          </h3>
+          <p class="mt-2 text-sm text-gray-500">
+            Get started by creating your first tag.
+          </p>
+          <div class="mt-6">
+            <a href="{% url 'newsroom:tag_create' %}"
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
+              Create Tag
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

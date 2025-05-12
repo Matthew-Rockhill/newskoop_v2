@@ -61,6 +61,10 @@
       @apply bg-primary text-white hover:bg-primary-dark focus:ring-primary;
     }
     
+    .btn-primary:hover {
+      @apply text-white;
+    }
+    
     .btn-outline {
       @apply bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-gray-500;
     }

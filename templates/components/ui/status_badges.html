@@ -23,3 +23,29 @@
   {{ text|default:status|title }}
 </span>
 {% endif %}
+
+{% if status == 'draft' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+  {{ text }}
+</span>
+{% elif status == 'review' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
+  {{ text }}
+</span>
+{% elif status == 'pending_approval' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-light text-info">
+  {{ text }}
+</span>
+{% elif status == 'approved' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
+  {{ text }}
+</span>
+{% elif status == 'published' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
+  {{ text }}
+</span>
+{% elif status == 'archived' %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
+  {{ text }}
+</span>
+{% endif %}
