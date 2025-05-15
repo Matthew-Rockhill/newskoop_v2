@@ -13,11 +13,13 @@ from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.forms import inlineformset_factory
+from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied
 
 from accounts.models import CustomUser
 from .models import (
     Story, Category, AudioClip, Task, TaskAttachment, 
-    TaskComment, StoryRevision, Tag, StoryActivity, record_story_activity
+    TaskComment, Tag, StoryActivity, record_story_activity
 )
 from .forms import (
     StoryForm, CategoryForm, AudioClipForm, TaskForm, 
@@ -32,7 +34,7 @@ from .permissions import (
 from .templatetags.story_actions import (
     can_submit_for_review, can_submit_for_approval, can_approve_story, 
     can_publish_story, can_download_story, can_assign_xhosa_translation,
-    can_edit_story as can_edit_story_tag
+    can_edit_story as can_edit_story_tag, can_delete_story
 )
 
 # Configure logging
@@ -63,70 +65,27 @@ def dashboard(request):
     
     if request.user.user_type == CustomUser.UserType.STAFF:
         # Common data for all staff
-        context['recent_stories'] = Story.objects.order_by('-created_at')[:5]
         context['assigned_tasks'] = Task.objects.filter(
             assigned_to=request.user, 
             status__in=['PENDING', 'IN_PROGRESS', 'REVIEW']
         ).order_by('due_date')[:5]
-        context['story_count'] = Story.objects.count()
-        context['draft_count'] = Story.objects.filter(status='DRAFT').count()
-        context['published_count'] = Story.objects.filter(status='PUBLISHED').count()
         
         # My stories stats
         my_stories = Story.objects.filter(author=request.user)
+        context['my_stories'] = my_stories.order_by('-updated_at')[:5]
         context['my_story_count'] = my_stories.count()
         context['my_draft_count'] = my_stories.filter(status='DRAFT').count()
         context['my_published_count'] = my_stories.filter(status='PUBLISHED').count()
-        context['my_review_count'] = my_stories.filter(status='REVIEW').count()
         
-        # Last updated story
-        last_updated_story = my_stories.order_by('-updated_at').first()
-        if last_updated_story:
-            days_since = (timezone.now() - last_updated_story.updated_at).days
-            context['last_updated_days'] = days_since
-            
-        # Pending tasks stats
+        # Task stats
         context['pending_tasks'] = Task.objects.filter(
             assigned_to=request.user, 
             status='PENDING'
         ).count()
-        context['in_progress_tasks'] = Task.objects.filter(
+        context['completed_tasks'] = Task.objects.filter(
             assigned_to=request.user, 
-            status='IN_PROGRESS'
+            status='COMPLETED'
         ).count()
-        context['tasks_created'] = Task.objects.filter(
-            assigned_by=request.user
-        ).count()
-        
-        # For interns - show draft stories they can submit for review
-        if request.user.staff_role == 'INTERN':
-            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
-            
-        # For journalists - show stories assigned for review and their own stories
-        if request.user.staff_role == 'JOURNALIST':
-            # Stories assigned to this journalist for review
-            context['review_tasks'] = Task.objects.filter(
-                assigned_to=request.user,
-                task_type='STORY_REVIEW',
-                status__in=['PENDING', 'IN_PROGRESS']
-            ).order_by('due_date')[:5]
-            
-            context['review_task_count'] = Task.objects.filter(
-                assigned_to=request.user,
-                task_type='STORY_REVIEW',
-                status__in=['PENDING', 'IN_PROGRESS']
-            ).count()
-            
-            # Their own stories that need further action
-            context['my_draft_stories'] = my_stories.filter(status='DRAFT').order_by('-updated_at')[:5]
-            context['my_review_stories'] = my_stories.filter(status='REVIEW').order_by('-updated_at')[:5]
-            
-            # Translation tasks assigned to them
-            context['my_translation_tasks'] = Task.objects.filter(
-                assigned_to=request.user,
-                task_type='TRANSLATION',
-                status__in=['PENDING', 'IN_PROGRESS']
-            ).order_by('due_date')[:5]
         
         # For editors and sub-editors
         if request.user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN', 'SUB_EDITOR']:
@@ -258,6 +217,12 @@ def story_list(request):
         # For interns and journalists, show only their own stories.
         if request.user.staff_role in ['INTERN', 'JOURNALIST']:
             stories = stories.filter(author=request.user)
+        # For sub-editors, show only stories that are pending approval or higher, or their own stories.
+        elif request.user.staff_role == 'SUB_EDITOR':
+            stories = stories.filter(
+                Q(status__in=['PENDING_APPROVAL', 'APPROVED', 'TRANSLATED', 'PUBLISHED']) |
+                Q(author=request.user)
+            )
     
     # Apply additional filters (status, category, language, search query)
     status_filter = request.GET.get('status')
@@ -329,21 +294,17 @@ def story_list(request):
 
 @login_required
 def story_detail(request, story_id):
-    """Show details of a story"""
+    """View story details"""
     story = get_object_or_404(Story, id=story_id)
-    if request.user.user_type == CustomUser.UserType.RADIO:
-        if not has_radio_access(request.user, story):
-            return HttpResponseForbidden("You don't have access to this content")
     
+    # Get audio clips for this story
     audio_clips = story.audio_clips.all()
     tasks = None
     journalists = None
-    revisions = None
     reviewer_task = None
     
     if request.user.user_type == CustomUser.UserType.STAFF:
         tasks = Task.objects.filter(related_story=story)
-        revisions = story.revisions.all().order_by('-revision_number')
         
         # Get journalists for review assignment dropdown - only for interns
         if story.status == 'DRAFT' and story.author == request.user and request.user.staff_role == 'INTERN':
@@ -362,96 +323,12 @@ def story_detail(request, story_id):
         ).first()
     
     # Define page actions
-    actions = []
-    
-    # Edit Story button
-    if can_edit_story_tag({"user": request.user}, story):
-        actions.append({
-            'label': 'Edit Story',
-            'url': reverse('newsroom:story_edit', kwargs={'story_id': story.id}),
-            'icon': 'edit',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-        })
-    
-    # Submit for Review button (Interns only)
-    if can_submit_for_review({"user": request.user}, story):
-        actions.append({
-            'label': 'Submit for Review',
-            'id': 'submit-for-review-btn',
-            'url': '#',  # This is handled by JavaScript to open modal
-            'icon': 'check-circle',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning'
-        })
-    
-    # Complete Review button (Journalists reviewing)
-    if reviewer_task:
-        actions.append({
-            'label': 'Complete Review',
-            'url': reverse('newsroom:story_complete_review', kwargs={'story_id': story.id, 'task_id': reviewer_task.id}),
-            'icon': 'check',
-            'form': True,
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
-        })
-    
-    # Submit for Approval button
-    if can_submit_for_approval({"user": request.user}, story):
-        actions.append({
-            'label': 'Submit for Approval',
-            'url': reverse('newsroom:story_submit_approval', kwargs={'story_id': story.id}),
-            'icon': 'check',
-            'form': True,
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
-        })
-    
-    # Approve Story button
-    if can_approve_story({"user": request.user}, story):
-        actions.append({
-            'label': 'Approve Story',
-            'url': reverse('newsroom:story_approve', kwargs={'story_id': story.id}),
-            'icon': 'check',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
-        })
-    
-    # Publish button
-    if can_publish_story({"user": request.user}, story):
-        actions.append({
-            'label': 'Publish',
-            'url': reverse('newsroom:story_publish', kwargs={'story_id': story.id}),
-            'icon': 'check',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
-        })
-    
-    # Assign Xhosa Translation button
-    if can_assign_xhosa_translation({"user": request.user}, story):
-        actions.append({
-            'label': 'Assign Xhosa Translation',
-            'url': f"{reverse('newsroom:task_create')}?type=TRANSLATION&story={story.id}&language=XHOSA",
-            'icon': 'globe',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-        })
-    
-    # Download button
-    if can_download_story({"user": request.user}, story):
-        actions.append({
-            'label': 'Download',
-            'url': reverse('newsroom:story_download', kwargs={'story_id': story.id}),
-            'icon': 'download',
-            'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-        })
-    
-    # Back to List button (always shown)
-    actions.append({
-        'label': 'Back to List',
-        'url': reverse('newsroom:story_list'),
-        'icon': 'arrow-left',
-        'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-    })
+    actions = generate_story_actions(request, story)
     
     context = {
         'story': story,
         'audio_clips': audio_clips,
         'tasks': tasks,
-        'revisions': revisions,
         'journalists': journalists,
         'reviewer_task': reviewer_task,
         'actions': actions,
@@ -496,14 +373,6 @@ def story_create(request):
                     uploaded_by=request.user
                 )
             
-            # Create initial revision
-            StoryRevision.objects.create(
-                story=story,
-                content=story.content,
-                revision_number=1,
-                created_by=request.user
-            )
-            
             record_story_activity(story, request.user, 'CREATE', 
                      new_status='DRAFT',
                      description="Story created")
@@ -529,65 +398,12 @@ def story_create(request):
 def story_edit(request, story_id, story=None):
     """Edit an existing story with multiple audio upload handling"""
     if request.method == 'POST':
-        # Check if this is a status update (e.g., submit for review)
-        new_status = request.POST.get('status')
-        
-        # If we're just updating the status (like Submit for Review from the detail page)
-        if new_status and not request.POST.get('is_full_edit', False):
-            # Validate that the status transition is allowed
-            if new_status in dict(Story.STATUS_CHOICES).keys():
-                # Additional permission check for status changes
-                if _can_change_status(request.user, story, new_status):
-                    # Update just the status without requiring full form validation
-                    story.status = new_status
-                    story.save()
-                    
-                    status_display = dict(Story.STATUS_CHOICES)[new_status]
-                    messages.success(request, f"Story status updated to {status_display}")
-                    return redirect('newsroom:story_detail', story_id=story.id)
-                else:
-                    messages.error(request, "You don't have permission to change the story to this status")
-                    return redirect('newsroom:story_detail', story_id=story.id)
-        
-        # Otherwise, handle as a full edit
         story_form = StoryForm(request.POST, request.FILES, instance=story, user=request.user, is_new=False)
         if story_form.is_valid():
-            updated_story = story_form.save(commit=False)
-            
-            # Update status if provided
-            if new_status and new_status in dict(Story.STATUS_CHOICES).keys():
-                
-                if _can_change_status(request.user, story, new_status):
-                    updated_story.status = new_status
-                    messages.success(request, f"Story status updated to {dict(Story.STATUS_CHOICES)[new_status]}")
-                else:
-                    messages.error(request, "You don't have permission to change the story to this status")
-                    return redirect('newsroom:story_detail', story_id=story.id)
-            
-            updated_story.save()
-            
-            # Save many-to-many relationships like tags
-            story_form.save_m2m()
-            
-            # Create a new revision if content has changed
-            if 'content' in story_form.changed_data:
-                latest_revision = StoryRevision.objects.filter(story=story).order_by('-revision_number').first()
-                new_revision_number = 1 if not latest_revision else latest_revision.revision_number + 1
-                StoryRevision.objects.create(
-                    story=story,
-                    content=updated_story.content,
-                    revision_number=new_revision_number,
-                    created_by=request.user
-                )
-                
-                record_story_activity(story, request.user, 'EDIT',
-                        description="Content edited")
+            updated_story = story_form.save()
             
             # Process individual audio files
-            audio_files = []
-            for key in request.FILES:
-                if key.startswith('audio_file_'):
-                    audio_files.append(request.FILES[key])
+            audio_files = request.FILES.getlist('audio_files')
             
             # Process each audio file
             for file in audio_files:
@@ -598,6 +414,9 @@ def story_edit(request, story_id, story=None):
                     audio_file=file,
                     uploaded_by=request.user
                 )
+            
+            record_story_activity(story, request.user, 'EDIT',
+                    description="Content edited")
             
             messages.success(request, "Story updated successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
@@ -620,62 +439,61 @@ def story_edit(request, story_id, story=None):
 @staff_required
 @can_edit_story
 def story_submit_review(request, story_id, story=None):
-    """Submit a story for review to a specific journalist"""
+    """Submit a story for review by a journalist"""
+    if not story:
+        story = get_object_or_404(Story, id=story_id)
+    
+    # Check if user can submit this story for review
+    if not story.can_be_edited_by(request.user):
+        raise PermissionDenied("You don't have permission to submit this story for review")
+    
+    if story.status != 'DRAFT':
+        messages.error(request, "Only draft stories can be submitted for review")
+        return redirect('newsroom:story_detail', story_id=story.id)
+    
+    # Get available journalists
+    journalists = CustomUser.objects.filter(staff_role='JOURNALIST', is_active=True)
+    
     if request.method == 'POST':
-        # Validate that the status transition is allowed
-        is_valid, message = validate_story_status_transition(request.user, story, 'REVIEW')
-        if not is_valid:
-            messages.error(request, message)
-            return redirect('newsroom:story_detail', story_id=story.id)
-        
-        # Get the selected reviewer
         reviewer_id = request.POST.get('reviewer')
         if not reviewer_id:
-            messages.error(request, "Please select a reviewer")
-            return redirect('newsroom:story_detail', story_id=story.id)
+            messages.error(request, "Please select a journalist to review the story")
+            return redirect('newsroom:story_submit_review', story_id=story.id)
         
-        try:
-            reviewer = CustomUser.objects.get(id=reviewer_id, user_type='STAFF', 
-                                            staff_role__in=['JOURNALIST', 'EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN'])
-        except CustomUser.DoesNotExist:
-            messages.error(request, "Selected reviewer not found")
-            return redirect('newsroom:story_detail', story_id=story.id)
-        
-        # Get optional review notes
-        review_notes = request.POST.get('review_notes', '')
-        
-        # Update story status
-        story.status = 'REVIEW'
-        story.save()
+        reviewer = get_object_or_404(CustomUser, id=reviewer_id, staff_role='JOURNALIST')
         
         # Create a review task
-        task = Task.objects.create(
-            title=f"Review: {story.title}",
-            description=f"Please review this story submitted by {story.author.get_full_name()}.\n\n" + review_notes,
+        review_task = Task.objects.create(
+            title=f"Review Story: {story.title}",
+            description=f"Please review the story '{story.title}' and provide feedback.",
             task_type='STORY_REVIEW',
+            status='PENDING',
             priority='MEDIUM',
             assigned_by=request.user,
             assigned_to=reviewer,
-            related_story=story,
-            status='PENDING',
-            due_date=timezone.now() + timezone.timedelta(days=2)  # Default 2-day deadline
+            related_story=story
         )
         
-        # Create an initial revision if one doesn't exist
-        revision_count = StoryRevision.objects.filter(story=story).count()
-        if revision_count == 0:
-            StoryRevision.objects.create(
-                story=story,
-                content=story.content,
-                revision_number=1,
-                created_by=request.user
-            )
+        # Update story status and reviewer
+        story.reviewer = reviewer
+        story.status = 'REVIEW'
+        story.save()
         
-        messages.success(request, f"Story submitted for review to {reviewer.get_full_name()}")
+        # Record the activity
+        record_story_activity(
+            story, request.user, 'SUBMIT_REVIEW',
+            old_status='DRAFT',
+            new_status='REVIEW',
+            description=f"Submitted for review by {reviewer.get_full_name()}"
+        )
+        
+        messages.success(request, "Story submitted for review successfully")
         return redirect('newsroom:story_detail', story_id=story.id)
     
-    # If not POST, redirect to story detail
-    return redirect('newsroom:story_detail', story_id=story.id)
+    return render(request, 'newsroom/story/story_submit_review.html', {
+        'story': story,
+        'journalists': journalists
+    })
 
 @staff_required
 def api_list_journalists(request):
@@ -1394,41 +1212,31 @@ def story_restore_revision(request, story_id, revision_id, story=None):
 @editor_or_subeditor_required
 @can_edit_story
 def story_approve(request, story_id, story=None):
-    """Approve a story that has been reviewed and create translation tasks"""
-    if request.method == 'POST':
-        # Validate that the status transition is allowed
-        is_valid, message = validate_story_status_transition(request.user, story, 'APPROVED')
-        if not is_valid:
-            messages.error(request, message)
-            return redirect('newsroom:story_detail', story_id=story.id)
-        
-        # Update story status to approved
-        story.status = 'APPROVED'
-        story.save()
-        
-        # Create translation tasks if the original is in English
-        if story.language == 'ENGLISH':
-            # Create task for Afrikaans translation
-            Task.objects.create(
-                title=f"Translate to Afrikaans: {story.title}",
-                description=f"Translate this story from English to Afrikaans.\n\nOriginal Title: {story.title}",
-                task_type='TRANSLATION',
-                priority='MEDIUM',
-                assigned_by=request.user,
-                assigned_to=request.user,  # Default to the current editor, can be reassigned
-                related_story=story,
-                status='PENDING',
-                due_date=timezone.now() + timezone.timedelta(days=3)  # Default 3-day deadline
-            )
-            
-            messages.success(request, "Story approved and Afrikaans translation task created. Remember to manually assign Xhosa translation if needed.")
-        else:
-            messages.success(request, "Story approved")
-        
+    """Approve a story by a sub-editor"""
+    if not story:
+        story = get_object_or_404(Story, id=story_id)
+    
+    # Check if user can approve this story
+    if request.user.staff_role != 'SUB_EDITOR':
+        raise PermissionDenied("Only sub-editors can approve stories")
+    
+    if story.status != 'PENDING_APPROVAL':
+        messages.error(request, "Only stories pending approval can be approved")
         return redirect('newsroom:story_detail', story_id=story.id)
     
-    # GET request shows approval confirmation page
-    return render(request, 'newsroom/story/story_approve.html', {'story': story})
+    story.status = 'APPROVED'
+    story.save()
+    
+    # Record the activity
+    record_story_activity(
+        story, request.user, 'APPROVE',
+        old_status='PENDING_APPROVAL',
+        new_status='APPROVED',
+        description="Story approved"
+    )
+    
+    messages.success(request, "Story approved successfully")
+    return redirect('newsroom:story_detail', story_id=story.id)
 
 @staff_required
 def submit_translation(request, task_id):
@@ -1596,40 +1404,34 @@ def translation_status_report(request):
 @staff_required
 @can_edit_story
 def story_submit_approval(request, story_id, story=None):
-    """Submit a story for approval by editors"""
-    if request.method == 'POST':
-        # Check if story is in draft or review status
-        if story.status not in ['DRAFT', 'REVIEW']:
-            messages.error(request, "Only draft or reviewed stories can be submitted for approval")
-            return redirect('newsroom:story_detail', story_id=story.id)
-        
-        # Update story status to PENDING_APPROVAL
-        story.status = 'PENDING_APPROVAL'
-        story.save()
-        
-        # If there's a review task for this user, mark it as completed
-        review_task = Task.objects.filter(
-            related_story=story,
-            task_type='STORY_REVIEW',
-            assigned_to=request.user
-        ).first()
-        
-        if review_task:
-            review_task.status = 'COMPLETED'
-            review_task.completed_at = timezone.now()
-            review_task.save()
-            
-            # Add a comment to the task
-            TaskComment.objects.create(
-                task=review_task,
-                author=request.user,
-                content="Review completed and submitted for approval"
-            )
-        
-        messages.success(request, "Story submitted for approval")
+    """Submit a reviewed story for approval by a sub-editor"""
+    if not story:
+        story = get_object_or_404(Story, id=story_id)
+    
+    # Check if user can submit this story for approval
+    if not story.can_be_edited_by(request.user):
+        raise PermissionDenied("You don't have permission to submit this story for approval")
+    
+    # Allow submission if:
+    # 1. User is the author and story is in DRAFT status (for journalists submitting their own stories)
+    # 2. User is the reviewer and story is in REVIEW status (for journalists reviewing intern stories)
+    if not ((story.author == request.user and story.status == 'DRAFT') or 
+            (story.reviewer == request.user and story.status == 'REVIEW')):
+        messages.error(request, "You can only submit stories for approval if you are the author or reviewer")
         return redirect('newsroom:story_detail', story_id=story.id)
     
-    # If not POST, redirect to story detail
+    story.status = 'PENDING_APPROVAL'
+    story.save()
+    
+    # Record the activity
+    record_story_activity(
+        story, request.user, 'SUBMIT_APPROVAL',
+        old_status=story.status,
+        new_status='PENDING_APPROVAL',
+        description="Submitted for approval"
+    )
+    
+    messages.success(request, "Story submitted for approval successfully")
     return redirect('newsroom:story_detail', story_id=story.id)
 
 @staff_required
@@ -1668,7 +1470,7 @@ def tag_list(request):
         'label': 'Create Tag',
         'url': reverse('newsroom:tag_create'),
         'icon': 'plus',
-        'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        'type': 'primary'
     }]
     
     context = {
@@ -1757,92 +1559,135 @@ def tag_delete(request, tag_id):
 def story_manage_tags(request, story_id, story=None):
     """Add or remove tags from a story"""
     if request.method == 'POST':
-        form = StoryTagsForm(request.POST)
+        form = StoryTagsForm(request.POST, story=story)
         if form.is_valid():
             # Get the selected tags
             selected_tags = form.cleaned_data['tags']
             
+            # Get the old tags for comparison
+            old_tags = set(story.tags.all())
+            new_tags = set(selected_tags)
+            
+            # Calculate changes
+            added_tags = new_tags - old_tags
+            removed_tags = old_tags - new_tags
+            
+            # Validate tag count before making changes
+            if len(new_tags) > 10:
+                messages.error(request, "A story can have a maximum of 10 tags")
+                return redirect('newsroom:story_manage_tags', story_id=story.id)
+            
             # Clear existing tags and add the selected ones
             story.tags.clear()
             for tag in selected_tags:
-                story.tags.add(tag)
+                try:
+                    tag.validate_story_tag_count(story)
+                    story.tags.add(tag)
+                except ValidationError as e:
+                    messages.error(request, str(e))
+                    return redirect('newsroom:story_manage_tags', story_id=story.id)
             
-            # Log this activity
+            # Log this activity with detailed changes
+            changes = []
+            if added_tags:
+                changes.append(f"Added tags: {', '.join(tag.name for tag in added_tags)}")
+            if removed_tags:
+                changes.append(f"Removed tags: {', '.join(tag.name for tag in removed_tags)}")
+            
             record_story_activity(story, request.user, 'EDIT', 
-                                 description=f"Tags updated to: {', '.join([tag.name for tag in selected_tags])}")
+                                 description="Tags updated: " + "; ".join(changes))
             
             messages.success(request, "Story tags updated successfully")
             return redirect('newsroom:story_detail', story_id=story.id)
     else:
         # Pre-select the story's current tags
-        form = StoryTagsForm(initial={'tags': story.tags.all()})
+        form = StoryTagsForm(initial={'tags': story.tags.all()}, story=story)
     
-    # Improve the UI by adding tag categories or popular tags
+    # Get popular tags for suggestions
     popular_tags = Tag.objects.annotate(
-        story_count=Count('stories')
-    ).order_by('-story_count')[:15]
+        usage_count=Count('stories')
+    ).order_by('-usage_count')[:15]
+    
+    # Get related tags based on story category
+    related_tags = []
+    if story.category:
+        related_tags = Tag.objects.filter(
+            stories__category=story.category
+        ).exclude(
+            id__in=story.tags.values_list('id', flat=True)
+        ).annotate(
+            story_count=Count('stories')
+        ).order_by('-story_count')[:10]
     
     context = {
         'form': form,
         'story': story,
         'popular_tags': popular_tags,
+        'related_tags': related_tags
     }
     
     return render(request, 'newsroom/story/story_manage_tags.html', context)
-def _can_change_status(user, story, new_status):
-    """Helper to check if a user can change a story to a specific status"""
-    current_status = story.status
+
+@staff_required
+@editor_or_subeditor_required
+def tag_detail(request, tag_id):
+    """Show details of a tag and stories using it"""
+    tag = get_object_or_404(Tag, id=tag_id)
     
-    # Editors can do anything
-    if user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
-        return True
+    # Get stories using this tag
+    stories = tag.stories.all().order_by('-created_at')
     
-    # Authors can submit their draft for review
-    if story.author == user and current_status == 'DRAFT' and new_status == 'REVIEW':
-        return True
+    # Paginate stories
+    paginator = Paginator(stories, 15)
+    page_number = request.GET.get('page')
+    stories_page = paginator.get_page(page_number)
     
-    # Journalists with review tasks can submit for approval
-    if current_status == 'REVIEW' and new_status == 'PENDING_APPROVAL':
-        review_task = Task.objects.filter(
-            related_story=story,
-            task_type='STORY_REVIEW',
-            assigned_to=user,
-            status__in=['PENDING', 'IN_PROGRESS', 'COMPLETED']
-        ).exists()
-        
-        if review_task or story.author == user:
-            return True
+    context = {
+        'tag': tag,
+        'stories': stories_page
+    }
     
-    # No other transitions allowed
-    return False
+    return render(request, 'newsroom/tag/tag_detail.html', context)
 
 def generate_story_actions(request, story):
     """Generate consistent action buttons for story pages"""
     actions = []
     user = request.user
     
-    # Common actions based on permissions
-    
-    # Edit Story button
+    # Edit Story button - only show if story can be edited in its current state
     if can_edit_story_tag({"user": user}, story):
+        # Don't show edit button for published stories unless user is editor/admin
+        if story.status != 'PUBLISHED' or user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            actions.append({
+                'label': 'Edit Story',
+                'url': reverse('newsroom:story_edit', kwargs={'story_id': story.id}),
+                'icon': 'edit',
+                'type': 'link',
+                'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+            })
+    
+    # Manage Tags button (for editors and above) - only show for non-archived stories
+    if user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN'] and story.status != 'ARCHIVED':
         actions.append({
-            'label': 'Edit Story',
-            'url': reverse('newsroom:story_edit', kwargs={'story_id': story.id}),
-            'icon': 'edit',
+            'label': 'Manage Tags',
+            'url': reverse('newsroom:story_manage_tags', kwargs={'story_id': story.id}),
+            'icon': 'tag',
+            'type': 'link',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
         })
     
-    # Submit for Review button (Interns only)
-    if can_submit_for_review({"user": user}, story):
+    # Submit for Review button (Interns only) - only show for draft stories
+    if can_submit_for_review({"user": user}, story) and story.status == 'DRAFT':
         actions.append({
             'label': 'Submit for Review',
             'id': 'submit-for-review-btn',
             'url': '#',  # This is handled by JavaScript to open modal
             'icon': 'check-circle',
+            'type': 'button',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-warning hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning'
         })
     
-    # Complete Review button (Journalists reviewing)
+    # Complete Review button (Journalists reviewing) - only show for stories in review
     reviewer_task = Task.objects.filter(
         related_story=story,
         task_type='STORY_REVIEW',
@@ -1850,229 +1695,150 @@ def generate_story_actions(request, story):
         status__in=['PENDING', 'IN_PROGRESS']
     ).first()
     
-    if reviewer_task:
+    if reviewer_task and story.status == 'REVIEW':
         actions.append({
             'label': 'Complete Review',
             'url': reverse('newsroom:story_complete_review', kwargs={'story_id': story.id, 'task_id': reviewer_task.id}),
             'icon': 'check',
-            'form': True,
+            'type': 'submit',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
         })
     
-    # Submit for Approval button
-    if can_submit_for_approval({"user": user}, story):
+    # Submit for Approval button - only show for stories in review
+    if can_submit_for_approval({"user": user}, story) and story.status == 'REVIEW':
         actions.append({
             'label': 'Submit for Approval',
             'url': reverse('newsroom:story_submit_approval', kwargs={'story_id': story.id}),
             'icon': 'check',
-            'form': True,
+            'type': 'submit',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
         })
     
-    # Approve Story button
-    if can_approve_story({"user": user}, story):
+    # Approve Story button - only show for stories pending approval
+    if can_approve_story({"user": user}, story) and story.status == 'PENDING_APPROVAL':
         actions.append({
             'label': 'Approve Story',
             'url': reverse('newsroom:story_approve', kwargs={'story_id': story.id}),
             'icon': 'check',
+            'type': 'submit',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
         })
     
-    # Publish button
-    if can_publish_story({"user": user}, story):
+    # Create Translation button - only show for approved English stories
+    if (user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN'] and 
+        story.status == 'APPROVED' and 
+        story.language == 'ENGLISH' and 
+        not story.is_translation):
+        actions.append({
+            'label': 'Create Translation',
+            'url': reverse('newsroom:story_create_translation', kwargs={'story_id': story.id}),
+            'icon': 'translate',
+            'type': 'link',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+        })
+    
+    # Publish button - only show for approved stories
+    if can_publish_story({"user": user}, story) and story.status == 'APPROVED':
         actions.append({
             'label': 'Publish',
             'url': reverse('newsroom:story_publish', kwargs={'story_id': story.id}),
             'icon': 'check',
+            'type': 'submit',
             'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-success hover:bg-success-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success'
         })
     
-    # Assign Translation button (for approved English stories)
-    if can_assign_xhosa_translation({"user": user}, story):
+    # Delete button - only show for non-published stories
+    if can_delete_story({"user": user}, story) and story.status != 'PUBLISHED':
         actions.append({
-            'label': 'Assign Xhosa Translation',
-            'url': f"{reverse('newsroom:task_create')}?type=TRANSLATION&story={story.id}&language=XHOSA",
-            'icon': 'globe',
-            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-        })
-    
-    # Download button
-    if can_download_story({"user": user}, story):
-        actions.append({
-            'label': 'Download',
-            'url': reverse('newsroom:story_download', kwargs={'story_id': story.id}),
-            'icon': 'download',
-            'class': 'inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+            'label': 'Delete Story',
+            'url': reverse('newsroom:story_delete', kwargs={'story_id': story.id}),
+            'icon': 'trash',
+            'type': 'link',
+            'class': 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-danger hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger'
         })
     
     return actions
 
-def validate_story_status_transition(user, story, new_status):
-    """
-    Comprehensive validation of story status transitions based on user role
-    Returns (is_valid, message) tuple
-    """
-    current_status = story.status
+@staff_required
+@can_edit_story
+def story_delete(request, story_id, story=None):
+    """Delete a story"""
+    if request.method == 'POST':
+        # Check if user can delete this story
+        if not story.can_be_deleted_by(request.user):
+            raise PermissionDenied("You don't have permission to delete this story")
+        
+        # Delete the story
+        story.delete()
+        messages.success(request, "Story deleted successfully")
+        return redirect('newsroom:story_list')
     
-    # Status transition matrix - what transitions are allowed from each state
-    allowed_transitions = {
-        'DRAFT': ['REVIEW', 'PENDING_APPROVAL'],  # Draft can go to review or directly to approval
-        'REVIEW': ['PENDING_APPROVAL', 'DRAFT'],  # Review can go back to draft or forward to approval
-        'PENDING_APPROVAL': ['APPROVED', 'REVIEW', 'DRAFT'],  # Approval can go back or forward
-        'APPROVED': ['PUBLISHED', 'PENDING_APPROVAL', 'DRAFT'],  # Approved can be published or go back
-        'PUBLISHED': ['ARCHIVED'],  # Published can only be archived
-        'ARCHIVED': ['DRAFT']  # Archived can be brought back as draft
+    context = {
+        'story': story
     }
     
-    # Check if the transition is valid based on the matrix
-    if new_status not in allowed_transitions.get(current_status, []):
-        return False, f"Cannot transition from {current_status} to {new_status}"
-    
-    # Role-based permissions for transitions
-    if user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN']:
-        # Editors can do any allowed transition
-        return True, "Transition allowed"
-        
-    elif user.staff_role == 'SUB_EDITOR':
-        # Sub-editors can approve, but can't publish
-        if new_status == 'PUBLISHED':
-            return False, "Only editors can publish stories"
-        # But they can do any other allowed transition
-        return True, "Transition allowed"
-        
-    elif user.staff_role == 'JOURNALIST':
-        # Journalists can submit for review or approval
-        if new_status == 'REVIEW' and current_status == 'DRAFT':
-            # Journalists can submit their own drafts for review
-            if story.author == user:
-                return True, "Transition allowed"
-        
-        if new_status == 'PENDING_APPROVAL' and current_status in ['DRAFT', 'REVIEW']:
-            # Journalists can submit for approval if they author or were assigned to review
-            if story.author == user:
-                return True, "Transition allowed"
-            
-            # Check for review task assignment
-            review_task = Task.objects.filter(
-                related_story=story,
-                task_type='STORY_REVIEW',
-                assigned_to=user,
-                status__in=['PENDING', 'IN_PROGRESS', 'COMPLETED']
-            ).exists()
-            
-            if review_task:
-                return True, "Transition allowed"
-        
-        # Journalists can't do other transitions
-        return False, "You don't have permission for this action"
-        
-    elif user.staff_role == 'INTERN':
-        # Interns can only submit their own drafts for review
-        if new_status == 'REVIEW' and current_status == 'DRAFT' and story.author == user:
-            return True, "Transition allowed"
-            
-        # No other transitions for interns
-        return False, "Interns can only submit their own drafts for review"
-    
-    # Default deny
-    return False, "Invalid status transition for your role"
+    return render(request, 'newsroom/story/story_delete.html', context)
 
 @staff_required
-@editor_required
-def create_translation_tasks(request, story_id):
-    """Create translation tasks for a story"""
-    story = get_object_or_404(Story, id=story_id)
+@can_edit_story
+def story_create_translation(request, story_id, story=None):
+    """Create a new translation task for a story."""
+    if not story:
+        story = get_object_or_404(Story, id=story_id)
     
-    # Verify story is approved
-    if story.status != 'APPROVED':
-        messages.error(request, "Only approved stories can have translation tasks created")
-        return redirect('newsroom:story_detail', story_id=story.id)
-    
-    # Verify story is in English
-    if story.language != 'ENGLISH':
-        messages.error(request, "Only English stories can be translated")
+    # Check if the story is in a state where translations can be created
+    if story.status not in ['APPROVED', 'PUBLISHED']:
+        messages.error(request, 'Translations can only be created for approved or published stories.')
         return redirect('newsroom:story_detail', story_id=story.id)
     
     if request.method == 'POST':
-        # Check which languages were selected
-        translate_to_afrikaans = request.POST.get('afrikaans') == 'on'
-        translate_to_xhosa = request.POST.get('xhosa') == 'on'
-        assigned_to_id = request.POST.get('assigned_to')
+        target_language = request.POST.get('language')
+        if not target_language:
+            messages.error(request, 'Please select a target language for translation.')
+            return redirect('newsroom:story_create_translation', story_id=story.id)
         
-        try:
-            assigned_to = CustomUser.objects.get(id=assigned_to_id)
-        except (CustomUser.DoesNotExist, ValueError, TypeError):
-            assigned_to = request.user  # Default to current user
+        # Check if a translation task already exists for this language
+        existing_task = Task.objects.filter(
+            related_story=story,
+            task_type='TRANSLATION',
+            title__icontains=target_language
+        ).exists()
         
-        tasks_created = 0
+        if existing_task:
+            messages.error(request, f'A translation task for {target_language} already exists.')
+            return redirect('newsroom:story_detail', story_id=story.id)
         
-        # Create Afrikaans task if selected
-        if translate_to_afrikaans:
-            # Check if task already exists
-            afrikaans_task = Task.objects.filter(
-                related_story=story,
-                task_type='TRANSLATION',
-                title__contains='Afrikaans'
-            ).first()
-            
-            if not afrikaans_task:
-                Task.objects.create(
-                    title=f"Translate to Afrikaans: {story.title}",
-                    description=f"Translate this story from English to Afrikaans.\n\nOriginal Title: {story.title}",
-                    task_type='TRANSLATION',
-                    priority='MEDIUM',
-                    assigned_by=request.user,
-                    assigned_to=assigned_to,
-                    related_story=story,
-                    status='PENDING',
-                    due_date=timezone.now() + timezone.timedelta(days=3)
-                )
-                tasks_created += 1
+        # Get available translators (users with JOURNALIST role)
+        translators = CustomUser.objects.filter(
+            user_type=CustomUser.UserType.STAFF,
+            staff_role='JOURNALIST'
+        )
         
-        # Create Xhosa task if selected
-        if translate_to_xhosa:
-            # Check if task already exists
-            xhosa_task = Task.objects.filter(
-                related_story=story,
-                task_type='TRANSLATION',
-                title__contains='Xhosa'
-            ).first()
-            
-            if not xhosa_task:
-                Task.objects.create(
-                    title=f"Translate to Xhosa: {story.title}",
-                    description=f"Translate this story from English to Xhosa.\n\nOriginal Title: {story.title}",
-                    task_type='TRANSLATION',
-                    priority='MEDIUM',
-                    assigned_by=request.user,
-                    assigned_to=assigned_to,
-                    related_story=story,
-                    status='PENDING',
-                    due_date=timezone.now() + timezone.timedelta(days=3)
-                )
-                tasks_created += 1
+        if not translators.exists():
+            messages.error(request, 'No translators available. Please ensure there are journalists in the system.')
+            return redirect('newsroom:story_detail', story_id=story.id)
         
-        if tasks_created > 0:
-            # Log the activity
-            record_story_activity(story, request.user, 'TRANSLATION',
-                                 description=f"Created {tasks_created} translation task(s)")
-            
-            messages.success(request, f"{tasks_created} translation task(s) created")
-        else:
-            messages.info(request, "No new translation tasks were created")
+        # Create a new translation task
+        task = Task.objects.create(
+            title=f"Translate to {target_language}: {story.title}",
+            description=f"Create a {target_language} translation of the story: {story.title}",
+            task_type='TRANSLATION',
+            status='PENDING',
+            priority='MEDIUM',
+            assigned_by=request.user,
+            assigned_to=translators.first(),  # Assign to the first available translator
+            related_story=story
+        )
         
-        return redirect('newsroom:story_detail', story_id=story.id)
+        messages.success(request, f'Translation task for {target_language} created successfully.')
+        return redirect('newsroom:task_detail', task_id=task.id)
     
-    # GET request - show form
-    # Get translators - users who have 'Journalist' or 'Editor' roles
-    translators = CustomUser.objects.filter(
-        user_type='STAFF',
-        staff_role__in=['JOURNALIST', 'EDITOR', 'SUB_EDITOR']
-    ).order_by('first_name', 'last_name')
-    
+    # For GET requests, show the translation form
     context = {
         'story': story,
-        'translators': translators,
+        'languages': [
+            ('AFRIKAANS', 'Afrikaans'),
+            ('XHOSA', 'Xhosa')
+        ]
     }
-    
-    return render(request, 'newsroom/story/create_translation_tasks.html', context)
+    return render(request, 'newsroom/story/story_create_translation.html', context)

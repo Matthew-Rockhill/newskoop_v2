@@ -4,6 +4,8 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
 
 class Category(models.Model):
     """
@@ -171,6 +173,7 @@ class Story(models.Model):
         ('REVIEW', 'In Review'),
         ('PENDING_APPROVAL', 'Pending Approval'),
         ('APPROVED', 'Approved'), 
+        ('TRANSLATED', 'Translated'),
         ('PUBLISHED', 'Published'),
         ('ARCHIVED', 'Archived'),
     ]
@@ -188,9 +191,22 @@ class Story(models.Model):
         ('XHOSA', 'Xhosa'),
     ]
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='ENGLISH')
+    
+    # Workflow fields
     is_translation = models.BooleanField(default=False, help_text="Whether this story is a translation of another story")
+    translation_of = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, 
+                                     related_name='translations',
+                                     help_text="The original story this is a translation of")
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
+                               null=True, blank=True, related_name='reviewing_stories',
+                               help_text="The journalist assigned to review this story")
+    
+    # Author and editor fields
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='authored_stories')
-    editor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='edited_stories', null=True, blank=True)
+    editor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='edited_stories', 
+                             null=True, blank=True)
+    
+    # Timestamps and metrics
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     published_at = models.DateTimeField(null=True, blank=True)
@@ -205,22 +221,127 @@ class Story(models.Model):
         return self.title
     
     def save(self, *args, **kwargs):
-        # Auto-generate slug if not provided.
+        # Auto-generate slug if not provided
         if not self.slug:
-            base_slug = slugify(self.title)
-            slug = base_slug
+            self.slug = slugify(self.title)
+            
+            # Ensure slug uniqueness by appending a number if needed
+            original_slug = self.slug
             counter = 1
-            while Story.objects.filter(slug=slug).exists():
-                slug = f"{base_slug}-{counter}"
+            while Story.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
                 counter += 1
-            self.slug = slug
+        
+        # If this is a translation, ensure it's marked as such
+        if self.translation_of:
+            self.is_translation = True
+        
         super().save(*args, **kwargs)
     
     def publish(self, editor):
+        """Publish the story and all its translations"""
+        if self.status != 'APPROVED' and self.status != 'TRANSLATED':
+            raise ValidationError("Only approved or translated stories can be published")
+        
+        # Check if all translations are approved
+        if self.language == 'ENGLISH':
+            translations = self.translations.all()
+            if translations.exists() and not all(t.status == 'APPROVED' for t in translations):
+                raise ValidationError("All translations must be approved before publishing")
+        
+        # Update status and timestamps
         self.status = 'PUBLISHED'
         self.published_at = timezone.now()
         self.editor = editor
         self.save()
+        
+        # Record the activity
+        record_story_activity(
+            self, editor, 'PUBLISH',
+            old_status='APPROVED',
+            new_status='PUBLISHED',
+            description=f"Published by {editor.get_full_name()}"
+        )
+        
+        # If this is a translation, publish the original and all other translations
+        if self.is_translation:
+            original = self.translation_of
+            if original.status != 'PUBLISHED':
+                original.publish(editor)
+            for translation in original.translations.all():
+                if translation.id != self.id and translation.status != 'PUBLISHED':
+                    translation.publish(editor)
+    
+    def can_be_edited_by(self, user):
+        """Check if the user can edit this story based on their role and the story's status"""
+        # Published stories cannot be edited
+        if self.status == 'PUBLISHED':
+            return False
+        
+        # Interns can only edit their own draft stories
+        if user.staff_role == 'INTERN':
+            return self.author == user and self.status == 'DRAFT'
+        
+        # Journalists can edit their own stories and stories assigned to them for review
+        if user.staff_role == 'JOURNALIST':
+            return (self.author == user and self.status in ['DRAFT', 'REVIEW']) or \
+                   (self.reviewer == user and self.status == 'REVIEW')
+        
+        # Sub-editors can edit stories pending approval and their own stories
+        if user.staff_role == 'SUB_EDITOR':
+            return (self.author == user and self.status in ['DRAFT', 'REVIEW', 'PENDING_APPROVAL']) or \
+                   (self.status == 'PENDING_APPROVAL')
+        
+        # Editors can edit any non-published story
+        if user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN']:
+            return self.status != 'PUBLISHED'
+        
+        return False
+    
+    def can_be_deleted_by(self, user):
+        """Check if the user can delete this story"""
+        # Published stories cannot be deleted
+        if self.status == 'PUBLISHED':
+            return False
+        
+        # Interns can only delete their own draft stories
+        if user.staff_role == 'INTERN':
+            return self.author == user and self.status == 'DRAFT'
+        
+        # Journalists can delete their own stories
+        if user.staff_role == 'JOURNALIST':
+            return self.author == user and self.status in ['DRAFT', 'REVIEW']
+        
+        # Sub-editors and editors can delete any non-published story
+        if user.staff_role in ['SUB_EDITOR', 'EDITOR', 'SUPERADMIN', 'ADMIN']:
+            return self.status != 'PUBLISHED'
+        
+        return False
+
+    @property
+    def get_related_stories(self):
+        """Get stories related to this one based on tags and category"""
+        # Get stories with common tags
+        tag_related = Story.objects.filter(
+            tags__in=self.tags.all()
+        ).exclude(
+            id=self.id
+        ).distinct()
+
+        # Get stories in the same category
+        category_related = Story.objects.filter(
+            category=self.category
+        ).exclude(
+            id=self.id
+        ).distinct()
+
+        # Combine and order by relevance (number of common tags)
+        related = (tag_related | category_related).distinct()
+        related = related.annotate(
+            common_tags=Count('tags', filter=Q(tags__in=self.tags.all()))
+        ).order_by('-common_tags', '-created_at')[:5]
+
+        return related
 
 class AudioClip(models.Model):
     """
@@ -346,32 +467,13 @@ class TaskComment(models.Model):
     def __str__(self):
         return f"Comment by {self.author.get_full_name()} on {self.task.title}"
 
-class StoryRevision(models.Model):
-    """
-    Track revisions to stories
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='revisions')
-    content = models.TextField()
-    revision_number = models.PositiveIntegerField()
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-revision_number']
-        unique_together = ['story', 'revision_number']
-    
-    def __str__(self):
-        return f"Revision {self.revision_number} of {self.story.title}"
-    
 class Tag(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(unique=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
-                                  null=True, related_name='created_tags')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_tags')
     
     class Meta:
         ordering = ['name']
@@ -380,17 +482,20 @@ class Tag(models.Model):
         return self.name
     
     def save(self, *args, **kwargs):
-        # Auto-generate slug if not provided.
         if not self.slug:
-            base_slug = slugify(self.name)
-            slug = base_slug
-            counter = 1
-            while Tag.objects.filter(slug=slug).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-            self.slug = slug
+            self.slug = slugify(self.name)
         super().save(*args, **kwargs)
-        
+    
+    def validate_story_tag_count(self, story):
+        """Validate that adding this tag won't exceed the story's tag limit"""
+        if story.tags.count() >= 10:
+            raise ValidationError("A story can have a maximum of 10 tags")
+    
+    @property
+    def story_count(self):
+        """Get the number of stories using this tag"""
+        return self.stories.count()
+
 # Add to models.py
 class StoryActivity(models.Model):
     """
@@ -426,7 +531,7 @@ class StoryActivity(models.Model):
     def __str__(self):
         return f"{self.get_activity_type_display()} by {self.user.get_full_name()} on {self.created_at.strftime('%Y-%m-%d')}"
 
-# Add helper function for recording activity
+#helper function for recording activity
 def record_story_activity(story, user, activity_type, old_status=None, new_status=None, description=None):
     """Helper function to record story activity"""
     activity = StoryActivity.objects.create(

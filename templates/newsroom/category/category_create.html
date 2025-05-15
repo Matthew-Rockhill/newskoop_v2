@@ -5,168 +5,140 @@
 {% block page_title %}{% if is_new %}Create Category{% else %}Edit Category{% endif %}{% endblock %}
 
 {% block page_actions %}
-<div class="flex space-x-3">
-  <button type="submit" form="category-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-    {% if is_new %}Create Category{% else %}Save Changes{% endif %}
-  </button>
-  
-  <a href="{% url 'newsroom:category_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
+<div class="flex items-center space-x-3">
+  <a href="{% url 'newsroom:category_list' %}" class="text-gray-600 hover:text-gray-900">
+    {% include "components/ui/icons.html" with name="arrow-left" class="h-5 w-5" %}
   </a>
+  <h1 class="text-2xl font-bold text-gray-900">Create Category</h1>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-2 gap-6">
-  <!-- Left Column -->
-  <div class="bg-white rounded-lg shadow">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">
-        {% if is_new %}Create New Category{% else %}Edit Category{% endif %}
-      </h2>
-    </div>
-    
-    <div class="p-6">
-      <!-- Form Error Summary -->
-      {% if form.errors %}
-      <div class="bg-danger-light p-4 rounded-lg mb-4">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            {% include "components/ui/icons.html" with name="warning" class="text-danger" %}
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-danger">Please correct the errors below</h3>
-            <ul class="mt-2 text-sm text-danger">
-              {% for field, errors in form.errors.items %}
-                {% if field != '__all__' %}
-                  {% for error in errors %}
-                    <li>{{ field|title }}: {{ error }}</li>
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
-      </div>
-      {% endif %}
-      
-      <form id="category-form" method="post" class="space-y-6">
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <form method="post" class="space-y-6">
         {% csrf_token %}
         
-        <!-- Content Type Selection (if applicable) -->
-        <div class="form-group">
-          <label for="{{ form.content_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Content Type <span class="text-danger">*</span></label>
-          <select name="{{ form.content_type.name }}" id="{{ form.content_type.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 {% if form.content_type.errors %}border-danger{% endif %}" {% if form.content_type.field.disabled %}disabled{% endif %}>
-            <option value="">Select Content Type</option>
-            {% for value, text in form.content_type.field.choices %}
-              <option value="{{ value }}" {% if form.content_type.value == value %}selected{% endif %}>{{ text }}</option>
-            {% endfor %}
-          </select>
-          {% if form.content_type.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.content_type.errors|first }}</div>
-          {% endif %}
-          {% if form.content_type.help_text %}
-            <div class="text-gray-500 text-sm mt-1">{{ form.content_type.help_text }}</div>
-          {% endif %}
-          
-          <!-- If content_type is disabled, add a hidden input to ensure the value is submitted -->
-          {% if form.content_type.field.disabled %}
-            <input type="hidden" name="{{ form.content_type.name }}" value="{{ form.content_type.value }}">
-          {% endif %}
-        </div>
-        
-        <!-- Parent Category -->
-        <div class="form-group">
-          <label for="{{ form.parent.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Parent Category</label>
-          <select name="{{ form.parent.name }}" id="{{ form.parent.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 {% if form.parent.errors %}border-danger{% endif %}">
-            <option value="">None (Top Level Category)</option>
-            {% for parent in form.parent.field.queryset %}
-              <option value="{{ parent.id }}" {% if form.parent.value|stringformat:"s" == parent.id|stringformat:"s" %}selected{% endif %}>
-                {{ parent.name }}
-              </option>
-            {% endfor %}
-          </select>
-          {% if form.parent.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.parent.errors|first }}</div>
-          {% endif %}
-          <div class="text-gray-500 text-sm mt-1">
-            Select a parent to create a subcategory, or leave empty for a top-level category.
-          </div>
-        </div>
-        
-        <!-- Category Name -->
-        <div class="form-group">
-          <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-danger">*</span></label>
-          <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 {% if form.name.errors %}border-danger{% endif %}" value="{{ form.name.value|default:'' }}" required>
-          {% if form.name.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.name.errors|first }}</div>
-          {% endif %}
-        </div>
-        
-        <!-- Description -->
-        <div class="form-group">
-          <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="3" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 {% if form.description.errors %}border-danger{% endif %}">{{ form.description.value|default:'' }}</textarea>
-          {% if form.description.errors %}
-            <div class="text-danger text-sm mt-1">{{ form.description.errors|first }}</div>
-          {% endif %}
-        </div>
-        
-        <!-- Active Status (rendered once) -->
-        <div class="form-group">
-          <div class="flex items-start">
-            <div class="flex items-center h-5">
-              <input type="checkbox" name="{{ form.is_active.name }}" id="{{ form.is_active.id_for_label }}" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-offset-0" {% if form.is_active.value %}checked{% endif %}>
-            </div>
-            <div class="ml-3 text-sm">
-              <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-700">Active</label>
-              <p class="text-gray-500">When active, this category will appear in menus in the Radio Zone</p>
-            </div>
-          </div>
-        </div>
-        
         {% if form.non_field_errors %}
-          <div class="bg-danger-light p-4 rounded-lg text-danger">
-            {% for error in form.non_field_errors %}
-              <p>{{ error }}</p>
-            {% endfor %}
+        <div class="rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              {% include "components/ui/icons.html" with name="exclamation-circle" class="h-5 w-5 text-red-400" %}
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">There was an error with your submission</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <ul class="list-disc pl-5 space-y-1">
+                  {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
           </div>
+        </div>
         {% endif %}
+        
+        <div class="space-y-6">
+          <!-- Basic Information -->
+          <div>
+            <h3 class="text-lg font-medium text-gray-900">Basic Information</h3>
+            <div class="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+              <div class="sm:col-span-4">
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">Name</label>
+                <div class="mt-1">
+                  {{ form.name }}
+                  {% if form.name.errors %}
+                  <p class="mt-2 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="sm:col-span-4">
+                <label for="{{ form.slug.id_for_label }}" class="block text-sm font-medium text-gray-700">Slug</label>
+                <div class="mt-1">
+                  {{ form.slug }}
+                  {% if form.slug.errors %}
+                  <p class="mt-2 text-sm text-red-600">{{ form.slug.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="sm:col-span-6">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">Description</label>
+                <div class="mt-1">
+                  {{ form.description }}
+                  {% if form.description.errors %}
+                  <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Category Structure -->
+          <div>
+            <h3 class="text-lg font-medium text-gray-900">Category Structure</h3>
+            <div class="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+              <div class="sm:col-span-3">
+                <label for="{{ form.content_type.id_for_label }}" class="block text-sm font-medium text-gray-700">Content Type</label>
+                <div class="mt-1">
+                  {{ form.content_type }}
+                  {% if form.content_type.errors %}
+                  <p class="mt-2 text-sm text-red-600">{{ form.content_type.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="sm:col-span-3">
+                <label for="{{ form.parent.id_for_label }}" class="block text-sm font-medium text-gray-700">Parent Category</label>
+                <div class="mt-1">
+                  {{ form.parent }}
+                  {% if form.parent.errors %}
+                  <p class="mt-2 text-sm text-red-600">{{ form.parent.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Status -->
+          <div>
+            <h3 class="text-lg font-medium text-gray-900">Status</h3>
+            <div class="mt-4 space-y-4">
+              <div class="flex items-start">
+                <div class="flex items-center h-5">
+                  {{ form.is_active }}
+                </div>
+                <div class="ml-3 text-sm">
+                  <label for="{{ form.is_active.id_for_label }}" class="font-medium text-gray-700">Active</label>
+                  <p class="text-gray-500">Make this category available for use</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="flex items-center h-5">
+                  {{ form.is_default }}
+                </div>
+                <div class="ml-3 text-sm">
+                  <label for="{{ form.is_default.id_for_label }}" class="font-medium text-gray-700">Default Category</label>
+                  <p class="text-gray-500">Use as the default category for this content type</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="pt-5">
+          <div class="flex justify-end space-x-3">
+            <a href="{% url 'newsroom:category_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+              Cancel
+            </a>
+            {% include "components/ui/buttons.html" with type="primary" text="Create Category" icon="plus" %}
+          </div>
+        </div>
       </form>
-    </div>
-  </div>
-  
-  <!-- Right Column: Quick Tips -->
-  <div class="space-y-6">
-    <div class="bg-info-light rounded-lg p-6">
-      <h3 class="font-medium text-gray-800 mb-4 flex items-center">
-        {% include "components/ui/icons.html" with name="info" class="text-info mr-2" %}
-        Category Guidelines
-      </h3>
-      <ul class="space-y-3">
-        <li class="flex items-start">
-          {% include "components/ui/icons.html" with name="check" class="h-5 w-5 text-info mr-2 flex-shrink-0" %}
-          <span>Choose a content type first, which determines radio station access</span>
-        </li>
-        <li class="flex items-start">
-          {% include "components/ui/icons.html" with name="check" class="h-5 w-5 text-info mr-2 flex-shrink-0" %}
-          <span>Categories support up to 3 levels of nesting (Type > Parent > Subcategory)</span>
-        </li>
-        <li class="flex items-start">
-          {% include "components/ui/icons.html" with name="check" class="h-5 w-5 text-info mr-2 flex-shrink-0" %}
-          <span>Use clear, descriptive names that make sense to radio stations</span>
-        </li>
-        <li class="flex items-start">
-          {% include "components/ui/icons.html" with name="check" class="h-5 w-5 text-info mr-2 flex-shrink-0" %}
-          <span>Only active categories will be visible in the Radio Zone</span>
-        </li>
-        <li class="flex items-start">
-          {% include "components/ui/icons.html" with name="check" class="h-5 w-5 text-info mr-2 flex-shrink-0" %}
-          <span>Keep names concise but descriptive for better navigation</span>
-        </li>
-      </ul>
     </div>
   </div>
 </div>

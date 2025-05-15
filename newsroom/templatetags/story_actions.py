@@ -4,6 +4,22 @@ from newsroom.models import Task, Story
 
 register = template.Library()
 
+@register.filter
+def call_with(value, args):
+    """Call a function with the given arguments"""
+    if not value:
+        return False
+    if isinstance(args, str):
+        args = [args]
+    return value(*args)
+
+@register.filter
+def split(value, delimiter=','):
+    """Split a string into a list using the specified delimiter"""
+    if not value:
+        return []
+    return [x.strip() for x in value.split(delimiter)]
+
 @register.simple_tag(takes_context=True)
 def can_edit_story(context, story):
     """Check if current user can edit a story"""
@@ -13,8 +29,8 @@ def can_edit_story(context, story):
     if user.user_type != 'STAFF':
         return False
     
-    # Authors can edit their own stories unless published
-    if story.author == user and story.status != 'PUBLISHED':
+    # Authors can edit their own stories only if in DRAFT
+    if story.author == user and story.status == 'DRAFT':
         return True
     
     # Editors can edit any story, including published ones
@@ -31,6 +47,29 @@ def can_edit_story(context, story):
         ).exists()
         if review_task:
             return True
+    
+    return False
+
+@register.simple_tag(takes_context=True)
+def can_delete_story(context, story):
+    """Check if current user can delete a story"""
+    user = context['user']
+    
+    # Published stories cannot be deleted
+    if story.status == 'PUBLISHED':
+        return False
+    
+    # Interns can only delete their own draft stories
+    if user.staff_role == 'INTERN':
+        return story.author == user and story.status == 'DRAFT'
+    
+    # Journalists can delete their own stories
+    if user.staff_role == 'JOURNALIST':
+        return story.author == user and story.status in ['DRAFT', 'REVIEW']
+    
+    # Sub-editors and editors can delete any non-published story
+    if user.staff_role in ['SUB_EDITOR', 'EDITOR', 'SUPERADMIN', 'ADMIN']:
+        return story.status != 'PUBLISHED'
     
     return False
 
@@ -77,20 +116,18 @@ def can_submit_for_approval(context, story):
     if story.status not in ['DRAFT', 'REVIEW']:
         return False
     
-    # Journalists can submit their own stories or ones they've reviewed
+    # Journalists can submit their own stories directly for approval
+    if user.staff_role == 'JOURNALIST' and story.author == user:
+        return story.status == 'DRAFT'
+    
+    # Journalists can submit stories they've reviewed
     if user.staff_role == 'JOURNALIST':
-        # Own story
-        if story.author == user:
-            return True
-        
-        # Story assigned for review
         completed_review = Task.objects.filter(
             related_story=story,
             task_type='STORY_REVIEW',
             assigned_to=user,
             status__in=['PENDING', 'IN_PROGRESS', 'COMPLETED']
         ).exists()
-        
         return completed_review
     
     # Authors of any role can submit their own stories

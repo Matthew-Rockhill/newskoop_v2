@@ -48,7 +48,10 @@
           </div>
           <div>
             <p class="text-sm text-gray-500">Status</p>
-            <p class="font-medium">{% if station.is_active %}Active{% else %}Inactive{% endif %}</p>
+            <div class="flex items-center">
+              <span class="text-sm text-gray-500">ID: {{ station.id }}</span>
+              {% include "components/ui/status_badges.html" with status=station.is_active|yesno:"active,inactive" text=station.is_active|yesno:"Active,Inactive" %}
+            </div>
           </div>
           <div>
             <p class="text-sm text-gray-500">Created</p>

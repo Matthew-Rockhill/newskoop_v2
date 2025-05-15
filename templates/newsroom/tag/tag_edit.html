@@ -10,24 +10,10 @@
 {% endblock %}
 
 {% block page_actions %}
-  <div class="flex space-x-3">
-    <button
-      type="submit"
-      form="tag-form"
-      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-    >
-      {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-      Save Changes
-    </button>
-
-    <a
-      href="{% url 'newsroom:tag_list' %}"
-      class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-    >
-      {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-      Cancel
-    </a>
-  </div>
+<div class="flex space-x-3">
+  {% include "components/ui/buttons.html" with type="primary" text="Save Changes" icon="save" is_submit=True form="tag-form" %}
+  {% include "components/ui/buttons.html" with type="secondary" text="Cancel" icon="arrow-left" url="newsroom:tag_list" %}
+</div>
 {% endblock %}
 
 {% block content %}

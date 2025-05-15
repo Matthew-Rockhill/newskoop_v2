@@ -1,6 +1,6 @@
 # newsroom/admin.py
 from django.contrib import admin
-from .models import Category, Story, AudioClip, Task, TaskAttachment, TaskComment, StoryRevision
+from .models import Category, Story, AudioClip, Task, TaskAttachment, TaskComment
 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'parent', 'content_type', 'created_at')
@@ -12,18 +12,12 @@ class AudioClipInline(admin.TabularInline):
     model = AudioClip
     extra = 1
 
-class StoryRevisionInline(admin.TabularInline):
-    model = StoryRevision
-    extra = 0
-    readonly_fields = ('revision_number', 'created_by', 'created_at')
-    can_delete = False
-
 class StoryAdmin(admin.ModelAdmin):
     list_display = ('title', 'author', 'category', 'status', 'language', 'created_at', 'published_at')
     list_filter = ('status', 'category', 'language', 'religion_classification')
     search_fields = ('title', 'content')
     prepopulated_fields = {'slug': ('title',)}
-    inlines = [AudioClipInline, StoryRevisionInline]
+    inlines = [AudioClipInline]
     readonly_fields = ('view_count', 'download_count')
     date_hierarchy = 'created_at'
     
@@ -62,4 +56,3 @@ admin.site.register(AudioClip, AudioClipAdmin)
 admin.site.register(Task, TaskAdmin)
 admin.site.register(TaskComment)
 admin.site.register(TaskAttachment)
-admin.site.register(StoryRevision)

@@ -121,19 +121,4 @@ class Migration(migrations.Migration):
                 'ordering': ['created_at'],
             },
         ),
-        migrations.CreateModel(
-            name='StoryRevision',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('content', models.TextField()),
-                ('revision_number', models.PositiveIntegerField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL)),
-                ('story', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='revisions', to='newsroom.story')),
-            ],
-            options={
-                'ordering': ['-revision_number'],
-                'unique_together': {('story', 'revision_number')},
-            },
-        ),
     ]

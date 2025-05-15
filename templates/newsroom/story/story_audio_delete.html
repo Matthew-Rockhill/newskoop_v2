@@ -8,16 +8,9 @@
 <div class="flex space-x-3">
   <form method="post" id="audio-delete-form">
     {% csrf_token %}
-    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-danger hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger">
-      {% include "components/ui/icons.html" with name="trash" class="mr-2" %}
-      Confirm Delete
-    </button>
+    {% include "components/ui/buttons.html" with type="danger" text="Confirm Delete" icon="trash" is_submit=True %}
   </form>
-  
-  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
-  </a>
+  {% include "components/ui/buttons.html" with type="secondary" text="Cancel" icon="arrow-left" url="newsroom:story_detail" story_id=story.id %}
 </div>
 {% endblock %}
 

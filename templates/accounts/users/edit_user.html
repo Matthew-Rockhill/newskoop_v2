@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}Edit {{ user_obj.get_full_name }} - Newskoop{% endblock %}
+{% load actions %}
+
+{% block title %}Edit User: {{ user_obj.get_full_name }} - Newskoop{% endblock %}
 {% block page_title %}Edit User{% endblock %}
+
 {% block page_actions %}
 <div class="flex space-x-3">
-  <button type="submit" form="user-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-    Save Changes
-  </button>
-  <a href="{% url 'accounts:user_list' %}?user_type={{ user_obj.user_type }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+  {% get_user_actions user_obj user as user_actions %}
+  {% include "components/page_actions.html" with actions=user_actions %}
+  
+  <a href="{% url 'accounts:user_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
+    Back to List
   </a>
 </div>
 {% endblock %}

@@ -94,6 +94,8 @@ def can_edit_story(view_func):
         if not request.user.is_authenticated:
             return redirect('accounts:login')
         
+        from .models import Story, Task
+        
         story_id = kwargs.get('story_id')
         if not story_id:
             raise ValueError("Story ID not provided")
@@ -158,8 +160,7 @@ def can_manage_task(view_func):
     """
     Decorator that ensures users can only manage tasks if:
     1. They created the task, or
-    2. They are assigned to the task, or
-    3. They have an editor/admin role
+    2. They have an editor/admin role
     """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
@@ -179,11 +180,10 @@ def can_manage_task(view_func):
         
         # Check permissions
         is_creator = task.assigned_by == request.user
-        is_assignee = task.assigned_to == request.user
         has_admin_role = request.user.staff_role in ['EDITOR', 'SUPERADMIN', 'ADMIN']
         
-        if not (is_creator or is_assignee or has_admin_role):
-            messages.error(request, "You don't have permission to manage this task")
+        if not (is_creator or has_admin_role):
+            messages.error(request, "You don't have permission to edit this task")
             return redirect('newsroom:task_detail', task_id=task_id)
         
         kwargs['task'] = task  # Add task to kwargs for the view

@@ -7,6 +7,7 @@
 {% block content %}
 <div class="space-y-6">
   <!-- Stats Overview - Only showing active users and stations with real change calculations -->
+  {% if show_admin_sections %}
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <!-- Using stat_card component for consistent stats display with accurate calculations -->
     {% include "components/patterns/stat_card.html" with label="Active Users" value=stats.active_users|default:"0" icon="users" change=stats.user_change|default:"0%" period="from last month" %}
@@ -14,10 +15,12 @@
     {% include "components/patterns/stat_card.html" with label="Active Stations" value=stats.active_stations|default:"0" icon="radio" change=stats.station_change|default:"0%" period="from last month" %}
     {% endif %}
   </div>
+  {% endif %}
   
   <!-- Redesigned Layout - Activity Feed (2/3) and Quick Actions (1/3) -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Recent Activity (wider column) -->
+    {% if show_admin_sections %}
     <div class="lg:col-span-2">
       <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -49,9 +52,10 @@
         </div>
       </div>
     </div>
+    {% endif %}
     
     <!-- Quick Actions (1/3) - Redesigned to match other templates -->
-    <div class="lg:col-span-1">
+    <div class="{% if show_admin_sections %}lg:col-span-1{% else %}lg:col-span-3{% endif %}">
       <div class="bg-white rounded-lg shadow h-full">
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-800">Quick Actions</h2>
@@ -59,7 +63,7 @@
         <div class="p-6">
           <div class="space-y-4">
             <!-- Redesigned quick actions to match other templates -->
-            {% if user.user_type == 'STAFF' %}
+            {% if user.user_type == 'STAFF' and show_admin_sections %}
               <a href="{% url 'accounts:station_create' %}" class="bg-white border border-gray-200 rounded-lg p-4 flex items-center shadow-sm hover:shadow-md transition-all">
                 <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
                   {% include "components/ui/icons.html" with name="radio" %}

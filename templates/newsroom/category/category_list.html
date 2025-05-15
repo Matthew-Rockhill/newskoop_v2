@@ -6,10 +6,7 @@
 
 {% block page_actions %}
 {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-<a href="{% url 'newsroom:category_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-  {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
-  Add Category
-</a>
+  {% include "components/ui/buttons.html" with type="primary" text="Add Category" icon="plus" url="newsroom:category_create" %}
 {% endif %}
 {% endblock %}
 
@@ -18,20 +15,20 @@
   <!-- Content Type Sections -->
   {% for content_type, group in category_groups.items %}
   <div class="bg-white rounded-lg shadow overflow-hidden">
-    <button type="button" class="w-full px-6 py-3 border-b border-gray-200 flex justify-between items-center section-header" data-target="content-{{ content_type }}">
+    <div class="px-6 py-3 border-b border-gray-200 flex justify-between items-center">
       <div class="flex items-center">
         <h2 class="text-lg font-semibold text-gray-800">{{ group.name }}</h2>
         <span class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{{ group.categories|length|add:"1" }}</span>
       </div>
       <div class="flex items-center space-x-2">
         {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-          <a href="{% url 'newsroom:category_create' %}?content_type={{ content_type }}" class="text-primary hover:text-primary-dark" title="Add Top-Level Category">
-            {% include "components/ui/icons.html" with name="plus" %}
+          <a href="{% url 'newsroom:category_create' %}?content_type={{ content_type }}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Add Top-Level Category">
+            {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
+            Add Category
           </a>
         {% endif %}
-        {% include "components/ui/icons.html" with name="chevron-down" class="h-5 w-5 text-gray-500 toggle-icon" %}
       </div>
-    </button>
+    </div>
     
     <div class="category-content" id="content-{{ content_type }}">
       <!-- All Categories (including "Uncategorised") -->
@@ -41,7 +38,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <span class="text-gray-500 mr-2">
-                  {% include "components/ui/icons.html" with name="tag" %}
+                  {% include "components/ui/icons.html" with name="tag" class="h-5 w-5" %}
                 </span>
                 <div>
                   <h3 class="font-medium text-gray-900">{{ category_data.category.name }}</h3>
@@ -66,17 +63,20 @@
                 
                 {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' and not category_data.category.is_default %}
                 <div class="flex space-x-2">
-                  <a href="{% url 'newsroom:category_edit' category_id=category_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                    {% include "components/ui/icons.html" with name="edit" %}
+                  <a href="{% url 'newsroom:category_edit' category_id=category_data.category.id %}" class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Edit">
+                    {% include "components/ui/icons.html" with name="edit" class="h-4 w-4 mr-1" %}
+                    Edit
                   </a>
                   
-                  <a href="{% url 'newsroom:category_create' %}?parent={{ category_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
-                    {% include "components/ui/icons.html" with name="plus" %}
+                  <a href="{% url 'newsroom:category_create' %}?parent={{ category_data.category.id }}" class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Add Subcategory">
+                    {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
+                    Add Sub
                   </a>
                   
                   {% if category_data.category.is_deletable %}
-                  <a href="{% url 'newsroom:category_delete' category_id=category_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                    {% include "components/ui/icons.html" with name="trash" %}
+                  <a href="{% url 'newsroom:category_delete' category_id=category_data.category.id %}" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" title="Delete">
+                    {% include "components/ui/icons.html" with name="trash" class="h-4 w-4 mr-1" %}
+                    Delete
                   </a>
                   {% endif %}
                 </div>
@@ -98,39 +98,42 @@
           <!-- Parent Categories (Level 2) -->
           {% if category_data.children %}
           <div class="hidden pl-6 pr-4 pb-3 border-t border-gray-50" id="children-{{ category_data.category.id }}">
+            <div class="bg-gray-100 rounded-md p-2">
             {% for parent_data in category_data.children %}
-              <div class="border-b border-gray-100 py-3">
+              <div class="py-3 bg-gray-100 rounded mb-2 last:mb-0">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center">
                     <span class="text-gray-400 mr-2">
-                      {% include "components/ui/icons.html" with name="folder" %}
+                      {% include "components/ui/icons.html" with name="folder" class="h-5 w-5" %}
                     </span>
                     <div>
                       <h4 class="font-medium text-gray-800">{{ parent_data.category.name }}</h4>
                       {% if not parent_data.category.is_active %}
-                      <span class="ml-1 px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">Inactive</span>
+                      <span class="ml-1 px-1 py-0.5 bg-white text-gray-600 text-xs font-medium rounded-full">Inactive</span>
                       {% endif %}
                     </div>
                   </div>
-                  
                   <div class="flex items-center space-x-3">
                     <div class="text-gray-500 text-xs">
                       {{ parent_data.story_count }} {{ parent_data.story_count|pluralize:"story,stories" }}
                     </div>
                     
                     {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-                    <div class="flex space-x-1">
-                      <a href="{% url 'newsroom:category_edit' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                        {% include "components/ui/icons.html" with name="edit" class="h-4 w-4" %}
+                    <div class="flex space-x-2">
+                      <a href="{% url 'newsroom:category_edit' category_id=parent_data.category.id %}" class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Edit">
+                        {% include "components/ui/icons.html" with name="edit" class="h-4 w-4 mr-1" %}
+                        Edit
                       </a>
                       
-                      <a href="{% url 'newsroom:category_create' %}?parent={{ parent_data.category.id }}" class="text-gray-600 hover:text-primary" title="Add Subcategory">
-                        {% include "components/ui/icons.html" with name="plus" class="h-4 w-4" %}
+                      <a href="{% url 'newsroom:category_create' %}?parent={{ parent_data.category.id }}" class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Add Subcategory">
+                        {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
+                        Add Sub
                       </a>
                       
                       {% if parent_data.category.is_deletable %}
-                      <a href="{% url 'newsroom:category_delete' category_id=parent_data.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                        {% include "components/ui/icons.html" with name="trash" class="h-4 w-4" %}
+                      <a href="{% url 'newsroom:category_delete' category_id=parent_data.category.id %}" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" title="Delete">
+                        {% include "components/ui/icons.html" with name="trash" class="h-4 w-4 mr-1" %}
+                        Delete
                       </a>
                       {% endif %}
                     </div>
@@ -148,45 +151,50 @@
                 
                   <!-- Subcategories (Level 3) -->
                   <div class="hidden pl-4 mt-2" id="subcategories-{{ parent_data.category.id }}">
-                    <div class="bg-gray-100 p-3 rounded-md">
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {% for subcategory in parent_data.children %}
-                          <div class="border border-gray-100 rounded p-2 bg-white">
-                            <div class="flex justify-between items-start">
-                              <div class="max-w-[70%]">
-                                <h5 class="text-xs font-medium text-gray-800 break-words">{{ subcategory.category.name }}</h5>
-                                <div class="text-xs text-gray-500">{{ subcategory.story_count }} {{ subcategory.story_count|pluralize:"story,stories" }}</div>
+                    <!-- LEVEL 3 CATEGORY CONTAINER -->
+                    <div class="bg-gray-300 border border-gray-400 rounded-md p-2">
+                      {% for subcategory in parent_data.children %}
+                        <div class="bg-gray-200 hover:bg-gray-400 transition-colors duration-150 rounded-md mb-2 last:mb-0 shadow-sm">
+                          <div class="p-3">
+                            <div class="flex justify-between items-center">
+                              <div class="flex items-center space-x-3">
+                                <span class="text-gray-700">
+                                  {% include "components/ui/icons.html" with name="tag" class="h-4 w-4" %}
+                                </span>
+                                <div>
+                                  <h5 class="text-sm font-medium text-gray-900">{{ subcategory.category.name }}</h5>
+                                  <div class="text-xs text-gray-700">{{ subcategory.story_count }} {{ subcategory.story_count|pluralize:"story,stories" }}</div>
+                                </div>
+                                {% if not subcategory.category.is_active %}
+                                <span class="px-2 py-0.5 bg-white text-gray-700 text-xs font-medium rounded-full shadow-sm">Inactive</span>
+                                {% endif %}
                               </div>
                               
-                              <!-- Keep the rest of your subcategory code here -->
-                              <div class="flex flex-col items-end">
-                                {% if not subcategory.category.is_active %}
-                                <span class="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full mb-1">Inactive</span>
-                                {% endif %}
+                              {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+                              <div class="flex space-x-2">
+                                <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="inline-flex items-center px-2 py-1 border border-gray-400 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" title="Edit">
+                                  {% include "components/ui/icons.html" with name="edit" class="h-3 w-3 mr-1" %}
+                                  Edit
+                                </a>
                                 
-                                {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-                                <div class="flex space-x-1">
-                                  <a href="{% url 'newsroom:category_edit' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                                    {% include "components/ui/icons.html" with name="edit" class="h-3 w-3" %}
-                                  </a>
-                                  
-                                  {% if subcategory.category.is_deletable %}
-                                  <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="text-gray-600 hover:text-danger" title="Delete">
-                                    {% include "components/ui/icons.html" with name="trash" class="h-3 w-3" %}
-                                  </a>
-                                  {% endif %}
-                                </div>
+                                {% if subcategory.category.is_deletable %}
+                                <a href="{% url 'newsroom:category_delete' category_id=subcategory.category.id %}" class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" title="Delete">
+                                  {% include "components/ui/icons.html" with name="trash" class="h-3 w-3 mr-1" %}
+                                  Delete
+                                </a>
                                 {% endif %}
                               </div>
+                              {% endif %}
                             </div>
                           </div>
-                        {% endfor %}
-                      </div>
+                        </div>
+                      {% endfor %}
                     </div>
                   </div>
                 {% endif %}
               </div>
             {% endfor %}
+            </div>
           </div>
           {% endif %}
         </div>
@@ -198,7 +206,7 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <span class="text-gray-400 mr-2">
-                {% include "components/ui/icons.html" with name="folder" %}
+                {% include "components/ui/icons.html" with name="folder" class="h-5 w-5" %}
               </span>
               <div>
                 <h3 class="font-medium text-gray-900">Uncategorised {{ group.name }}</h3>
@@ -221,10 +229,7 @@
       <p class="mt-2 text-sm text-gray-500">Categories help organize content for radio stations</p>
       {% if user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
       <div class="mt-6">
-        <a href="{% url 'newsroom:category_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-          {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
-          Create Category
-        </a>
+        {% include "components/ui/buttons.html" with type="primary" text="Create Category" icon="plus" url="newsroom:category_create" %}
       </div>
       {% endif %}
     </div>

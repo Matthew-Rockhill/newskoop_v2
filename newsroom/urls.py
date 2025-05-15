@@ -13,20 +13,18 @@ urlpatterns = [
     path('stories/create/', views.story_create, name='story_create'),
     path('stories/<uuid:story_id>/', views.story_detail, name='story_detail'),
     path('stories/<uuid:story_id>/edit/', views.story_edit, name='story_edit'),
+    path('stories/<uuid:story_id>/delete/', views.story_delete, name='story_delete'),
     path('stories/<uuid:story_id>/publish/', views.story_publish, name='story_publish'),
     path('stories/<uuid:story_id>/download/', views.story_download, name='story_download'),
     path('stories/<uuid:story_id>/submit-review/', views.story_submit_review, name='story_submit_review'),
     path('stories/<uuid:story_id>/approve/', views.story_approve, name='story_approve'),
     path('stories/<uuid:story_id>/submit-approval/', views.story_submit_approval, name='story_submit_approval'),
     path('stories/<uuid:story_id>/complete-review/<uuid:task_id>/', views.story_complete_review, name='story_complete_review'),
+    path('stories/<uuid:story_id>/create-translation/', views.story_create_translation, name='story_create_translation'),
     
     # Audio clips
     path('stories/<uuid:story_id>/audio/upload/', views.story_audio_upload, name='story_audio_upload'),
     path('stories/<uuid:story_id>/audio/<uuid:audio_id>/delete/', views.story_audio_delete, name='story_audio_delete'),
-    
-    # Story revisions
-    path('stories/<uuid:story_id>/revisions/<uuid:revision_id>/', views.story_view_revision, name='story_revision'),
-    path('stories/<uuid:story_id>/revisions/<uuid:revision_id>/restore/', views.story_restore_revision, name='story_restore_revision'),
     
     # Categories
     path('categories/', views.category_list, name='category_list'),
@@ -51,8 +49,8 @@ urlpatterns = [
     #tags
     path('tags/', views.tag_list, name='tag_list'),
     path('tags/create/', views.tag_create, name='tag_create'),
+    path('tags/<uuid:tag_id>/', views.tag_detail, name='tag_detail'),
     path('tags/<uuid:tag_id>/edit/', views.tag_edit, name='tag_edit'),
     path('tags/<uuid:tag_id>/delete/', views.tag_delete, name='tag_delete'),
     path('stories/<uuid:story_id>/tags/', views.story_manage_tags, name='story_manage_tags'),
-    
 ]

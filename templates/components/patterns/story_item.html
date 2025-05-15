@@ -19,15 +19,7 @@
       <span class="text-sm">{{ story.created_at|date:"M d, Y" }}</span>
     </div>
     <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-        {% if story.status == 'DRAFT' %}bg-gray-100 text-gray-800
-        {% elif story.status == 'REVIEW' %}bg-warning-light text-warning
-        {% elif story.status == 'PUBLISHED' %}bg-success-light text-success
-        {% elif story.status == 'APPROVED' %}bg-info-light text-info
-        {% elif story.status == 'ARCHIVED' %}bg-gray-200 text-gray-600
-        {% endif %}">
-        {{ story.get_status_display }}
-      </span>
+      {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
       <span>•</span>
       <span>{{ story.get_language_display }}</span>
       <span>•</span>

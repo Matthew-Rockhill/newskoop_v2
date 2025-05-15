@@ -52,35 +52,6 @@
       @apply mt-1 text-sm text-gray-500;
     }
     
-    /* Buttons */
-    .btn {
-      @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
-    }
-    
-    .btn-primary {
-      @apply bg-primary text-white hover:bg-primary-dark focus:ring-primary;
-    }
-    
-    .btn-primary:hover {
-      @apply text-white;
-    }
-    
-    .btn-outline {
-      @apply bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-gray-500;
-    }
-    
-    .btn-danger {
-      @apply bg-danger text-white hover:bg-red-700 focus:ring-danger;
-    }
-    
-    .btn-sm {
-      @apply px-3 py-1.5 text-xs;
-    }
-    
-    .btn-lg {
-      @apply px-6 py-3 text-base;
-    }
-    
     /* Cards */
     .card {
       @apply bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200;
@@ -144,4 +115,10 @@
     .table td {
       @apply px-6 py-4 whitespace-nowrap;
     }
-  }
+}
+
+.ql-editor {
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+}

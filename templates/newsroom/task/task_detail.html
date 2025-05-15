@@ -6,17 +6,10 @@
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  {% if task.assigned_to == user or task.assigned_by == user or user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-  <a href="{% url 'newsroom:task_edit' task_id=task.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="pencil" class="mr-2" %}
-    Edit Task
-  </a>
+  {% if task.assigned_by == user or user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+    {% include "components/ui/buttons.html" with type="primary" text="Edit Task" icon="pencil" url="newsroom:task_edit" task_id=task.id %}
   {% endif %}
-  
-  <a href="{% url 'newsroom:task_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Back to Tasks
-  </a>
+  {% include "components/ui/buttons.html" with type="secondary" text="Back to Tasks" icon="arrow-left" url="newsroom:task_list" %}
 </div>
 {% endblock %}
 
@@ -26,54 +19,47 @@
   <div class="lg:col-span-2 space-y-6">
     <!-- Task Content -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between">
-        <div class="flex items-center mr-4 mb-2 sm:mb-0">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full 
-            {% if task.task_type == 'STORY_WRITING' %}bg-blue-100 text-blue-700
-            {% elif task.task_type == 'STORY_EDITING' %}bg-purple-100 text-purple-700
-            {% elif task.task_type == 'FOLLOW_UP' %}bg-orange-100 text-orange-700
-            {% elif task.task_type == 'TRANSLATION' %}bg-green-100 text-green-700
-            {% elif task.task_type == 'AUDIO_RECORDING' %}bg-red-100 text-red-700
-            {% else %}bg-primary-50 text-primary
-            {% endif %} flex items-center justify-center mr-4">
-            {% if task.task_type == 'STORY_WRITING' %}
-              {% include "components/ui/icons.html" with name="edit" %}
-            {% elif task.task_type == 'STORY_EDITING' %}
-              {% include "components/ui/icons.html" with name="edit-3" %}
-            {% elif task.task_type == 'FOLLOW_UP' %}
-              {% include "components/ui/icons.html" with name="refresh-cw" %}
-            {% elif task.task_type == 'TRANSLATION' %}
-              {% include "components/ui/icons.html" with name="globe" %}
-            {% elif task.task_type == 'AUDIO_RECORDING' %}
-              {% include "components/ui/icons.html" with name="mic" %}
-            {% else %}
-              {% include "components/ui/icons.html" with name="check-circle" %}
-            {% endif %}
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10 rounded-full 
+              {% if task.task_type == 'STORY_WRITING' %}bg-blue-100 text-blue-700
+              {% elif task.task_type == 'STORY_EDITING' %}bg-purple-100 text-purple-700
+              {% elif task.task_type == 'FOLLOW_UP' %}bg-orange-100 text-orange-700
+              {% elif task.task_type == 'TRANSLATION' %}bg-green-100 text-green-700
+              {% elif task.task_type == 'AUDIO_RECORDING' %}bg-red-100 text-red-700
+              {% else %}bg-primary-50 text-primary
+              {% endif %} flex items-center justify-center mr-4">
+              {% if task.task_type == 'STORY_WRITING' %}
+                {% include "components/ui/icons.html" with name="edit" size=24 %}
+              {% elif task.task_type == 'STORY_EDITING' %}
+                {% include "components/ui/icons.html" with name="edit-3" size=24 %}
+              {% elif task.task_type == 'FOLLOW_UP' %}
+                {% include "components/ui/icons.html" with name="refresh-cw" size=24 %}
+              {% elif task.task_type == 'TRANSLATION' %}
+                {% include "components/ui/icons.html" with name="globe" size=24 %}
+              {% elif task.task_type == 'AUDIO_RECORDING' %}
+                {% include "components/ui/icons.html" with name="mic" size=24 %}
+              {% else %}
+                {% include "components/ui/icons.html" with name="check-circle" size=24 %}
+              {% endif %}
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">{{ task.title }}</h1>
+              <p class="text-sm text-gray-500">{{ task.get_task_type_display }} Task</p>
+            </div>
           </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">{{ task.title }}</h2>
-            <p class="text-sm text-gray-500">{{ task.get_task_type_display }} Task</p>
+          <div class="flex items-center space-x-4">
+            {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
+            <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+              {% if task.priority == 'LOW' %}bg-gray-100 text-gray-800
+              {% elif task.priority == 'MEDIUM' %}bg-blue-100 text-blue-800
+              {% elif task.priority == 'HIGH' %}bg-yellow-100 text-yellow-800
+              {% elif task.priority == 'URGENT' %}bg-red-100 text-red-800
+              {% endif %}">
+              {{ task.get_priority_display }} Priority
+            </span>
           </div>
-        </div>
-        <div class="flex items-center space-x-2">
-          <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-            {% if task.status == 'PENDING' %}bg-gray-100 text-gray-800
-            {% elif task.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-800
-            {% elif task.status == 'REVIEW' %}bg-yellow-100 text-yellow-800
-            {% elif task.status == 'COMPLETED' %}bg-green-100 text-green-800
-            {% elif task.status == 'CANCELLED' %}bg-red-100 text-red-800
-            {% endif %}">
-            {{ task.get_status_display }}
-          </span>
-          
-          <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-            {% if task.priority == 'LOW' %}bg-gray-100 text-gray-800
-            {% elif task.priority == 'MEDIUM' %}bg-blue-100 text-blue-800
-            {% elif task.priority == 'HIGH' %}bg-yellow-100 text-yellow-800
-            {% elif task.priority == 'URGENT' %}bg-red-100 text-red-800
-            {% endif %}">
-            {{ task.get_priority_display }} Priority
-          </span>
         </div>
       </div>
       
@@ -84,7 +70,7 @@
         </div>
 
         {% if task.task_type == 'TRANSLATION' and task.status != 'COMPLETED' %}
-          <div class="mt-4">
+          <div class="mt-6">
             <a href="{% url 'newsroom:submit_translation' task_id=task.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
               {% include "components/ui/icons.html" with name="globe" class="mr-2" %}
               Submit Translation
@@ -94,44 +80,36 @@
         {% endif %}
         
         {% if task.related_story %}
-        <div class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="text-lg font-medium text-gray-900 mb-3">Related Story</h3>
-          <div class="bg-gray-50 p-4 rounded-md">
-            <div class="flex flex-wrap items-center justify-between">
-              <h4 class="font-medium mb-2 sm:mb-0">
+        <div class="mt-8 pt-6 border-t border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Related Story</h3>
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <h4 class="font-medium">
                 <a href="{% url 'newsroom:story_detail' story_id=task.related_story.id %}" class="text-primary hover:underline">
                   {{ task.related_story.title }}
                 </a>
               </h4>
-              <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                {% if task.related_story.status == 'DRAFT' %}bg-gray-100 text-gray-800
-                {% elif task.related_story.status == 'REVIEW' %}bg-yellow-100 text-yellow-800
-                {% elif task.related_story.status == 'APPROVED' %}bg-blue-100 text-blue-800
-                {% elif task.related_story.status == 'PUBLISHED' %}bg-green-100 text-green-800
-                {% elif task.related_story.status == 'ARCHIVED' %}bg-red-100 text-red-800
-                {% endif %}">
-                {{ task.related_story.get_status_display }}
-              </span>
+              {% include "components/ui/status_badges.html" with status=task.related_story.status|lower text=task.related_story.get_status_display %}
             </div>
-            <div class="mt-2 text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-1">
-              <span class="flex items-center">
-                {% include "components/ui/icons.html" with name="user" class="h-4 w-4 mr-1 text-gray-400" %}
-                Author: {{ task.related_story.author.get_full_name }}
-              </span>
-              <span class="flex items-center">
-                {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 mr-1 text-gray-400" %}
-                Category: {{ task.related_story.category.name }}
-              </span>
-              <span class="flex items-center">
-                {% include "components/ui/icons.html" with name="calendar" class="h-4 w-4 mr-1 text-gray-400" %}
-                Created: {{ task.related_story.created_at|date:"M d, Y" }}
-              </span>
-              <span class="flex items-center">
-                {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 mr-1 text-gray-400" %}
-                Language: {{ task.related_story.get_language_display }}
-              </span>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="flex items-center text-sm text-gray-600">
+                {% include "components/ui/icons.html" with name="user" class="h-4 w-4 mr-2 text-gray-400" %}
+                <span>Author: {{ task.related_story.author.get_full_name }}</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 mr-2 text-gray-400" %}
+                <span>Category: {{ task.related_story.category.name }}</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                {% include "components/ui/icons.html" with name="calendar" class="h-4 w-4 mr-2 text-gray-400" %}
+                <span>Created: {{ task.related_story.created_at|date:"M d, Y" }}</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-600">
+                {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 mr-2 text-gray-400" %}
+                <span>Language: {{ task.related_story.get_language_display }}</span>
+              </div>
             </div>
-            <div class="mt-3">
+            <div class="mt-4">
               <a href="{% url 'newsroom:story_detail' story_id=task.related_story.id %}" class="inline-flex items-center text-sm font-medium text-primary hover:underline">
                 {% include "components/ui/icons.html" with name="arrow-right" class="mr-1 h-4 w-4" %}
                 View Story
@@ -145,33 +123,37 @@
     
     <!-- Comments Section -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="message-circle" %}
-        </div>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">Comments</h2>
-          <p class="text-sm text-gray-500">Discussion about this task</p>
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="message-circle" size=20 %}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Comments</h2>
+            <p class="text-sm text-gray-500">Discussion about this task</p>
+          </div>
         </div>
       </div>
       
       <div class="p-6">
-      <!-- Comment Form with Improved Layout -->
-      <form method="post" action="{% url 'newsroom:task_add_comment' task_id=task.id %}" class="mb-6">
-        {% csrf_token %}
-        <label for="{{ comment_form.content.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Add Comment</label>
-        <div class="relative">
-          <textarea name="{{ comment_form.content.name }}" id="{{ comment_form.content.id_for_label }}" rows="3" 
-            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50 mb-10" 
-            placeholder="Add your comments here..."></textarea>
-          <div class="absolute right-0 flex items-center pr-3 mt-2">
-            <button type="submit" 
-              class="inline-flex items-center justify-center px-4 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              Post
-            </button>
+        <!-- Comment Form -->
+        <form method="post" action="{% url 'newsroom:task_add_comment' task_id=task.id %}" class="mb-6">
+          {% csrf_token %}
+          <div class="space-y-4">
+            <label for="{{ comment_form.content.id_for_label }}" class="block text-sm font-medium text-gray-700">Add Comment</label>
+            <div class="relative">
+              <textarea name="{{ comment_form.content.name }}" id="{{ comment_form.content.id_for_label }}" rows="3" 
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" 
+                placeholder="Add your comments here..."></textarea>
+              <div class="absolute right-0 bottom-0 p-2">
+                <button type="submit" 
+                  class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                  Post Comment
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
         
         <!-- Comment List -->
         <div class="space-y-6">
@@ -182,11 +164,11 @@
                   {% include "components/ui/avatar.html" with user=comment.author size="sm" class="mr-4" %}
                 </div>
                 <div class="ml-3 flex-1">
-                  <div class="flex flex-wrap justify-between">
+                  <div class="flex flex-wrap justify-between items-center">
                     <p class="text-sm font-medium text-gray-900">{{ comment.author.get_full_name }}</p>
                     <p class="text-sm text-gray-500">{{ comment.created_at|date:"M d, Y, g:i a" }}</p>
                   </div>
-                  <div class="mt-1 text-sm text-gray-700 whitespace-pre-line">
+                  <div class="mt-2 text-sm text-gray-700 whitespace-pre-line">
                     {{ comment.content }}
                   </div>
                 </div>
@@ -200,244 +182,128 @@
         </div>
       </div>
     </div>
-    
-    <!-- Attachments Section -->
-    {% if attachments %}
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div class="flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-            {% include "components/ui/icons.html" with name="paperclip" %}
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Attachments</h2>
-            <p class="text-sm text-gray-500">Files related to this task</p>
-          </div>
-        </div>
-        <button type="button" class="inline-flex items-center text-sm text-primary hover:underline" onclick="document.getElementById('attachment-form-container').classList.toggle('hidden')">
-          {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
-          Add Attachment
-        </button>
-      </div>
-      
-      <div class="p-6">
-        <!-- Hidden Attachment Form -->
-        <div id="attachment-form-container" class="hidden mb-6 bg-gray-50 p-4 rounded-lg">
-          <h3 class="font-medium text-gray-900 mb-3">Upload New Attachment</h3>
-          <form method="post" action="{% url 'newsroom:task_add_attachment' task_id=task.id %}" enctype="multipart/form-data" class="space-y-4">
-            {% csrf_token %}
-            <div>
-              <label for="{{ attachment_form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input type="text" name="{{ attachment_form.title.name }}" id="{{ attachment_form.title.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" placeholder="Enter a title for this attachment">
-            </div>
-            <div>
-              <label for="{{ attachment_form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">File</label>
-              <input type="file" name="{{ attachment_form.file.name }}" id="{{ attachment_form.file.id_for_label }}" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary hover:file:bg-primary-100">
-            </div>
-            <div class="flex justify-end">
-              <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                Upload Attachment
-              </button>
-            </div>
-          </form>
-        </div>
-        
-        <!-- Attachment List -->
-        <div class="grid grid-cols-1 gap-4">
-          {% for attachment in attachments %}
-            <div class="border rounded-md p-4 flex flex-wrap items-center justify-between">
-              <div class="flex items-center mb-2 sm:mb-0">
-                {% include "components/ui/icons.html" with name="file" class="h-6 w-6 text-gray-400 mr-3" %}
-                <div>
-                  <h4 class="font-medium">{{ attachment.title }}</h4>
-                  <p class="text-xs text-gray-500">
-                    Uploaded by {{ attachment.uploaded_by.get_full_name }} on {{ attachment.created_at|date:"M d, Y" }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex space-x-3">
-                <a href="{{ attachment.file.url }}" class="text-primary hover:underline text-sm inline-flex items-center" download>
-                  {% include "components/ui/icons.html" with name="download" class="h-4 w-4 mr-1" %}
-                  Download
-                </a>
-                {% if user == attachment.uploaded_by or user == task.assigned_by or user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
-                <form method="post" action="{% url 'newsroom:task_delete_attachment' task_id=task.id attachment_id=attachment.id %}" onsubmit="return confirm('Are you sure you want to delete this attachment?');">
-                  {% csrf_token %}
-                  <button type="submit" class="text-danger hover:text-danger-dark text-sm inline-flex items-center">
-                    {% include "components/ui/icons.html" with name="trash" class="h-4 w-4 mr-1" %}
-                    Delete
-                  </button>
-                </form>
-                {% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
   </div>
   
-  <!-- Right Column (1/3 width on large screens) - Details and Actions -->
+  <!-- Sidebar Column (1/3 width on large screens) -->
   <div class="space-y-6">
     <!-- Task Details Card -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="info" %}
-        </div>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">Task Details</h2>
-          <p class="text-sm text-gray-500">Information and assignment</p>
-        </div>
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Task Details</h3>
       </div>
-      
-      <div class="p-6">
-        <dl class="grid grid-cols-1 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Status</dt>
-            <dd class="mt-1">
-              <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                {% if task.status == 'PENDING' %}bg-gray-100 text-gray-800
-                {% elif task.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-800
-                {% elif task.status == 'REVIEW' %}bg-yellow-100 text-yellow-800
-                {% elif task.status == 'COMPLETED' %}bg-green-100 text-green-800
-                {% elif task.status == 'CANCELLED' %}bg-red-100 text-red-800
-                {% endif %}">
-                {{ task.get_status_display }}
-              </span>
-            </dd>
+      <div class="p-6 space-y-4">
+        <div class="flex items-center text-sm">
+          <div class="flex-shrink-0 w-8">
+            {% include "components/ui/icons.html" with name="user" class="h-5 w-5 text-gray-400" %}
           </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Task Type</dt>
-            <dd class="mt-1">{{ task.get_task_type_display }}</dd>
+          <div class="ml-3">
+            <p class="text-gray-500">Assigned To</p>
+            <p class="font-medium text-gray-900">{{ task.assigned_to.get_full_name }}</p>
           </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Priority</dt>
-            <dd class="mt-1">
-              <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                {% if task.priority == 'LOW' %}bg-gray-100 text-gray-800
-                {% elif task.priority == 'MEDIUM' %}bg-blue-100 text-blue-800
-                {% elif task.priority == 'HIGH' %}bg-yellow-100 text-yellow-800
-                {% elif task.priority == 'URGENT' %}bg-red-100 text-red-800
-                {% endif %}">
-                {{ task.get_priority_display }}
-              </span>
-            </dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Assigned To</dt>
-            <dd class="mt-1">{{ task.assigned_to.get_full_name }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Assigned By</dt>
-            <dd class="mt-1">{{ task.assigned_by.get_full_name }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Created</dt>
-            <dd class="mt-1">{{ task.created_at|date:"F j, Y" }}</dd>
-          </div>
-          
-          {% if task.due_date %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Due Date</dt>
-            <dd class="mt-1 {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}text-danger font-medium{% endif %}">
-              {{ task.due_date|date:"F j, Y, g:i a" }}
-              {% if task.due_date < now and task.status != 'COMPLETED' and task.status != 'CANCELLED' %}
-                <span class="text-xs text-danger ml-2">(Overdue)</span>
-              {% endif %}
-            </dd>
-          </div>
-          {% endif %}
-          
-          {% if task.completed_at %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Completed</dt>
-            <dd class="mt-1">{{ task.completed_at|date:"F j, Y, g:i a" }}</dd>
-          </div>
-          {% endif %}
-        </dl>
-      </div>
-    </div>
-    
-    <!-- Status Update Card -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="refresh-cw" %}
         </div>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">Update Status</h2>
-          <p class="text-sm text-gray-500">Change task status</p>
-        </div>
-      </div>
-      
-      <div class="p-6">
-        <form method="post" action="{% url 'newsroom:task_status_update' task_id=task.id %}" class="space-y-4">
-          {% csrf_token %}
-          <div class="grid grid-cols-2 gap-2">
-            <button type="submit" name="status" value="PENDING" class="w-full py-2 px-3 rounded-md border {% if task.status == 'PENDING' %}border-primary bg-primary-50 text-primary{% else %}border-gray-300 bg-white text-gray-700 hover:bg-gray-50{% endif %} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              Pending
-            </button>
-            
-            <button type="submit" name="status" value="IN_PROGRESS" class="w-full py-2 px-3 rounded-md border {% if task.status == 'IN_PROGRESS' %}border-primary bg-primary-50 text-primary{% else %}border-gray-300 bg-white text-gray-700 hover:bg-gray-50{% endif %} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              In Progress
-            </button>
-            
-            <button type="submit" name="status" value="REVIEW" class="w-full py-2 px-3 rounded-md border {% if task.status == 'REVIEW' %}border-primary bg-primary-50 text-primary{% else %}border-gray-300 bg-white text-gray-700 hover:bg-gray-50{% endif %} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              In Review
-            </button>
-            
-            <button type="submit" name="status" value="COMPLETED" class="w-full py-2 px-3 rounded-md border {% if task.status == 'COMPLETED' %}border-success bg-success-50 text-success{% else %}border-gray-300 bg-white text-gray-700 hover:bg-gray-50{% endif %} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              Completed
-            </button>
-          </div>
-          
-          <button type="submit" name="status" value="CANCELLED" class="w-full mt-2 py-2 px-3 rounded-md border {% if task.status == 'CANCELLED' %}border-danger bg-danger-50 text-danger{% else %}border-gray-300 bg-white text-danger hover:bg-gray-50{% endif %} text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger" onclick="return confirm('Are you sure you want to cancel this task?')">
-            Cancel Task
-          </button>
-        </form>
         
-        <div class="mt-4 text-xs text-gray-500">
-          <p>Changing status will automatically notify assignee and creator.</p>
+        <div class="flex items-center text-sm">
+          <div class="flex-shrink-0 w-8">
+            {% include "components/ui/icons.html" with name="user" class="h-5 w-5 text-gray-400" %}
+          </div>
+          <div class="ml-3">
+            <p class="text-gray-500">Created By</p>
+            <p class="font-medium text-gray-900">{{ task.assigned_by.get_full_name }}</p>
+          </div>
         </div>
+        
+        <div class="flex items-center text-sm">
+          <div class="flex-shrink-0 w-8">
+            {% include "components/ui/icons.html" with name="calendar" class="h-5 w-5 text-gray-400" %}
+          </div>
+          <div class="ml-3">
+            <p class="text-gray-500">Created</p>
+            <p class="font-medium text-gray-900">{{ task.created_at|date:"M d, Y, g:i a" }}</p>
+          </div>
+        </div>
+        
+        {% if task.due_date %}
+        <div class="flex items-center text-sm">
+          <div class="flex-shrink-0 w-8">
+            {% include "components/ui/icons.html" with name="clock" class="h-5 w-5 text-gray-400" %}
+          </div>
+          <div class="ml-3">
+            <p class="text-gray-500">Due Date</p>
+            <p class="font-medium text-gray-900">{{ task.due_date|date:"M d, Y, g:i a" }}</p>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% if task.completed_at %}
+        <div class="flex items-center text-sm">
+          <div class="flex-shrink-0 w-8">
+            {% include "components/ui/icons.html" with name="check-circle" class="h-5 w-5 text-gray-400" %}
+          </div>
+          <div class="ml-3">
+            <p class="text-gray-500">Completed</p>
+            <p class="font-medium text-gray-900">{{ task.completed_at|date:"M d, Y, g:i a" }}</p>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
     
-    {% if not attachments %}
-    <!-- Add Attachment Card -->
+    <!-- Attachments Card -->
+    {% if attachments %}
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="paperclip" %}
-        </div>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">Attachments</h2>
-          <p class="text-sm text-gray-500">Add supporting files</p>
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="paperclip" size=20 %}
+          </div>
+          <div>
+            <h3 class="text-lg font-medium text-gray-900">Attachments</h3>
+            <p class="text-sm text-gray-500">Files related to this task</p>
+          </div>
         </div>
       </div>
       
       <div class="p-6">
-        <form method="post" action="{% url 'newsroom:task_add_attachment' task_id=task.id %}" enctype="multipart/form-data" class="space-y-4">
+        <div class="space-y-4">
+          {% for attachment in attachments %}
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              {% include "components/ui/icons.html" with name="file" class="h-5 w-5 text-gray-400 mr-3" %}
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ attachment.file.name }}</p>
+                <p class="text-xs text-gray-500">{{ attachment.file.size|filesizeformat }}</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a href="{{ attachment.file.url }}" class="text-primary hover:text-primary-dark" title="Download">
+                {% include "components/ui/icons.html" with name="download" class="h-5 w-5" %}
+              </a>
+              {% if task.assigned_to == user or task.assigned_by == user or user.staff_role in 'EDITOR,SUPERADMIN,ADMIN' %}
+              <form method="post" action="{% url 'newsroom:task_delete_attachment' task_id=task.id attachment_id=attachment.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
+                  {% include "components/ui/icons.html" with name="trash" class="h-5 w-5" %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        
+        <!-- Add Attachment Form -->
+        <form method="post" action="{% url 'newsroom:task_add_attachment' task_id=task.id %}" enctype="multipart/form-data" class="mt-6">
           {% csrf_token %}
-          <div>
-            <label for="{{ attachment_form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input type="text" name="{{ attachment_form.title.name }}" id="{{ attachment_form.title.id_for_label }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" placeholder="Enter a title for this attachment">
-          </div>
-          <div>
-            <label for="{{ attachment_form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">File</label>
-            <input type="file" name="{{ attachment_form.file.name }}" id="{{ attachment_form.file.id_for_label }}" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary hover:file:bg-primary-100">
-          </div>
-          <div>
-            <button type="submit" class="w-full py-2 px-3 inline-flex justify-center items-center border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              {% include "components/ui/icons.html" with name="upload" class="mr-2 h-4 w-4" %}
-              Upload Attachment
-            </button>
+          <div class="space-y-4">
+            <label for="{{ attachment_form.file.id_for_label }}" class="block text-sm font-medium text-gray-700">Add Attachment</label>
+            <div class="flex items-center space-x-4">
+              <input type="file" name="{{ attachment_form.file.name }}" id="{{ attachment_form.file.id_for_label }}" 
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary hover:file:bg-primary-100">
+              <button type="submit" 
+                class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                Upload
+              </button>
+            </div>
           </div>
         </form>
       </div>

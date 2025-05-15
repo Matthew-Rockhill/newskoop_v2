@@ -10,20 +10,23 @@
 {% endblock %}
 
 {% block page_actions %}
-  {% include "components/page_actions.html" with actions=actions %}
+  <div class="flex space-x-3">
+    {% include "components/ui/buttons.html" with type="primary" text="Create Tag" icon="plus" url="newsroom:tag_create" %}
+  </div>
 {% endblock %}
 
 {% block content %}
   <div class="space-y-6">
     <!-- Tags List -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-gray-800">
-          All Tags
-        </h2>
-        <span class="text-sm text-gray-500">
-          {{ tags.count }} tags
-        </span>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="tag" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">All Tags</h2>
+          <p class="text-sm text-gray-500">{{ tags.count }} tags</p>
+        </div>
       </div>
 
       {% if tags %}
@@ -55,8 +58,13 @@
               {% for tag in tags %}
                 <tr class="hover:bg-gray-50">
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ tag.name }}
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-3">
+                        {% include "components/ui/icons.html" with name="tag" %}
+                      </div>
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ tag.name }}
+                      </div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -66,7 +74,7 @@
                   </td>
                   <td class="px-6 py-4">
                     <div class="text-sm text-gray-900">
-                      {{ tag.description|truncatechars:50 }}
+                      {{ tag.description|truncatechars:50|default:"No description" }}
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -75,20 +83,21 @@
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">
-                      {{ tag.created_by.get_full_name }}
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mr-3">
+                        {% include "components/ui/icons.html" with name="user" %}
+                      </div>
+                      <div class="text-sm text-gray-900">
+                        {{ tag.created_by.get_full_name }}
+                      </div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
-                      <a href="{% url 'newsroom:tag_edit' tag_id=tag.id %}"
-                         class="text-gray-600 hover:text-primary"
-                         title="Edit">
+                      <a href="{% url 'newsroom:tag_edit' tag.id %}" class="text-gray-400 hover:text-primary" title="Edit">
                         {% include "components/ui/icons.html" with name="edit" %}
                       </a>
-                      <a href="{% url 'newsroom:tag_delete' tag_id=tag.id %}"
-                         class="text-gray-600 hover:text-danger"
-                         title="Delete">
+                      <a href="{% url 'newsroom:tag_delete' tag.id %}" class="text-gray-400 hover:text-danger" title="Delete">
                         {% include "components/ui/icons.html" with name="trash" %}
                       </a>
                     </div>
@@ -99,20 +108,18 @@
           </table>
         </div>
       {% else %}
-        <div class="px-6 py-12 text-center">
-          {% include "components/ui/icons.html" with name="tag" size=48 class="mx-auto text-gray-400" %}
-          <h3 class="mt-4 text-lg font-medium text-gray-900">
+        <div class="text-center py-12">
+          <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 text-gray-400 mb-4">
+            {% include "components/ui/icons.html" with name="tag" %}
+          </div>
+          <h3 class="text-lg font-medium text-gray-900">
             No tags found
           </h3>
           <p class="mt-2 text-sm text-gray-500">
             Get started by creating your first tag.
           </p>
           <div class="mt-6">
-            <a href="{% url 'newsroom:tag_create' %}"
-               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
-              Create Tag
-            </a>
+            {% include "components/ui/buttons.html" with type="primary" text="Create Tag" icon="plus" url="newsroom:tag_create" %}
           </div>
         </div>
       {% endif %}

@@ -26,15 +26,7 @@
       </span>
     </div>
     <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-        {% if task.status == 'PENDING' %}bg-gray-100 text-gray-800
-        {% elif task.status == 'IN_PROGRESS' %}bg-info-light text-info
-        {% elif task.status == 'REVIEW' %}bg-warning-light text-warning
-        {% elif task.status == 'COMPLETED' %}bg-success-light text-success
-        {% elif task.status == 'CANCELLED' %}bg-gray-200 text-gray-600
-        {% endif %}">
-        {{ task.get_status_display }}
-      </span>
+      {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
       
       {% if task.due_date %}
         <span>•</span>

@@ -6,7 +6,7 @@
 
 {% block page_actions %}
 {% if user.user_type == 'STAFF' %}
-<div class="flex space-x-3">
+<div class="flex space-x-3 mb-2">
   {% if user.staff_role in 'INTERN,JOURNALIST,EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
   <a href="{% url 'newsroom:story_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
@@ -24,495 +24,322 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-100">
-    <div class="py-10">
-        <main>
-            <div class="mx-auto sm:px-6 lg:px-8">
-<div class="space-y-8">
-  {% if user.user_type == 'STAFF' %}
-  <!-- Staff Dashboard -->
-  
-  <!-- Stats Overview -->
-                  <div>
-                    <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-    <!-- Story Stats -->
-                      <!-- My Stories Stat Card -->
-                      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div class="p-6">
-                          <div class="flex items-start">
-                            <div class="flex-shrink-0 rounded-md bg-primary p-3">
-                              <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                              </svg>
-                            </div>
-                            <div class="ml-4">
-                              <p class="text-sm font-medium text-gray-500">My Stories</p>
-                              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ my_story_count|default:"0" }}</p>
-                              <div class="mt-2 text-sm text-gray-500">
-                                <span>Drafts: {{ my_draft_count|default:"0" }}</span>
-                                <span class="ml-4">Published: {{ my_published_count|default:"0" }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6">
-                          <a href="{% url 'newsroom:story_list' %}" class="text-sm font-medium text-primary hover:text-primary-dark">
-                            View all<span class="sr-only"> My Stories stats</span>
-                          </a>
-                        </div>
-                      </div>
-                      
-                      {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div class="p-6">
-                          <div class="flex items-start">
-                            <div class="flex-shrink-0 rounded-md bg-primary p-3">
-                              <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                              </svg>
-                            </div>
-                            <div class="ml-4">
-                              <p class="text-sm font-medium text-gray-500">Total Stories</p>
-                              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ story_count|default:"0" }}</p>
-                              <div class="mt-2 text-sm">
-                                <span class="text-warning">Pending: {{ awaiting_approval|default:"0" }}</span>
-                                <span class="ml-4 text-success">Approved: {{ approved_count|default:"0" }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6">
-                          <a href="{% url 'newsroom:story_list' %}" class="text-sm font-medium text-primary hover:text-primary-dark">
-                            View all<span class="sr-only"> Total Stories stats</span>
-                          </a>
-                        </div>
-                      </div>
-                      {% endif %}
-                      
-                      <!-- Task Stats -->
-                      {% if user.staff_role in 'INTERN,JOURNALIST' %}
-                      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div class="p-6">
-                          <div class="flex items-start">
-                            <div class="flex-shrink-0 rounded-md bg-warning p-3">
-                              <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <div class="ml-4">
-                              <p class="text-sm font-medium text-gray-500">My Tasks</p>
-                              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ pending_tasks|default:"0" }}</p>
-                              <div class="mt-2 text-sm text-gray-500">
-                                <span>Pending: {{ pending_tasks|default:"0" }}</span>
-                                <span class="ml-4">Completed: {{ completed_tasks|default:"0" }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6">
-                          <a href="{% url 'newsroom:task_list' %}?view=assigned" class="text-sm font-medium text-primary hover:text-primary-dark">
-                            View all<span class="sr-only"> My Tasks stats</span>
-                          </a>
-                        </div>
-                      </div>
-                      {% endif %}
-                      
-                      {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div class="p-6">
-                          <div class="flex items-start">
-                            <div class="flex-shrink-0 rounded-md bg-info p-3">
-                              <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <div class="ml-4">
-                              <p class="text-sm font-medium text-gray-500">Tasks Created</p>
-                              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ tasks_created|default:"0" }}</p>
-                              <div class="mt-2 text-sm text-gray-500">
-                                <span>Pending: {{ pending_tasks|default:"0" }}</span>
-                                <span class="ml-4">Completed: {{ completed_tasks|default:"0" }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6">
-                          <a href="{% url 'newsroom:task_list' %}?view=created" class="text-sm font-medium text-primary hover:text-primary-dark">
-                            View all<span class="sr-only"> Tasks Created stats</span>
-                          </a>
-                        </div>
-                      </div>
-                      {% endif %}
-                      
-                      <!-- Category Stats -->
-                      {% if user.staff_role in 'INTERN,JOURNALIST,EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div class="p-6">
-                          <div class="flex items-start">
-                            <div class="flex-shrink-0 rounded-md bg-info p-3">
-                              <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                              </svg>
-                            </div>
-                            <div class="ml-4">
-                              <p class="text-sm font-medium text-gray-500">Categories</p>
-                              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ category_count|default:"0" }}</p>
-                              <div class="mt-2 text-sm text-gray-500">
-                                <span>Active: {{ active_categories|default:"0" }}</span>
-                                <span class="ml-4">Stories: {{ stories_in_categories|default:"0" }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6">
-                          <a href="{% url 'newsroom:category_list' %}" class="text-sm font-medium text-primary hover:text-primary-dark">
-                            Manage categories<span class="sr-only"> Categories stats</span>
-                          </a>
-                        </div>
-                      </div>
-                      {% endif %}
-                    </dl>
-                  </div>
-                  
-                  <!-- Main Content Area -->
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Left Column: Personal Content -->
-                    <div class="space-y-6">
-                      <!-- My Recent Stories -->
-                      <div class="bg-white rounded-lg shadow overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                          <h2 class="text-lg font-semibold text-gray-800">
-                            {% if user.staff_role in 'INTERN,JOURNALIST,EDITOR,SUB_EDITOR' %}My Recent Stories
-                            {% else %}Recent Stories{% endif %}
-                          </h2>
-                          <a href="{% url 'newsroom:story_list' %}" class="text-sm text-primary hover:underline">View all</a>
-                        </div>
-                        <div class="p-6">
-                          {% if recent_stories %}
-                            <div class="space-y-4">
-                              {% for story in recent_stories %}
-                                <div class="group relative flex items-center justify-between gap-x-6 py-4 hover:bg-gray-50 px-4 rounded-lg">
-                                  <div class="min-w-0">
-                                    <div class="flex items-start gap-x-3">
-                                      <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-sm font-semibold leading-6 text-gray-900 hover:text-primary">
-                                        {{ story.title }}
-                                      </a>
-                                      <span class="mt-0.5 rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 task-priority-{{ story.status|lower }}">
-                                        {{ story.get_status_display }}
-                                      </span>
-                                    </div>
-                                    <div class="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
-                                      <p class="whitespace-nowrap">{{ story.created_at|date:"M d, Y" }}</p>
-                                      <svg viewBox="0 0 2 2" class="h-0.5 w-0.5 fill-current">
-                                        <circle cx="1" cy="1" r="1" />
-                                      </svg>
-                                      <p class="truncate">{{ story.get_language_display }}</p>
-                                      <svg viewBox="0 0 2 2" class="h-0.5 w-0.5 fill-current">
-                                        <circle cx="1" cy="1" r="1" />
-                                      </svg>
-                                      <p class="truncate">By {{ story.author.get_full_name }}</p>
-                                    </div>
-                                  </div>
-                                  <div class="flex flex-none items-center gap-x-4">
-                                    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
-                                      View story<span class="sr-only">, {{ story.title }}</span>
-                                    </a>
-                                    <div class="relative flex-none">
-                                      <button type="button" class="-m-2.5 block p-2.5 text-gray-500 hover:text-gray-900" id="story-options-{{ story.id }}-button" aria-expanded="false" aria-haspopup="true">
-                                        <span class="sr-only">Open options</span>
-                                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                          <path d="M10 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM10 8.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM11.5 15.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
-                                        </svg>
-                                      </button>
-                                      <div class="absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="story-options-{{ story.id }}-button" tabindex="-1">
-                                        <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">Edit<span class="sr-only">, {{ story.title }}</span></a>
-                                        <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">View<span class="sr-only">, {{ story.title }}</span></a>
-                                        {% if story.audio_clips.exists %}
-                                        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">Manage Audio<span class="sr-only">, {{ story.title }}</span></a>
-                                        {% endif %}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              {% endfor %}
-                            </div>
-    {% else %}
-                            <div class="text-center py-6">
-                              {% include "components/ui/icons.html" with name="content" size=48 class="mx-auto text-gray-400" %}
-                              <p class="mt-2 text-gray-500">No stories yet</p>
-                              <div class="mt-4">
-                                <a href="{% url 'newsroom:story_create' %}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                                  Create a story
-                                </a>
-                              </div>
-                            </div>
-    {% endif %}
-                        </div>
-  </div>
-  
-                      <!-- My Tasks (for Interns and Journalists) -->
-                      {% if user.staff_role in 'INTERN,JOURNALIST' %}
+<div class="space-y-6">
+  {% if user.staff_role == 'SUB_EDITOR' %}
+    <!-- Sub-Editor Dashboard Stats Cards -->
+    <div class="mb-10">
+      <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Pending Approval Stat Card -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="p-6 flex items-center">
+            <div class="flex-shrink-0 rounded-md bg-warning p-3">
+              {% include "components/ui/icons.html" with name="clock" class="h-6 w-6 text-white" %}
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Pending Approval</p>
+              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ awaiting_approval|default:"0" }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- My Stories Stat Card -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="p-6 flex items-center">
+            <div class="flex-shrink-0 rounded-md bg-primary p-3">
+              {% include "components/ui/icons.html" with name="file-text" class="h-6 w-6 text-white" %}
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">My Stories</p>
+              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ my_story_count|default:"0" }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- Recent Activity Stat Card -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div class="p-6 flex items-center">
+            <div class="flex-shrink-0 rounded-md bg-success p-3">
+              {% include "components/ui/icons.html" with name="activity" class="h-6 w-6 text-white" %}
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Recent Activity</p>
+              <p class="mt-2 text-2xl font-semibold text-gray-900">{{ recent_activity|length|default:"0" }}</p>
+            </div>
+          </div>
+        </div>
+      </dl>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Stories Pending Approval -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 class="text-lg font-semibold text-gray-800">My Tasks</h2>
-          <a href="{% url 'newsroom:task_list' %}?view=assigned" class="text-sm text-primary hover:underline">View all</a>
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-800">Stories Pending Approval</h2>
+          <span class="text-sm text-gray-500">{{ awaiting_approval|default:0 }} pending</span>
         </div>
         <div class="p-6">
-          {% if assigned_tasks %}
+          {% if stories_for_approval %}
             <div class="space-y-4">
-              {% for task in assigned_tasks %}
-                                <div class="group relative flex items-center justify-between gap-x-6 py-4 hover:bg-gray-50 px-4 rounded-lg">
-                                  <div class="min-w-0">
-                                    <div class="flex items-start gap-x-3">
-                                      <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="text-sm font-semibold leading-6 text-gray-900 hover:text-primary">
-                        {{ task.title }}
-                      </a>
-                                      <span class="mt-0.5 rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 task-priority-{{ task.status|lower }}">
-                                        {{ task.get_status_display }}
-                                      </span>
+              {% for story in stories_for_approval %}
+                <div class="flex items-center justify-between">
+                  <div>
+                    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="font-medium text-primary hover:underline">{{ story.title }}</a>
+                    <div class="text-xs text-gray-500">By {{ story.author.get_full_name }} • {{ story.created_at|date:"M d, Y" }}</div>
                   </div>
-                                    <div class="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
-                    {% if task.due_date %}
-                                        <p class="whitespace-nowrap">Due on <time datetime="{{ task.due_date|date:'Y-m-d' }}">{{ task.due_date|date:"M d, Y" }}</time></p>
-                    {% endif %}
-                                    </div>
-                                  </div>
-                                  <div class="flex flex-none items-center gap-x-4">
-                                    <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
-                                      View task<span class="sr-only">, {{ task.title }}</span>
-                                    </a>
-                                    <div class="relative flex-none">
-                                      <button type="button" class="-m-2.5 block p-2.5 text-gray-500 hover:text-gray-900" id="task-options-{{ task.id }}-button" aria-expanded="false" aria-haspopup="true">
-                                        <span class="sr-only">Open options</span>
-                                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                          <path d="M10 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM10 8.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM11.5 15.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
-                                        </svg>
-                                      </button>
-                                      <div class="absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="task-options-{{ task.id }}-button" tabindex="-1">
-                                        <a href="{% url 'newsroom:task_edit' task_id=task.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">Edit<span class="sr-only">, {{ task.title }}</span></a>
-                                        <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">View<span class="sr-only">, {{ task.title }}</span></a>
-                                        <a href="{% url 'newsroom:task_status_update' task_id=task.id %}" class="block px-3 py-1 text-sm leading-6 text-gray-900" role="menuitem" tabindex="-1">Update Status<span class="sr-only">, {{ task.title }}</span></a>
-                                      </div>
-                                    </div>
+                  <div class="flex items-center gap-x-2">
+                    {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+                    <a href="{% url 'newsroom:story_approve' story_id=story.id %}" class="inline-flex items-center px-2 py-1 border border-success-200 text-xs font-medium rounded-md text-success bg-success-50 hover:bg-success-100">Approve</a>
                   </div>
                 </div>
               {% endfor %}
             </div>
           {% else %}
-            <div class="text-center py-6">
-              {% include "components/ui/icons.html" with name="check-circle" size=48 class="mx-auto text-gray-400" %}
-              <p class="mt-2 text-gray-500">No tasks assigned to you</p>
-                            </div>
-                          {% endif %}
-              </div>
-            </div>
+            <div class="text-gray-400 text-sm">No stories pending approval.</div>
           {% endif %}
         </div>
-                    
-                    <!-- Right Column: Editorial Content -->
-                    <div class="space-y-6">
-                      {% if user.staff_role == 'JOURNALIST' %}
-                      <!-- Stories Awaiting Review -->
-                      <div class="bg-white rounded-lg shadow overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                          <div class="flex items-center">
-                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-warning-50 flex items-center justify-center text-warning mr-4">
-                              {% include "components/ui/icons.html" with name="eye" %}
-                            </div>
-                            <div>
-                              <h2 class="text-lg font-semibold text-gray-800">Stories Awaiting Your Review</h2>
-                              <p class="text-sm text-gray-500">Stories assigned to you for review</p>
-                            </div>
-                          </div>
-                          {% if review_task_count > 5 %}
-                          <a href="{% url 'newsroom:task_list' %}?view=assigned&type=STORY_REVIEW" class="text-sm text-primary hover:underline">
-                            View all ({{ review_task_count }})
-                          </a>
-                          {% endif %}
-                        </div>
-                        
-                        <div class="divide-y divide-gray-200">
-                          {% for task in review_tasks %}
-                            <div class="px-6 py-4 hover:bg-gray-50">
-                              <div class="flex items-center justify-between">
-                                <div>
-                                  <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="text-base font-medium text-primary hover:underline">
-                                    {{ task.title }}
-                                  </a>
-                                  <div class="mt-1 text-sm text-gray-500">
-                                    <div class="flex items-center space-x-4">
-                                      <span>By: {{ task.related_story.author.get_full_name }}</span>
-                                      <span>Assigned: {{ task.created_at|date:"M d, Y" }}</span>
-                                      {% if task.due_date %}
-                                      <span class="{% if task.due_date < now %}text-danger font-medium{% endif %}">
-                                        Due: {{ task.due_date|date:"M d, Y" }}
-                                        {% if task.due_date < now %}
-                                          <span class="text-xs text-danger ml-1">(Overdue)</span>
-                                        {% endif %}
-                                      </span>
-                                      {% endif %}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div class="flex items-center">
-                                  {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
-                                </div>
-                              </div>
-                            </div>
-                          {% empty %}
-                            <div class="px-6 py-8 text-center">
-                              <p class="text-gray-500">No stories are currently awaiting your review.</p>
-                            </div>
-                          {% endfor %}
       </div>
-    </div>
-                      {% endif %}
-    
-                      {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                      <!-- Stories Pending Approval -->
+      <!-- My Stories -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                          <div class="flex items-center">
-                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-info-50 flex items-center justify-center text-info mr-4">
-                              {% include "components/ui/icons.html" with name="clock" %}
-                            </div>
-                            <div>
-                              <h2 class="text-lg font-semibold text-gray-800">Stories Pending Approval</h2>
-                              <p class="text-sm text-gray-500">Stories waiting for your approval</p>
-                            </div>
-                          </div>
-                          {% if pending_approval_count > 5 %}
-                          <a href="{% url 'newsroom:story_list' %}?status=PENDING_APPROVAL" class="text-sm text-primary hover:underline">
-                            View all ({{ pending_approval_count }})
-                          </a>
-                          {% endif %}
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-800">My Stories</h2>
+          <span class="text-sm text-gray-500">{{ my_story_count|default:0 }} total</span>
         </div>
-                        
-        <div class="divide-y divide-gray-200">
-          {% for story in pending_approval_stories %}
-            <div class="px-6 py-4 hover:bg-gray-50">
-              <div class="flex items-center justify-between">
-                <div>
-                  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-base font-medium text-primary hover:underline">
-                    {{ story.title }}
-                  </a>
-                  <div class="mt-1 text-sm text-gray-500">
-                    <div class="flex items-center space-x-4">
-                      <span>By: {{ story.author.get_full_name }}</span>
-                      <span>Submitted: {{ story.updated_at|date:"M d, Y" }}</span>
-                      <span>{{ story.get_language_display }}</span>
-                    </div>
+        <div class="p-6">
+          {% if my_stories %}
+            <div class="space-y-4">
+              {% for story in my_stories %}
+                <div class="flex items-center justify-between">
+                  <div>
+                    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="font-medium text-primary hover:underline">{{ story.title }}</a>
+                    <div class="text-xs text-gray-500">{{ story.created_at|date:"M d, Y" }}</div>
+                  </div>
+                  <div class="flex items-center gap-x-2">
+                    {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+                    <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-2 py-1 border border-primary-200 text-xs font-medium rounded-md text-primary bg-primary-50 hover:bg-primary-100">Edit</a>
                   </div>
                 </div>
-                <div class="flex items-center">
-                  {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-                </div>
-              </div>
+              {% endfor %}
             </div>
-          {% empty %}
-            <div class="px-6 py-8 text-center">
-              <p class="text-gray-500">No stories are currently pending approval.</p>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
+          {% else %}
+            <div class="text-gray-400 text-sm">No stories found.</div>
           {% endif %}
         </div>
       </div>
-                  
-                  <!-- Bottom Section: Additional Features -->
-                  {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                  <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-                          {% include "components/ui/icons.html" with name="globe" %}
-                        </div>
-                        <div>
-                          <h2 class="text-lg font-semibold text-gray-800">Translation Status</h2>
-                          <p class="text-sm text-gray-500">View and manage story translations</p>
-                        </div>
-                      </div>
-                      <a href="{% url 'newsroom:translation_status_report' %}" class="inline-flex items-center text-primary hover:text-primary-dark">
-                        View Report
-                        {% include "components/ui/icons.html" with name="arrow-right" class="ml-2" %}
-                      </a>
     </div>
-  </div>
-                  {% endif %}
-  
-  {% else %}
-  <!-- Radio Station Dashboard -->
-  <div class="bg-white rounded-lg shadow p-6 mb-6">
-    <h2 class="text-xl font-semibold text-gray-800 mb-4">Welcome, {{ user.get_full_name }}</h2>
-    
-    <div class="bg-primary-50 rounded-lg p-4 border border-primary-100">
-      <div class="flex items-start">
-        <div class="flex-shrink-0 mt-1">
-          {% include "components/ui/icons.html" with name="info" class="text-primary" %}
-        </div>
-        <div class="ml-3">
-          <p class="text-gray-800">
-            You have access to <span class="font-bold">{{ story_count|default:"0" }} stories</span> from Newskoop.
-            Browse the content below or use the filter options on the <a href="{% url 'newsroom:story_list' %}" class="text-primary hover:underline">stories page</a>.
-          </p>
-        </div>
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mt-6">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-800">Recent Activity</h2>
+        <span class="text-sm text-gray-500">{{ recent_activity|length|default:0 }} recent</span>
       </div>
-    </div>
-  </div>
-  
-  <!-- Recent Stories -->
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <h2 class="text-lg font-semibold text-gray-800">Recent Content</h2>
-      <a href="{% url 'newsroom:story_list' %}" class="text-sm text-primary hover:underline">View all</a>
-    </div>
-    <div class="p-6">
-      {% if recent_stories %}
-        <div class="space-y-4">
-          {% for story in recent_stories %}
-            <div class="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-              <div class="flex justify-between">
-                <h3 class="font-medium">
-                  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="hover:text-primary">
-                    {{ story.title }}
-                  </a>
-                </h3>
-                <div class="flex space-x-2">
-                  <span class="text-sm">{{ story.published_at|date:"M d, Y" }}</span>
-                  <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="text-primary" title="Download">
-                    {% include "components/ui/icons.html" with name="download" %}
-                  </a>
+      <div class="p-6">
+        {% if recent_activity %}
+          <div class="space-y-4">
+            {% for activity in recent_activity %}
+              <div class="flex items-center justify-between">
+                <div>
+                  <a href="{% url 'newsroom:story_detail' story_id=activity.story.id %}" class="font-medium text-primary hover:underline">{{ activity.story.title }}</a>
+                  <div class="text-xs text-gray-500">{{ activity.get_activity_type_display }} • {{ activity.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="flex items-center gap-x-2">
+                  {% include "components/ui/status_badges.html" with status=activity.story.status|lower text=activity.story.get_status_display %}
                 </div>
               </div>
-              <div class="mt-1 flex items-center text-sm text-gray-500 space-x-2">
-                <span>{{ story.category.name }}</span>
-                <span>•</span>
-                <span>{{ story.get_language_display }}</span>
-                {% if story.audio_clips.exists %}
-                  <span>•</span>
-                  <span class="flex items-center">
-                    {% include "components/ui/icons.html" with name="radio" size=14 class="text-gray-400 mr-1" %}
-                    {{ story.audio_clips.count }} audio clip{{ story.audio_clips.count|pluralize }}
-                  </span>
-                {% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="text-center py-6">
-          {% include "components/ui/icons.html" with name="content" size=48 class="mx-auto text-gray-400" %}
-          <p class="mt-2 text-gray-500">No stories available for your station yet</p>
-          <p class="text-sm text-gray-500">Content matching your station's permissions will appear here</p>
-        </div>
-      {% endif %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-gray-400 text-sm">No recent activity.</div>
+        {% endif %}
+      </div>
     </div>
-  </div>
-                {% endif %}
-              </div>
-            </div>
-        </main>
-  </div>
+    <!-- Quick Actions -->
+    <div class="flex gap-4 mt-6">
+      <a href="{% url 'newsroom:story_create' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+        {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
+        Create Story
+      </a>
+      <a href="{% url 'newsroom:story_list' %}" class="inline-flex items-center px-4 py-2 border border-primary text-sm font-medium rounded-md shadow-sm text-primary bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+        {% include "components/ui/icons.html" with name="list" class="mr-2" %}
+        View All Stories
+      </a>
+    </div>
+  {% else %}
+    <div class="min-h-screen bg-gray-100">
+        <div class="py-6">
+            <main>
+                <div class="mx-auto sm:px-6 lg:px-8">
+                    <!-- Stats Overview -->
+                    <div class="mb-10">
+                        <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2">
+                            {% if user.staff_role in 'INTERN,JOURNALIST' %}
+                            <!-- My Stories Stat Card -->
+                            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-6">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0 rounded-md bg-primary p-3">
+                                            {% include "components/ui/icons.html" with name="file-text" class="h-6 w-6 text-white" %}
+                                        </div>
+                                        <div class="ml-4">
+                                            <p class="text-sm font-medium text-gray-500">My Stories</p>
+                                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ my_story_count|default:"0" }}</p>
+                                            <div class="mt-2 text-sm text-gray-500">
+                                                <span>Drafts: {{ my_draft_count|default:"0" }}</span>
+                                                <span class="ml-4">Published: {{ my_published_count|default:"0" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 px-4 py-4 sm:px-6">
+                                    <a href="{% url 'newsroom:story_list' %}" class="text-sm font-medium text-primary hover:text-primary-dark">
+                                        View all<span class="sr-only"> My Stories stats</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- My Tasks Stat Card -->
+                            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-6">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0 rounded-md bg-success p-3">
+                                            {% include "components/ui/icons.html" with name="check" class="h-6 w-6 text-white" %}
+                                        </div>
+                                        <div class="ml-4">
+                                            <p class="text-sm font-medium text-gray-500">My Tasks</p>
+                                            <p class="mt-2 text-2xl font-semibold text-gray-900">{{ pending_tasks|default:"0" }}</p>
+                                            <div class="mt-2 text-sm text-gray-500">
+                                                <span>Pending: {{ pending_tasks|default:"0" }}</span>
+                                                <span class="ml-4">Completed: {{ completed_tasks|default:"0" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 px-4 py-4 sm:px-6">
+                                    <a href="{% url 'newsroom:task_list' %}?view=assigned" class="text-sm font-medium text-primary hover:text-primary-dark">
+                                        View all<span class="sr-only"> My Tasks stats</span>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-y-8">
+                        <!-- Left Column: My Stories -->
+                        {% if user.staff_role in 'INTERN,JOURNALIST' %}
+                        <div class="lg:pr-6">
+                            <div class="bg-white rounded-lg shadow overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                                    <h2 class="text-lg font-semibold text-gray-800">My Stories</h2>
+                                    <a href="{% url 'newsroom:story_list' %}" class="text-sm text-primary hover:underline">View all</a>
+                                </div>
+                                <div class="p-6">
+                                    {% if my_stories %}
+                                        <div class="space-y-4">
+                                            {% for story in my_stories %}
+                                                <div class="group relative flex items-center justify-between gap-x-6 py-4 hover:bg-gray-50 px-4 rounded-lg border border-gray-100">
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex items-start gap-x-3">
+                                                            <div class="flex-shrink-0 mt-1">
+                                                                {% if story.status == 'DRAFT' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-gray-400"></div>
+                                                                {% elif story.status == 'REVIEW' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-warning"></div>
+                                                                {% elif story.status == 'PUBLISHED' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-success"></div>
+                                                                {% elif story.status == 'ARCHIVED' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-gray-500"></div>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="flex-1">
+                                                                <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-sm font-semibold leading-6 text-gray-900 hover:text-primary">
+                                                                    {{ story.title }}
+                                                                </a>
+                                                                <div class="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                                                    <p class="whitespace-nowrap">
+                                                                        {{ story.created_at|date:"F j, Y" }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex-shrink-0">
+                                                                {% if story.status == 'DRAFT' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Draft</span>
+                                                                {% elif story.status == 'REVIEW' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-warning-50 px-2 py-1 text-xs font-medium text-warning-700 ring-1 ring-inset ring-warning-600/20">In Review</span>
+                                                                {% elif story.status == 'PUBLISHED' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-success-50 px-2 py-1 text-xs font-medium text-success-700 ring-1 ring-inset ring-success-600/20">Published</span>
+                                                                {% elif story.status == 'ARCHIVED' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Archived</span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-gray-500 text-sm">No stories found.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: My Tasks -->
+                        <div class="lg:pl-6">
+                            <div class="bg-white rounded-lg shadow overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                                    <h2 class="text-lg font-semibold text-gray-800">My Tasks</h2>
+                                    <a href="{% url 'newsroom:task_list' %}?view=assigned" class="text-sm text-primary hover:underline">View all</a>
+                                </div>
+                                <div class="p-6">
+                                    {% if assigned_tasks %}
+                                        <div class="space-y-4">
+                                            {% for task in assigned_tasks %}
+                                                <div class="group relative flex items-center justify-between gap-x-6 py-4 hover:bg-gray-50 px-4 rounded-lg border border-gray-100">
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex items-start gap-x-3">
+                                                            <div class="flex-shrink-0 mt-1">
+                                                                {% if task.priority == 'HIGH' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-danger"></div>
+                                                                {% elif task.priority == 'MEDIUM' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-warning"></div>
+                                                                {% elif task.priority == 'LOW' %}
+                                                                    <div class="h-2 w-2 rounded-full bg-success"></div>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="flex-1">
+                                                                <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="text-sm font-semibold leading-6 text-gray-900 hover:text-primary">
+                                                                    {{ task.title }}
+                                                                </a>
+                                                                <div class="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                                                    <p class="whitespace-nowrap">
+                                                                        Due {{ task.due_date|date:"F j, Y" }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex-shrink-0">
+                                                                {% if task.priority == 'HIGH' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-danger-50 px-2 py-1 text-xs font-medium text-danger-700 ring-1 ring-inset ring-danger-600/20">High</span>
+                                                                {% elif task.priority == 'MEDIUM' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-warning-50 px-2 py-1 text-xs font-medium text-warning-700 ring-1 ring-inset ring-warning-600/20">Medium</span>
+                                                                {% elif task.priority == 'LOW' %}
+                                                                    <span class="inline-flex items-center rounded-md bg-success-50 px-2 py-1 text-xs font-medium text-success-700 ring-1 ring-inset ring-success-600/20">Low</span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-gray-500 text-sm">No tasks found.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
