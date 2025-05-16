@@ -104,6 +104,12 @@ def dashboard(request):
             context['stories_for_approval'] = Story.objects.filter(status='PENDING_APPROVAL').order_by('-created_at')[:5]
             context['stories_ready_for_publishing'] = Story.objects.filter(status='APPROVED').order_by('-created_at')[:5]
             
+            # Recent activity for sub-editors
+            if request.user.staff_role == 'SUB_EDITOR':
+                context['recent_activity'] = StoryActivity.objects.filter(
+                    story__status__in=['REVIEW', 'PENDING_APPROVAL', 'APPROVED']
+                ).select_related('story', 'user').order_by('-created_at')[:10]
+            
             # Translation tasks
             context['translation_tasks'] = Task.objects.filter(
                 task_type='TRANSLATION',
@@ -517,6 +523,67 @@ def api_list_journalists(request):
     
     return JsonResponse(data, safe=False)
 
+def validate_story_status_transition(user, story, target_status):
+    """
+    Validate if a story can transition from its current status to the target status.
+    
+    Args:
+        user: The user attempting to make the transition
+        story: The story object
+        target_status: The target status to transition to
+        
+    Returns:
+        tuple: (is_valid, message) where is_valid is a boolean and message is an error message if invalid
+    """
+    current_status = story.status
+    
+    # Define allowed transitions based on user role and current status
+    if target_status == 'PUBLISHED':
+        # Only editors and above can publish stories
+        if user.staff_role not in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            return False, "You don't have permission to publish stories"
+        
+        # Only approved stories can be published
+        if current_status != 'APPROVED':
+            return False, f"Cannot publish: Story must be approved first (current status: {current_status})"
+    
+    elif target_status == 'APPROVED':
+        # Only sub-editors and above can approve stories
+        if user.staff_role not in ['SUB_EDITOR', 'EDITOR', 'SUPERADMIN', 'ADMIN']:
+            return False, "You don't have permission to approve stories"
+        
+        # Only stories pending approval can be approved
+        if current_status != 'PENDING_APPROVAL':
+            return False, f"Cannot approve: Story must be pending approval first (current status: {current_status})"
+    
+    elif target_status == 'PENDING_APPROVAL':
+        # Authors or reviewers can submit for approval
+        is_author = story.author == user
+        is_reviewer = story.reviewer == user
+        
+        if not (is_author or is_reviewer):
+            return False, "Only the author or assigned reviewer can submit a story for approval"
+        
+        # Only draft or reviewed stories can be submitted for approval
+        if current_status not in ['DRAFT', 'REVIEW']:
+            return False, f"Cannot submit for approval: Story must be in draft or review status (current status: {current_status})"
+    
+    elif target_status == 'REVIEW':
+        # Only the author can submit a story for review
+        if story.author != user:
+            return False, "Only the author can submit a story for review"
+        
+        # Only draft stories can be submitted for review
+        if current_status != 'DRAFT':
+            return False, f"Cannot submit for review: Story must be in draft status (current status: {current_status})"
+    
+    elif target_status == 'ARCHIVED':
+        # Only editors and above can archive stories
+        if user.staff_role not in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            return False, "You don't have permission to archive stories"
+    
+    # If we get here, the transition is valid
+    return True, ""
 
 @staff_required
 @publishing_rights_required

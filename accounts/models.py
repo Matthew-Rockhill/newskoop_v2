@@ -4,6 +4,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 import uuid
 from django.core.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -82,6 +85,86 @@ class RadioStation(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        old_is_active = None
+        old_access_permissions = None
+        
+        if not is_new:
+            try:
+                old = RadioStation.objects.get(pk=self.pk)
+                old_is_active = old.is_active
+                old_access_permissions = {
+                    'news_stories': old.access_news_stories,
+                    'news_bulletins': old.access_news_bulletins,
+                    'sport': old.access_sport,
+                    'finance': old.access_finance,
+                    'specialty': old.access_specialty
+                }
+            except RadioStation.DoesNotExist:
+                pass
+
+        try:
+            super().save(*args, **kwargs)
+            
+            # Log the action
+            if is_new:
+                logger.info(
+                    f"New radio station created: {self.name} (ID: {self.id}) "
+                    f"in {self.get_province_display()}"
+                )
+            else:
+                changes = []
+                if old_is_active != self.is_active:
+                    changes.append(f"active status from {old_is_active} to {self.is_active}")
+                
+                # Check for changes in access permissions
+                new_access_permissions = {
+                    'news_stories': self.access_news_stories,
+                    'news_bulletins': self.access_news_bulletins,
+                    'sport': self.access_sport,
+                    'finance': self.access_finance,
+                    'specialty': self.access_specialty
+                }
+                
+                for key, old_value in old_access_permissions.items():
+                    if old_value != new_access_permissions[key]:
+                        changes.append(f"{key} access from {old_value} to {new_access_permissions[key]}")
+                
+                if changes:
+                    logger.info(
+                        f"Radio station updated: {self.name} (ID: {self.id}) - "
+                        f"Changed {', '.join(changes)}"
+                    )
+                else:
+                    logger.debug(
+                        f"Radio station updated: {self.name} (ID: {self.id})"
+                    )
+                    
+        except Exception as e:
+            logger.error(
+                f"Error saving radio station {self.name}: {str(e)}",
+                exc_info=True
+            )
+            raise
+
+    def delete(self, *args, **kwargs):
+        try:
+            station_name = self.name
+            station_id = self.id
+            user_count = self.users.count()
+            super().delete(*args, **kwargs)
+            logger.info(
+                f"Radio station deleted: {station_name} (ID: {station_id}) "
+                f"with {user_count} associated users"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error deleting radio station {self.name}: {str(e)}",
+                exc_info=True
+            )
+            raise
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     class UserType(models.TextChoices):
