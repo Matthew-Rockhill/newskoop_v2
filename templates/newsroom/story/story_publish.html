@@ -5,7 +5,21 @@
 {% block page_title %}Publish Story{% endblock %}
 
 {% block page_actions %}
-{% include "components/page_actions.html" with actions=actions %}
+<div class="flex space-x-3 mb-2">
+  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
+    Back to Story
+  </a>
+  {% if story.status == 'APPROVED' %}
+    <button type="submit" form="publish-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+      {% include "components/ui/icons.html" with name="check-circle" class="h-4 w-4 mr-2" %} Publish Story
+    </button>
+  {% else %}
+    <button type="button" disabled class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+      {% include "components/ui/icons.html" with name="check-circle" class="h-4 w-4 mr-2" %} Publish Story
+    </button>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block content %}
@@ -21,7 +35,6 @@
         <p class="text-sm text-success-500">Confirm the content before making it live</p>
       </div>
     </div>
-    
     <div class="p-6">
       <!-- Story Details Card -->
       <div class="mb-6 border border-gray-200 rounded-lg p-4">
@@ -46,14 +59,13 @@
           {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
         </div>
       </div>
-      
       <!-- Content Preview -->
       <div class="prose max-w-none story-content">
         {{ story.content|safe }}
       </div>
     </div>
   </div>
-  
+
   <!-- Publishing Form and Checklist -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <!-- Publish Form -->
@@ -67,13 +79,10 @@
           <p class="text-sm text-gray-500">Configure publication settings</p>
         </div>
       </div>
-      
       <div class="p-6">
         <form id="publish-form" method="post" class="space-y-4">
           {% csrf_token %}
-          
           <input type="hidden" name="action" value="publish">
-          
           <div class="form-group">
             <label for="published_at" class="block text-sm font-medium text-gray-700 mb-1">Publication Date</label>
             <input type="datetime-local" name="published_at" id="published_at" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" value="{{ now|date:'Y-m-d' }}T{{ now|time:'H:i' }}">
@@ -81,7 +90,6 @@
               Leave as is to publish immediately, or set a future date for scheduled publication.
             </div>
           </div>
-          
           <div class="form-group">
             <label for="editorial_notes" class="block text-sm font-medium text-gray-700 mb-1">Editorial Notes</label>
             <textarea name="editorial_notes" id="editorial_notes" rows="3" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50" placeholder="Optional notes about this publication"></textarea>
@@ -89,19 +97,6 @@
               These notes will be visible to other staff members only.
             </div>
           </div>
-          
-          <div class="form-group mt-4">
-            <div class="flex items-center">
-              <input type="checkbox" name="send_notifications" id="send_notifications" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mr-2" checked>
-              <label for="send_notifications" class="font-medium text-gray-700">
-                Send notifications to radio stations
-              </label>
-            </div>
-            <div class="text-sm text-gray-500 mt-1 ml-6">
-              Radio stations will receive an email when this story is published.
-            </div>
-          </div>
-          
           <div class="form-group mt-6">
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
               <div class="flex">
@@ -119,13 +114,11 @@
         </form>
       </div>
     </div>
-    
     <!-- Publishing Checklist -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h2 class="text-lg font-semibold text-gray-800">Publishing Checklist</h2>
       </div>
-      
       <div class="p-6">
         <ul class="space-y-3">
           <li class="flex items-start">
@@ -137,7 +130,6 @@
               <p class="text-gray-500">Check for spelling, grammar, and factual accuracy</p>
             </label>
           </li>
-          
           <li class="flex items-start">
             <div class="flex h-5 items-center">
               <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-metadata">
@@ -147,7 +139,6 @@
               <p class="text-gray-500">Category, language, and classifications are correct</p>
             </label>
           </li>
-          
           <li class="flex items-start">
             <div class="flex h-5 items-center">
               <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-audio">
@@ -157,7 +148,6 @@
               <p class="text-gray-500">All audio clips have been checked for quality{% if not story.audio_clips.exists %} or confirmed as not needed{% endif %}</p>
             </label>
           </li>
-          
           <li class="flex items-start">
             <div class="flex h-5 items-center">
               <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" id="check-approval">
@@ -168,7 +158,6 @@
             </label>
           </li>
         </ul>
-
         {% if translation_tasks %}
           <div class="mt-6 border-t border-gray-200 pt-6">
             <h3 class="font-medium text-gray-800 mb-4">Translations Status</h3>
@@ -198,7 +187,6 @@
                 </div>
               {% endfor %}
             </div>
-            
             {% if all_translations_complete %}
             <div class="mt-4 bg-success-50 p-3 rounded-md border border-success-200 text-success-700">
               <div class="flex items-start">
@@ -218,8 +206,7 @@
             </div>
             {% endif %}
           </div>
-          {% endif %}
-        
+        {% endif %}
         {% if story.audio_clips.exists %}
         <div class="mt-6 border-t border-gray-200 pt-6">
           <h3 class="font-medium text-gray-800 mb-4">Audio Clips ({{ story.audio_clips.count }})</h3>

@@ -56,13 +56,23 @@
     </div>
     
     {% if messages %}
-      <div class="alerts mb-6">
+      <div class="space-y-4 mb-6">
         {% for message in messages %}
-          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="alert-close" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
+          <div class="rounded-md p-4 {% if message.tags == 'success' %}bg-success-50 border border-success-200 text-success-700{% elif message.tags == 'error' %}bg-danger-50 border border-danger-200 text-danger-700{% else %}bg-primary-50 border border-primary-200 text-primary-700{% endif %}">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                {% if message.tags == 'success' %}
+                  {% include "components/ui/icons.html" with name="check-circle" class="h-5 w-5 text-success" %}
+                {% elif message.tags == 'error' %}
+                  {% include "components/ui/icons.html" with name="x-circle" class="h-5 w-5 text-danger" %}
+                {% else %}
+                  {% include "components/ui/icons.html" with name="information-circle" class="h-5 w-5 text-primary" %}
+                {% endif %}
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium">{{ message }}</p>
+              </div>
+            </div>
           </div>
         {% endfor %}
       </div>

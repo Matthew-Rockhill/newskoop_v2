@@ -1,34 +1,62 @@
-<div class="flex flex-wrap space-x-2 space-y-2 md:space-y-0">
-    {% for action in actions %}
-        {% if action.form %}
-            <form method="post" action="{{ action.url }}" class="inline-block">
-                {% csrf_token %}
-                {% if action.hidden_fields %}
-                    {% for field_name, field_value in action.hidden_fields.items %}
-                        <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
-                    {% endfor %}
-                {% endif %}
-                <button type="submit" 
-                        class="{{ action.class|default:'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary' }}"
-                        {% if action.id %}id="{{ action.id }}"{% endif %}
-                        {% if action.disabled %}disabled{% endif %}
-                        {% if action.confirm %}onclick="return confirm('{{ action.confirm }}');"{% endif %}>
-                    {% if action.icon %}
-                        {% include "components/ui/icons.html" with name=action.icon class="mr-2" %}
-                    {% endif %}
-                    {{ action.label }}
-                </button>
-            </form>
-        {% else %}
-            <a href="{{ action.url }}" 
-               class="{{ action.class|default:'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary' }}"
-               {% if action.id %}id="{{ action.id }}"{% endif %}
-               {% if action.target %}target="{{ action.target }}"{% endif %}>
-                {% if action.icon %}
-                    {% include "components/ui/icons.html" with name=action.icon class="mr-2" %}
-                {% endif %}
-                {{ action.label }}
-            </a>
+{% comment %}
+  Component: page_actions
+  Description: Displays page actions with role-based visibility and different styles
+  
+  Parameters:
+    - actions: List of action dictionaries with the following properties:
+      - label: Button text
+      - url: Action URL (for links) or form action (for forms)
+      - type: 'link', 'submit', 'button', or 'danger'
+      - icon: Icon name (optional)
+      - confirm: Confirmation message (optional)
+      - disabled: Boolean to disable the action (optional)
+      - class: Additional CSS classes (optional)
+      - hidden_fields: Dictionary of hidden form fields (optional)
+{% endcomment %}
+
+<div class="flex flex-wrap gap-2">
+  {% for action in actions %}
+    {% if action.type == 'submit' %}
+      <form method="post" action="{{ action.url }}" class="inline-block">
+        {% csrf_token %}
+        {% if action.hidden_fields %}
+          {% for field_name, field_value in action.hidden_fields.items %}
+            <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
+          {% endfor %}
         {% endif %}
-    {% endfor %}
+        <button type="submit" 
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white {% if action.type == 'danger' %}bg-danger hover:bg-danger-dark{% else %}bg-primary hover:bg-primary-dark{% endif %} focus:outline-none focus:ring-2 focus:ring-offset-2 {% if action.type == 'danger' %}focus:ring-danger{% else %}focus:ring-primary{% endif %} {{ action.class|default:'' }}"
+                {% if action.id %}id="{{ action.id }}"{% endif %}
+                {% if action.disabled %}disabled{% endif %}
+                {% if action.confirm %}onclick="return confirm('{{ action.confirm }}');"{% endif %}>
+          {% if action.icon %}
+            {% include "components/ui/icons.html" with name=action.icon class="mr-2" %}
+          {% endif %}
+          {{ action.label }}
+        </button>
+      </form>
+    {% elif action.type == 'button' %}
+      <button type="button"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white {% if action.type == 'danger' %}bg-danger hover:bg-danger-dark{% else %}bg-primary hover:bg-primary-dark{% endif %} focus:outline-none focus:ring-2 focus:ring-offset-2 {% if action.type == 'danger' %}focus:ring-danger{% else %}focus:ring-primary{% endif %} {{ action.class|default:'' }}"
+              {% if action.id %}id="{{ action.id }}"{% endif %}
+              {% if action.disabled %}disabled{% endif %}
+              {% if action.confirm %}onclick="return confirm('{{ action.confirm }}');"{% endif %}>
+        {% if action.icon %}
+          {% include "components/ui/icons.html" with name=action.icon class="mr-2" %}
+        {% endif %}
+        {{ action.label }}
+      </button>
+    {% else %}
+      <a href="{{ action.url }}" 
+         class="inline-flex items-center px-4 py-2 border {% if action.type == 'secondary' %}border-gray-300 text-gray-700 bg-white hover:bg-gray-50{% else %}border-transparent text-white {% if action.type == 'danger' %}bg-danger hover:bg-danger-dark{% else %}bg-primary hover:bg-primary-dark{% endif %}{% endif %} text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 {% if action.type == 'danger' %}focus:ring-danger{% else %}focus:ring-primary{% endif %} {{ action.class|default:'' }}"
+         {% if action.id %}id="{{ action.id }}"{% endif %}
+         {% if action.target %}target="{{ action.target }}"{% endif %}
+         {% if action.confirm %}onclick="return confirm('{{ action.confirm }}');"{% endif %}>
+        {% if action.icon %}
+          {% include "components/ui/icons.html" with name=action.icon class="mr-2" %}
+        {% endif %}
+        {{ action.label }}
+      </a>
+    {% endif %}
+  {% endfor %}
 </div>

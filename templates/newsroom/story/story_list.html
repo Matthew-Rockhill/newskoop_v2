@@ -85,164 +85,153 @@
     </div>
     
     {% if stories %}
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Title
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Category
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Author
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Language
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Date
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tags
-            </th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          {% for story in stories %}
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">
-                <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="hover:text-primary">
-                  {{ story.title }}
-                </a>
-                {% if story.audio_clips.exists %}
-                <span class="ml-1" title="{{ story.audio_clips.count }} audio clips">
-                  {% include "components/ui/icons.html" with name="radio" class="h-4 w-4 inline text-gray-400" %}
-                </span>
-                {% endif %}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">
-                {% if story.category.parent %}
-                  <span class="text-xs text-gray-500">{{ story.category.parent.name }} &gt;</span><br>
-                {% endif %}
-                {{ story.category.name }}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center text-primary">
-                  {{ story.author.first_name|first|default:""|upper }}{{ story.author.last_name|first|default:""|upper }}
-                  {% if not story.author.first_name and not story.author.last_name %}
-                    {{ story.author.email|first|upper }}
+    <div class="p-6">
+      <div class="space-y-4">
+        {% for story in stories %}
+          <div class="group relative flex items-center justify-between gap-x-6 py-4 hover:bg-gray-50 px-4 rounded-lg border border-gray-100">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start gap-x-3">
+                <div class="flex-shrink-0 mt-1">
+                  {% if story.status == 'DRAFT' %}
+                    <div class="h-2 w-2 rounded-full bg-gray-400"></div>
+                  {% elif story.status == 'REVIEW' %}
+                    <div class="h-2 w-2 rounded-full bg-warning"></div>
+                  {% elif story.status == 'PUBLISHED' %}
+                    <div class="h-2 w-2 rounded-full bg-success"></div>
+                  {% elif story.status == 'ARCHIVED' %}
+                    <div class="h-2 w-2 rounded-full bg-gray-500"></div>
                   {% endif %}
                 </div>
-                <div class="ml-3">
-                  <div class="text-sm font-medium text-gray-900">{{ story.author.get_full_name }}</div>
-                </div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ story.get_language_display }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-500">
-                {% if story.published_at %}
-                  {{ story.published_at|date:"M d, Y" }}
-                {% else %}
-                  {{ story.created_at|date:"M d, Y" }}
-                {% endif %}
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex flex-wrap gap-1">
-                {% for tag in story.tags.all|slice:":3" %}
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                    {{ tag.name }}
-                  </span>
-                {% endfor %}
-                {% if story.tags.count > 3 %}
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    +{{ story.tags.count|add:"-3" }}
-                  </span>
-                {% endif %}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <div class="flex justify-end space-x-2">
-                {% if user.user_type == 'STAFF' %}
-                  {% if story.status != 'PUBLISHED' or user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                  <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="text-gray-600 hover:text-primary" title="Edit">
-                    {% include "components/ui/icons.html" with name="edit" %}
-                  </a>
+                <div class="flex-1">
+                  <div class="flex items-center gap-x-2">
+                    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-sm font-semibold leading-6 text-gray-900 hover:text-primary">
+                      {{ story.title }}
+                    </a>
+                    {% if story.audio_clips.exists %}
+                    <span class="text-gray-400" title="{{ story.audio_clips.count }} audio clips">
+                      {% include "components/ui/icons.html" with name="radio" class="h-4 w-4" %}
+                    </span>
+                    {% endif %}
+                  </div>
+                  <div class="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                    <p class="whitespace-nowrap">
+                      By {{ story.author.get_full_name }}
+                    </p>
+                    <svg viewBox="0 0 2 2" class="h-0.5 w-0.5 fill-current">
+                      <circle cx="1" cy="1" r="1" />
+                    </svg>
+                    <p class="whitespace-nowrap">
+                      {{ story.category.name }}
+                    </p>
+                    <svg viewBox="0 0 2 2" class="h-0.5 w-0.5 fill-current">
+                      <circle cx="1" cy="1" r="1" />
+                    </svg>
+                    <p class="whitespace-nowrap">
+                      {{ story.get_language_display }}
+                    </p>
+                    <svg viewBox="0 0 2 2" class="h-0.5 w-0.5 fill-current">
+                      <circle cx="1" cy="1" r="1" />
+                    </svg>
+                    <p class="whitespace-nowrap">
+                      {% if story.published_at %}
+                        {{ story.published_at|date:"M d, Y" }}
+                      {% else %}
+                        {{ story.created_at|date:"M d, Y" }}
+                      {% endif %}
+                    </p>
+                  </div>
+                  {% if story.tags.exists %}
+                  <div class="mt-2 flex flex-wrap gap-1">
+                    {% for tag in story.tags.all|slice:":3" %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                        {{ tag.name }}
+                      </span>
+                    {% endfor %}
+                    {% if story.tags.count > 3 %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        +{{ story.tags.count|add:"-3" }}
+                      </span>
+                    {% endif %}
+                  </div>
                   {% endif %}
-                  
-                  {% if story.status == 'DRAFT' or story.status == 'REVIEW' or story.status == 'APPROVED' %}
-                    {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
-                    <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="text-gray-600 hover:text-success" title="Publish">
-                      {% include "components/ui/icons.html" with name="check" %}
+                </div>
+                <div class="flex-shrink-0 flex items-center gap-x-2">
+                  {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+                  <div class="flex items-center gap-x-2">
+                    {% if user.user_type == 'STAFF' %}
+                      {% if story.status != 'PUBLISHED' or user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+                        {% if story.status == 'REVIEW' %}
+                          <span class="text-gray-300 cursor-not-allowed" title="Cannot edit while under review">
+                            {% include "components/ui/icons.html" with name="edit" %}
+                          </span>
+                        {% else %}
+                          <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="text-gray-400 hover:text-primary" title="Edit">
+                            {% include "components/ui/icons.html" with name="edit" %}
+                          </a>
+                        {% endif %}
+                      {% endif %}
+                      
+                      {% if story.status == 'DRAFT' or story.status == 'REVIEW' or story.status == 'APPROVED' %}
+                        {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+                        <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="text-gray-400 hover:text-success" title="Publish">
+                          {% include "components/ui/icons.html" with name="check" %}
+                        </a>
+                        {% endif %}
+                      {% endif %}
+                    {% endif %}
+                    
+                    <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-gray-400 hover:text-primary" title="View">
+                      {% include "components/ui/icons.html" with name="eye" %}
+                    </a>
+                    
+                    {% if story.status == 'PUBLISHED' %}
+                    <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="text-gray-400 hover:text-primary" title="Download">
+                      {% include "components/ui/icons.html" with name="download" %}
                     </a>
                     {% endif %}
-                  {% endif %}
-                {% endif %}
-                
-                <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="text-gray-600 hover:text-primary" title="View">
-                  {% include "components/ui/icons.html" with name="eye" %}
-                </a>
-                
-                {% if story.status == 'PUBLISHED' %}
-                <a href="{% url 'newsroom:story_download' story_id=story.id %}" class="text-gray-600 hover:text-primary" title="Download">
-                  {% include "components/ui/icons.html" with name="download" %}
-                </a>
-                {% endif %}
+                  </div>
+                </div>
               </div>
-            </td>
-          </tr>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Pagination -->
+      {% if stories.paginator.num_pages > 1 %}
+      <div class="mt-6 flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
+        <div class="-mt-px flex w-0 flex-1">
+          {% if stories.has_previous %}
+          <a href="?page={{ stories.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+            {% include "components/ui/icons.html" with name="arrow-left" class="mr-3 h-5 w-5" %}
+            Previous
+          </a>
+          {% endif %}
+        </div>
+        <div class="hidden md:-mt-px md:flex">
+          {% for i in stories.paginator.page_range %}
+            {% if stories.number == i %}
+            <span class="inline-flex items-center border-t-2 border-primary px-4 pt-4 text-sm font-medium text-primary">
+              {{ i }}
+            </span>
+            {% else %}
+            <a href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+              {{ i }}
+            </a>
+            {% endif %}
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    
-    <!-- Pagination -->
-    {% if stories.paginator.num_pages > 1 %}
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-      <div class="text-sm text-gray-700">
-        Showing
-        <span class="font-medium">{{ stories.start_index }}</span>
-        to
-        <span class="font-medium">{{ stories.end_index }}</span>
-        of
-        <span class="font-medium">{{ stories.paginator.count }}</span>
-        results
+        </div>
+        <div class="-mt-px flex w-0 flex-1 justify-end">
+          {% if stories.has_next %}
+          <a href="?page={{ stories.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+            Next
+            {% include "components/ui/icons.html" with name="arrow-right" class="ml-3 h-5 w-5" %}
+          </a>
+          {% endif %}
+        </div>
       </div>
-      <div class="flex space-x-2">
-        {% if stories.has_previous %}
-        <a href="?page={{ stories.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if language_filter %}&language={{ language_filter }}{% endif %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-          Previous
-        </a>
-        {% endif %}
-        
-        {% if stories.has_next %}
-        <a href="?page={{ stories.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if language_filter %}&language={{ language_filter }}{% endif %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-          Next
-        </a>
-        {% endif %}
-      </div>
+      {% endif %}
     </div>
-    {% endif %}
-    
     {% else %}
     <div class="px-6 py-12 text-center">
       {% include "components/ui/icons.html" with name="content" size=48 class="mx-auto text-gray-400" %}

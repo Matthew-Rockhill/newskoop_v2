@@ -1,23 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
+{% load actions %}
 
 {% block title %}Delete Tag: {{ tag.name }} - Newskoop{% endblock %}
 {% block page_title %}Delete Tag{% endblock %}
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  <form method="post">
-    {% csrf_token %}
-    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-danger hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger">
-      {% include "components/ui/icons.html" with name="trash" class="mr-2" %}
-      Confirm Delete
-    </button>
-  </form>
-  
-  <a href="{% url 'newsroom:tag_edit' tag_id=tag.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
-  </a>
+  {% get_tag_actions tag user as tag_actions %}
+  {% include "components/page_actions.html" with actions=tag_actions %}
 </div>
 {% endblock %}
 

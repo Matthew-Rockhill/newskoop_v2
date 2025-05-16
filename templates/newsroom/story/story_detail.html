@@ -1,327 +1,332 @@
 {% extends "base.html" %}
 {% load static %}
+{% load actions %}
+{% load story_actions %}
 
 {% block title %}{{ story.title }} - Newskoop{% endblock %}
 {% block page_title %}Story Details{% endblock %}
 
 {% block page_actions %}
-{% include "components/page_actions.html" with actions=actions %}
+    {% can_edit_story story as can_edit %}
+    {% if can_edit %}
+        <a href="{% url 'newsroom:story_edit' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            Edit Story
+        </a>
+    {% else %}
+        <a href="{% url 'newsroom:story_list' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            ← Back to Stories
+        </a>
+    {% endif %}
+    
+    {% if story.status == 'DRAFT' and story.author == user %}
+        {% if user.staff_role == 'INTERN' %}
+            <button type="button" onclick="openSubmitReviewModal()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                Submit for Review
+            </button>
+        {% elif user.staff_role == 'JOURNALIST' %}
+            <a href="{% url 'newsroom:story_submit_approval' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                Submit for Approval
+            </a>
+        {% endif %}
+    {% endif %}
+    
+    {% if story.status == 'REVIEW' and story.reviewer == user %}
+        <a href="{% url 'newsroom:story_submit_approval' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            Submit for Approval
+        </a>
+    {% endif %}
+    
+    {% if story.status == 'PENDING_APPROVAL' and user.staff_role == 'SUB_EDITOR' %}
+        <a href="{% url 'newsroom:story_approve' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            Approve Story
+        </a>
+    {% endif %}
+    
+    {% if story.status == 'APPROVED' and user.staff_role in 'EDITOR,SUPERADMIN,ADMIN'|split %}
+        {% if not story.is_translation %}
+            <a href="{% url 'newsroom:story_create_translation' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                Create Translation
+            </a>
+        {% endif %}
+        <a href="{% url 'newsroom:story_publish' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            Publish Story
+        </a>
+    {% endif %}
+    
+    {% can_delete_story story as can_delete %}
+    {% if can_delete %}
+        <a href="{% url 'newsroom:story_delete' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-danger hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger">
+            Delete Story
+        </a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
+<!-- Submit for Review Modal -->
+<div id="submit-review-modal" class="fixed inset-0 bg-gray-500 bg-opacity-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="z-index: 9999;">
+  <div class="fixed inset-0 overflow-y-auto" style="z-index: 10000;">
+    <div class="flex min-h-screen items-center justify-center p-4 text-center">
+      <div class="relative transform overflow-hidden rounded-lg bg-white px-6 pb-8 pt-6 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xl sm:p-8">
+        <div class="absolute right-0 top-0 pr-4 pt-4">
+          <button type="button" onclick="closeSubmitReviewModal()" class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+            <span class="sr-only">Close</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
+              <svg class="h-6 w-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">Submit Story for Review</h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">Select a journalist to review this story.</p>
+            </div>
+          </div>
+        </div>
+        
+        <form method="post" action="{% url 'newsroom:story_submit_review' story_id=story.id %}" class="mt-6" id="submit-review-form">
+          {% csrf_token %}
+          <div class="space-y-4">
+            <div>
+              <label for="reviewer" class="block text-sm font-medium text-gray-700">Reviewer</label>
+              <select name="reviewer" id="reviewer" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50" required>
+                <option value="">Select a journalist...</option>
+                {% for journalist in journalists %}
+                  <option value="{{ journalist.id }}">{{ journalist.get_full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          
+          <div class="mt-8 sm:mt-8 sm:flex sm:flex-row-reverse sm:gap-4 mb-6">
+            <button type="submit" class="inline-flex w-full justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:w-auto">
+              Submit for Review
+            </button>
+            <button type="button" onclick="closeSubmitReviewModal()" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="grid grid-cols-3 gap-6">
-  <!-- Main Content Column (2/3 width) -->
+  <!-- Main Content (2/3 width) -->
   <div class="col-span-2 space-y-6">
     <!-- Story Content -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div class="flex-1">
-          <h1 class="text-2xl font-bold text-gray-900">{{ story.title }}</h1>
-          <div class="mt-2 flex flex-wrap items-center text-sm text-gray-500 gap-x-4 gap-y-2">
-            <span>
-              {% include "components/ui/icons.html" with name="user" class="h-4 w-4 inline mr-1" %}
-              By {{ story.author.get_full_name }}
-            </span>
-            
-            <span>
-              {% include "components/ui/icons.html" with name="calendar" class="h-4 w-4 inline mr-1" %}
-              {% if story.published_at %}
-                Published: {{ story.published_at|date:"F j, Y" }}
-              {% else %}
-                Created: {{ story.created_at|date:"F j, Y" }}
-              {% endif %}
-            </span>
-            
-            <span>
-              {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 inline mr-1" %}
-              {{ story.category.name }}
-              {% if story.category.parent %}
-                <span class="text-xs">({{ story.category.parent.name }})</span>
-              {% endif %}
-            </span>
-            
-            <span>
-              {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 inline mr-1" %}
-              {{ story.get_language_display }}
-            </span>
-            
-            {% if story.audio_clips.exists %}
-            <span>
-              {% include "components/ui/icons.html" with name="radio" class="h-4 w-4 inline mr-1" %}
-              {{ story.audio_clips.count }} Audio clip{{ story.audio_clips.count|pluralize }}
-            </span>
-            {% endif %}
-            
-            {% if user.user_type == 'STAFF' %}
-            <span>
-              {% include "components/ui/icons.html" with name="eye" class="h-4 w-4 inline mr-1" %}
-              {{ story.view_count }} view{{ story.view_count|pluralize }}
-            </span>
-            
-            <span>
-              {% include "components/ui/icons.html" with name="download" class="h-4 w-4 inline mr-1" %}
-              {{ story.download_count }} download{{ story.download_count|pluralize }}
-            </span>
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+              {% include "components/ui/icons.html" with name="content" %}
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">{{ story.title }}</h1>
+              <p class="text-sm text-gray-500">Story content and details</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+            {% if story.published_at %}
+              <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
             {% endif %}
           </div>
         </div>
-        {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-      </div>
-
-      {% if story.tags.exists %}
-      <div class="mt-4">
-        <h4 class="text-sm font-medium text-gray-500 mb-2">Tags</h4>
-        <div class="flex flex-wrap gap-2">
+        
+        <!-- Tags -->
+        {% if story.tags.exists %}
+        <div class="mt-4 flex flex-wrap gap-2">
           {% for tag in story.tags.all %}
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+            <a href="{% url 'newsroom:tag_detail' tag_id=tag.id %}" 
+               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 hover:bg-primary-200">
               {{ tag.name }}
-            </span>
+            </a>
           {% endfor %}
         </div>
+        {% endif %}
+        
+        <!-- Story Metadata -->
+        <div class="mt-4 flex items-center justify-between text-sm text-gray-500">
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center">
+              {% include "components/ui/icons.html" with name="user" class="h-4 w-4 mr-1" %}
+              By {{ story.author.get_full_name }}
+            </span>
+            <span class="flex items-center">
+              {% include "components/ui/icons.html" with name="clock" class="h-4 w-4 mr-1" %}
+              Last updated: {{ story.updated_at|date:"M d, Y" }}
+            </span>
+          </div>
+          {% if story.view_count or story.download_count %}
+          <div class="flex items-center space-x-4">
+            {% if story.view_count %}
+            <span>
+              {% include "components/ui/icons.html" with name="eye" class="h-4 w-4 inline mr-1" %}
+              {{ story.view_count }} views
+            </span>
+            {% endif %}
+            {% if story.download_count %}
+            <span>
+              {% include "components/ui/icons.html" with name="download" class="h-4 w-4 inline mr-1" %}
+              {{ story.download_count }} downloads
+            </span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
       </div>
-      {% endif %}
-
-      {% if user.user_type == 'STAFF' and user.staff_role in 'SUB_EDITOR,EDITOR,SUPERADMIN,ADMIN' %}
-      <div class="mt-2">
-        <a href="{% url 'newsroom:story_manage_tags' story_id=story.id %}" class="text-sm text-primary hover:underline inline-flex items-center">
-          {% include "components/ui/icons.html" with name="tag" class="h-4 w-4 mr-1" %}
-          {% if story.tags.exists %}Manage Tags{% else %}Add Tags{% endif %}
-        </a>
-      </div>
-      {% endif %}
-            
+      
       <div class="p-6">
-        <div class="story-content prose max-w-none">
+        <div class="prose max-w-none">
           {{ story.content|safe }}
         </div>
       </div>
     </div>
-    
-    <!-- Audio Clips -->
-    {% if story.audio_clips.exists %}
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div class="flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-            {% include "components/ui/icons.html" with name="radio" %}
+
+    {% if story.status == 'REVIEW' %}
+      <div class="bg-yellow-50 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+            </svg>
           </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
-            <p class="text-sm text-gray-500">Listen to audio content</p>
-          </div>
-        </div>
-        {% if user.user_type == 'STAFF' %}
-        <a href="{% url 'newsroom:story_audio_upload' story_id=story.id %}" class="inline-flex items-center text-sm text-primary hover:underline">
-          {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
-          Add Audio
-        </a>
-        {% endif %}
-      </div>
-      <div class="p-6">
-        <div class="grid grid-cols-1 gap-4">
-          {% for clip in story.audio_clips.all %}
-            <div class="border rounded-md p-4">
-              <h3 class="font-medium">{{ clip.title }}</h3>
-              {% if clip.description %}
-                <p class="text-sm text-gray-500 mt-1">{{ clip.description }}</p>
-              {% endif %}
-              <div class="mt-2">
-                <audio src="{{ clip.audio_file.url }}" controls class="audio-player w-full"></audio>
-              </div>
-              <div class="text-xs text-gray-500 mt-1">
-                Uploaded by {{ clip.uploaded_by.get_full_name }} on {{ clip.created_at|date:"M d, Y" }}
-              </div>
-              
-              {% if user.user_type == 'STAFF' %}
-              <div class="mt-2 flex justify-end">
-                <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="inline-flex items-center text-sm text-danger hover:underline">
-                  {% include "components/ui/icons.html" with name="trash" class="h-4 w-4 mr-1" %}
-                  Delete
-                </a>
-              </div>
-              {% endif %}
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">Story Under Review</h3>
+            <div class="mt-2 text-sm text-yellow-700">
+              <p>This story is currently being reviewed. Once the review is complete, it will be submitted for approval.</p>
             </div>
-          {% endfor %}
+          </div>
         </div>
       </div>
-    </div>
     {% endif %}
     
-    <!-- Story Revisions (Staff Only) - List Format with explicitly colored Current Badge -->
-{% if user.user_type == 'STAFF' and story.activities.exists %}
-<div class="bg-white rounded-lg shadow overflow-hidden" id="activity-log">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-      {% include "components/ui/icons.html" with name="activity" %}
-    </div>
-    <div>
-      <h2 class="text-lg font-semibold text-gray-800">Activity History</h2>
-      <p class="text-sm text-gray-500">Recent changes to this story</p>
-    </div>
-  </div>
-  <div class="p-6">
-    <div class="space-y-4">
-      {% for activity in story.activities.all|slice:":10" %}
-        <div class="flex items-start border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-          <div class="flex-shrink-0 h-8 w-8 rounded-full 
-            {% if activity.activity_type == 'CREATE' %}bg-green-50 text-green-600
-            {% elif activity.activity_type == 'EDIT' %}bg-blue-50 text-blue-600
-            {% elif activity.activity_type == 'STATUS' %}bg-purple-50 text-purple-600
-            {% elif activity.activity_type == 'REVIEW' %}bg-yellow-50 text-yellow-600
-            {% elif activity.activity_type == 'APPROVE' %}bg-teal-50 text-teal-600
-            {% elif activity.activity_type == 'PUBLISH' %}bg-indigo-50 text-indigo-600
-            {% elif activity.activity_type == 'TRANSLATION' %}bg-pink-50 text-pink-600
-            {% else %}bg-gray-50 text-gray-600{% endif %}
-            flex items-center justify-center mr-4">
-            {% if activity.activity_type == 'CREATE' %}
-              {% include "components/ui/icons.html" with name="plus" %}
-            {% elif activity.activity_type == 'EDIT' %}
-              {% include "components/ui/icons.html" with name="edit" %}
-            {% elif activity.activity_type == 'STATUS' %}
-              {% include "components/ui/icons.html" with name="refresh-cw" %}
-            {% elif activity.activity_type == 'REVIEW' %}
-              {% include "components/ui/icons.html" with name="eye" %}
-            {% elif activity.activity_type == 'APPROVE' %}
-              {% include "components/ui/icons.html" with name="check" %}
-            {% elif activity.activity_type == 'PUBLISH' %}
-              {% include "components/ui/icons.html" with name="upload" %}
-            {% elif activity.activity_type == 'TRANSLATION' %}
-              {% include "components/ui/icons.html" with name="globe" %}
-            {% else %}
-              {% include "components/ui/icons.html" with name="activity" %}
-            {% endif %}
+    {% if story.status == 'PENDING_APPROVAL' %}
+      <div class="bg-blue-50 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+            </svg>
           </div>
-          <div>
-            <div class="font-medium text-gray-900">{{ activity.get_activity_type_display }}</div>
-            <div class="text-sm text-gray-500">By {{ activity.user.get_full_name }} on {{ activity.created_at|date:"M d, Y, g:i a" }}</div>
-            {% if activity.description %}
-              <div class="text-sm text-gray-700 mt-1">{{ activity.description }}</div>
-            {% endif %}
-            {% if activity.old_status and activity.new_status %}
-              <div class="text-sm mt-1">
-                Status changed from 
-                <span class="font-medium">{{ activity.old_status }}</span> to 
-                <span class="font-medium">{{ activity.new_status }}</span>
-              </div>
-            {% endif %}
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Awaiting Approval</h3>
+            <div class="mt-2 text-sm text-blue-700">
+              <p>This story has been submitted for approval. An editor will review it before publication.</p>
+            </div>
           </div>
         </div>
-      {% endfor %}
-    </div>
+      </div>
+    {% endif %}
   </div>
-</div>
-{% endif %}
   
-  <!-- Right Column (1/3 width) - Related Content and Metadata -->
+  <!-- Sidebar (1/3 width) -->
   <div class="col-span-1 space-y-6">
-    <!-- Story Metadata Card -->
+    <!-- Story Details -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200 flex items-center">
         <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-          {% include "components/ui/icons.html" with name="info" %}
+          {% include "components/ui/icons.html" with name="tag" %}
         </div>
         <div>
           <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
-          <p class="text-sm text-gray-500">Metadata and classification</p>
+          <p class="text-sm text-gray-500">Classification and metadata</p>
         </div>
       </div>
+      
       <div class="p-6">
-        <dl class="grid grid-cols-1 gap-4">
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Status</dt>
-            <dd class="mt-1">
-              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-            </dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Author</dt>
-            <dd class="mt-1">{{ story.author.get_full_name }}</dd>
-          </div>
-          
-          <div>
+        <dl class="divide-y divide-gray-200">
+          <div class="py-3 flex justify-between">
             <dt class="text-sm font-medium text-gray-500">Category</dt>
-            <dd class="mt-1">
-              {% if story.category.parent %}
-                {{ story.category.parent.name }} > 
-              {% endif %}
-              {{ story.category.name }}
-            </dd>
+            <dd class="text-sm text-gray-900">{{ story.category.name }}</dd>
           </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Language</dt>
-            <dd class="mt-1">{{ story.get_language_display }}</dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Created</dt>
-            <dd class="mt-1">{{ story.created_at|date:"F j, Y" }}</dd>
-          </div>
-          
-          {% if story.published_at %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Published</dt>
-            <dd class="mt-1">{{ story.published_at|date:"F j, Y" }}</dd>
-          </div>
-          {% endif %}
           
           {% if story.religion_classification %}
-          <div>
-            <dt class="text-sm font-medium text-gray-500">Religious Classification</dt>
-            <dd class="mt-1">{{ story.get_religion_classification_display }}</dd>
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Religion</dt>
+            <dd class="text-sm text-gray-900">{{ story.get_religion_classification_display }}</dd>
           </div>
           {% endif %}
+          
+          <div class="py-3 flex justify-between">
+            <dt class="text-sm font-medium text-gray-500">Language</dt>
+            <dd class="text-sm text-gray-900">{{ story.get_language_display }}</dd>
+          </div>
         </dl>
       </div>
     </div>
-    
-    <!-- Related Tasks (Staff Only) -->
-    {% if user.user_type == 'STAFF' and tasks %}
+
+    <!-- Audio Clips -->
+    {% if story.audio_clips.exists %}
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div class="flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-            {% include "components/ui/icons.html" with name="check-circle" %}
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Related Tasks</h2>
-            <p class="text-sm text-gray-500">Tasks associated with this story</p>
-          </div>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="radio" %}
         </div>
-        <a href="{% url 'newsroom:task_create' %}?story={{ story.id }}" class="inline-flex items-center text-sm text-primary hover:underline">
-          {% include "components/ui/icons.html" with name="plus" class="h-4 w-4 mr-1" %}
-          Add Task
-        </a>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+          <p class="text-sm text-gray-500">Audio files attached to this story</p>
+        </div>
       </div>
+      
+      <div class="p-6">
+        <div class="space-y-3">
+          {% for clip in story.audio_clips.all %}
+            <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-3">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-900">{{ clip.title }}</h4>
+                    <p class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</p>
+                  </div>
+                </div>
+              </div>
+              <audio controls class="w-full">
+                <source src="{{ clip.audio_file.url }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Related Stories -->
+    {% if story.tags.exists %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Related Stories</h2>
+      </div>
+      
       <div class="p-6">
         <div class="space-y-4">
-          {% for task in tasks %}
-            <div class="border rounded-md p-4">
-              <div class="flex justify-between">
-                <h3 class="font-medium">
-                  <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="hover:text-primary">
-                    {{ task.title }}
-                  </a>
-                </h3>
-                <span class="text-sm task-priority-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+          {% for related_story in story.get_related_stories %}
+            <div class="flex items-start">
+              <div class="flex-1 min-w-0">
+                <a href="{% url 'newsroom:story_detail' story_id=related_story.id %}" class="text-sm font-medium text-primary hover:text-primary-dark">
+                  {{ related_story.title }}
+                </a>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ related_story.created_at|date:"F j, Y" }} • {{ related_story.get_language_display }}
+                </p>
               </div>
-              <div class="mt-1 text-sm text-gray-500">
-                {% include "components/ui/status_badges.html" with status=task.status|lower text=task.get_status_display %}
-                <span class="ml-2">Assigned to: {{ task.assigned_to.get_full_name }}</span>
-                {% if task.due_date %}
-                  <span class="ml-2">Due: {{ task.due_date|date:"M d, Y" }}</span>
-                {% endif %}
-              </div>
-              
-              {% if task.task_type == 'TRANSLATION' and task.status != 'COMPLETED' %}
-                <div class="mt-2">
-                  <a href="{% url 'newsroom:submit_translation' task_id=task.id %}" class="inline-flex items-center text-sm text-primary hover:underline">
-                    {% include "components/ui/icons.html" with name="globe" class="h-4 w-4 mr-1" %}
-                    Submit Translation
-                  </a>
-                </div>
-              {% endif %}
             </div>
           {% endfor %}
         </div>
@@ -330,82 +335,59 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
 
-<!-- Review Assignment Modal -->
-<div id="review-modal" class="fixed inset-0 hidden z-50 overflow-y-auto">
-  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-      <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-    </div>
-
-    <!-- Modal panel -->
-    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-      <form id="submit-review-form" method="post" action="{% url 'newsroom:story_submit_review' story_id=story.id %}">
-        {% csrf_token %}
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-warning-100 sm:mx-0 sm:h-10 sm:w-10">
-              {% include "components/ui/icons.html" with name="check-circle" class="h-6 w-6 text-warning" %}
-            </div>
-            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">Submit for Review</h3>
-              <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                  Select a journalist to review this story. They will be notified and assigned a review task.
-                </p>
-
-                <!-- Reviewer selection dropdown -->
-                <div class="mt-4">
-                  <label for="reviewer" class="block text-sm font-medium text-gray-700">Select Reviewer</label>
-                  <select id="reviewer" name="reviewer" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
-                    <option value="">Select a journalist</option>
-                    {% for journalist in journalists %}
-                      <option value="{{ journalist.id }}">{{ journalist.get_full_name }} ({{ journalist.get_staff_role_display }})</option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                <!-- Comments field -->
-                <div class="mt-4">
-                  <label for="review_notes" class="block text-sm font-medium text-gray-700">Notes for Reviewer (optional)</label>
-                  <textarea id="review_notes" name="review_notes" rows="3" class="shadow-sm focus:ring-primary focus:border-primary mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-warning text-base font-medium text-white hover:bg-warning-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-warning sm:ml-3 sm:w-auto sm:text-sm">
-            Submit for Review
-          </button>
-          <button type="button" onclick="closeReviewModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Add the modal control script -->
+{% block extra_js %}
 <script>
-  function openReviewModal() {
-    document.getElementById('review-modal').classList.remove('hidden');
-  }
+function openSubmitReviewModal() {
+  document.getElementById('submit-review-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
 
-  function closeReviewModal() {
-    document.getElementById('review-modal').classList.add('hidden');
-  }
+function closeSubmitReviewModal() {
+  document.getElementById('submit-review-modal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
 
-  document.addEventListener('DOMContentLoaded', function() {
-    // Replace the direct form submission with modal opening
-    const submitForReviewBtn = document.getElementById('submit-for-review-btn');
-    if (submitForReviewBtn) {
-      submitForReviewBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        openReviewModal();
-      });
+// Close modal when clicking outside
+document.getElementById('submit-review-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeSubmitReviewModal();
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSubmitReviewModal();
+  }
+});
+
+// Handle form submission
+document.getElementById('submit-review-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const form = this;
+  const formData = new FormData(form);
+  
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
     }
+  })
+  .then(response => {
+    if (response.ok) {
+      window.location.reload();
+    } else {
+      throw new Error('Network response was not ok');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('There was an error submitting the form. Please try again.');
   });
+});
 </script>
 {% endblock %}

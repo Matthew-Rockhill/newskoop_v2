@@ -16,36 +16,33 @@
 {% endcomment %}
 
 {% if dot_only %}
-<span class="status-dot status-dot-{{ status }}"></span>
+<span class="inline-flex h-2 w-2 rounded-full
+  {% if status == 'active' or status == 'success' or status == 'published' or status == 'approved' %}bg-success
+  {% elif status == 'inactive' or status == 'archived' %}bg-gray-400
+  {% elif status == 'pending' or status == 'review' or status == 'pending_approval' %}bg-warning
+  {% elif status == 'danger' %}bg-danger
+  {% elif status == 'info' %}bg-info
+  {% else %}bg-gray-400{% endif %}">
+</span>
 {% else %}
-<span class="status-badge status-{{ status }}">
-  <span class="status-dot status-dot-{{ status }}"></span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+  {% if status == 'active' or status == 'success' or status == 'published' or status == 'approved' %}bg-success-light text-success
+  {% elif status == 'inactive' or status == 'archived' %}bg-gray-200 text-gray-600
+  {% elif status == 'pending' or status == 'review' or status == 'pending_approval' %}bg-warning-light text-warning
+  {% elif status == 'danger' %}bg-danger-light text-danger
+  {% elif status == 'info' %}bg-info-light text-info
+  {% elif status == 'draft' %}bg-gray-100 text-gray-800
+  {% else %}bg-gray-100 text-gray-800{% endif %}">
+  {% if not dot_only %}
+  <span class="inline-flex h-2 w-2 rounded-full mr-1.5
+    {% if status == 'active' or status == 'success' or status == 'published' or status == 'approved' %}bg-success
+    {% elif status == 'inactive' or status == 'archived' %}bg-gray-400
+    {% elif status == 'pending' or status == 'review' or status == 'pending_approval' %}bg-warning
+    {% elif status == 'danger' %}bg-danger
+    {% elif status == 'info' %}bg-info
+    {% else %}bg-gray-400{% endif %}">
+  </span>
+  {% endif %}
   {{ text|default:status|title }}
-</span>
-{% endif %}
-
-{% if status == 'draft' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-  {{ text }}
-</span>
-{% elif status == 'review' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
-  {{ text }}
-</span>
-{% elif status == 'pending_approval' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-light text-info">
-  {{ text }}
-</span>
-{% elif status == 'approved' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
-  {{ text }}
-</span>
-{% elif status == 'published' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
-  {{ text }}
-</span>
-{% elif status == 'archived' %}
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-  {{ text }}
 </span>
 {% endif %}

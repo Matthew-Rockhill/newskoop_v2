@@ -1,5 +1,5 @@
 /**
- * Main JavaScript for Newskoop
+ * Modified version of main.js with improved Quill editor interaction
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const userDropdownMenu = document.getElementById('user-dropdown-menu');
 
   if (userMenuButton && userDropdownMenu) {
-    userMenuButton.addEventListener('click', function() {
+    userMenuButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isExpanded = userMenuButton.getAttribute('aria-expanded') === 'true';
+      userMenuButton.setAttribute('aria-expanded', !isExpanded);
       userDropdownMenu.classList.toggle('hidden');
     });
 
@@ -35,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(event) {
       if (!userMenuButton.contains(event.target) && !userDropdownMenu.contains(event.target)) {
         userDropdownMenu.classList.add('hidden');
+        userMenuButton.setAttribute('aria-expanded', 'false');
       }
     });
   }
@@ -239,6 +243,7 @@ function initCategoryToggles() {
 
 /**
  * Initialize Quill editor for story content
+ * UPDATED to handle form submission properly
  */
 function initStoryEditor() {
   const editorContainer = document.getElementById('content-editor');
@@ -248,7 +253,17 @@ function initStoryEditor() {
   const storyForm = document.getElementById('story-form');
   const translationForm = document.getElementById('translation-form');
   
+  // Check if Quill is already initialized
+  if (window.quillInstance) {
+    return;
+  }
+  
   if (editorContainer && contentInput) {
+    // Register custom sizes
+    var Size = Quill.import('attributors/style/size');
+    Size.whitelist = ['12px', '14px', '16px', '18px', '1rem'];
+    Quill.register(Size, true);
+
     // Configure Quill toolbar options
     const toolbarOptions = [
       ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
@@ -258,7 +273,7 @@ function initStoryEditor() {
       [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
       [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
       [{ 'direction': 'rtl' }],                         // text direction
-      [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
+      [{ 'size': ['12px', '14px', '16px', '18px', '1rem', false] }],  // custom dropdown
       [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
       [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults
       [{ 'font': [] }],
@@ -268,95 +283,46 @@ function initStoryEditor() {
     ];
 
     // Initialize Quill
-    const quill = new Quill('#content-editor', {
+    window.quillInstance = new Quill('#content-editor', {
       modules: {
         toolbar: toolbarOptions
       },
       theme: 'snow'
     });
 
+    // Set default font size to 1rem
+    window.quillInstance.format('size', '1rem');
+
     // Load existing content if any
     if (contentInput.value) {
-      quill.root.innerHTML = contentInput.value;
+      window.quillInstance.root.innerHTML = contentInput.value;
     }
 
-    // Add form submission handling for story form
-    if (storyForm) {
-      storyForm.addEventListener('submit', function(e) {
-        // Existing story form handling code...
-        contentInput.value = quill.root.innerHTML;
-        
-        // For story-create page, enhance submission process
-        if (window.location.pathname.includes('/stories/create/')) {
-          e.preventDefault();
-          
-          // Update the hidden input with Quill content
-          contentInput.value = quill.root.innerHTML;
-          
-          // Create FormData object
-          const formData = new FormData(storyForm);
-          
-          // Handle audio files properly
-          const audioInput = document.getElementById('audio_files');
-          if (audioInput && audioInput.files && audioInput.files.length > 0) {
-            // First, remove the standard audio_files field to prevent duplication
-            formData.delete('audio_files');
-            
-            // Add each file with our custom naming pattern
-            for (let i = 0; i < audioInput.files.length; i++) {
-              formData.append(`audio_file_${i}`, audioInput.files[i]);
-            }
-          }          
-     
-          // Submit the form using fetch API
-          fetch(storyForm.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin'
-          })
-          .then(response => {
-            if (response.redirected) {
-              // If redirected, go to the new URL (story detail page)
-              window.location.href = response.url;
-            } else {
-              // Parse the response to check for errors
-              return response.text();
-            }
-          })
-          .then(html => {
-            if (html) {
-              // If we got HTML back, there might be form errors
-              // Replace the current form with the new one containing error messages
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = html;
-              const newForm = tempDiv.querySelector('#story-form');
-              if (newForm) {
-                storyForm.innerHTML = newForm.innerHTML;
-                // Reinitialize Quill
-                initStoryEditor();
-              } else {
-                console.error('Form submission error occurred');
-              }
-            }
-          })
-          .catch(error => {
-            console.error('Error submitting form:', error);
-          });
-        } else {
-          // For other pages, just update the hidden input
-          contentInput.value = quill.root.innerHTML;
-        }
-      });
-    } 
+    // NEW CODE: The key problem is that we need to ensure Quill updates the hidden input
+    // before the form submits. We'll attach to all potential form submit events.
     
-    // Add form submission handling for translation form
+    // 1. Find all submit buttons with form attribute that target our form
+    document.querySelectorAll(`button[form="story-form"], input[type="submit"][form="story-form"]`).forEach(button => {
+      button.addEventListener('click', function() {
+        // Update the hidden input with the Quill content
+        contentInput.value = window.quillInstance.root.innerHTML;
+        console.log('Submit button clicked, Quill content saved to hidden input');
+      });
+    });
+    
+    // 2. Also handle direct form submission events
+    if (storyForm) {
+      storyForm.addEventListener('submit', function() {
+        contentInput.value = window.quillInstance.root.innerHTML;
+        console.log('Story form submitted, Quill content saved to hidden input');
+      });
+    }
+    
+    // 3. And translation form if present
     if (translationForm) {
-      translationForm.addEventListener('submit', function(e) {
-        // Update the hidden input with Quill content
-        contentInput.value = quill.root.innerHTML;
+      translationForm.addEventListener('submit', function() {
+        contentInput.value = window.quillInstance.root.innerHTML;
+        console.log('Translation form submitted, Quill content saved to hidden input');
       });
     }
 
@@ -364,21 +330,20 @@ function initStoryEditor() {
     const submitReviewBtn = document.querySelector('button[form="submit-review-form"]');
     const submitReviewForm = document.getElementById('submit-review-form');
 
-    if (submitReviewBtn && submitReviewForm && quill) {
+    if (submitReviewBtn && submitReviewForm && window.quillInstance) {
       submitReviewBtn.addEventListener('click', function(e) {
-        // Existing Submit for Review handling code...
         e.preventDefault();
         
         // Update the content input in the submit-review-form with the current Quill content
         const contentInput = submitReviewForm.querySelector('input[name="content"]');
         if (contentInput) {
-          contentInput.value = quill.root.innerHTML;
+          contentInput.value = window.quillInstance.root.innerHTML;
         } else {
           // If the content input doesn't exist, create it
           const newContentInput = document.createElement('input');
           newContentInput.type = 'hidden';
           newContentInput.name = 'content';
-          newContentInput.value = quill.root.innerHTML;
+          newContentInput.value = window.quillInstance.root.innerHTML;
           submitReviewForm.appendChild(newContentInput);
         }
         
@@ -404,6 +369,9 @@ function initStoryEditor() {
         submitReviewForm.submit();
       });
     }
+    
+    // Log successful initialization
+    console.log('Quill editor initialized and form submission handlers attached');
   }
 }
 
@@ -432,70 +400,45 @@ function initAudioUpload() {
           
           // Create a preview container
           const container = document.createElement('div');
-          container.className = 'border rounded-md p-3 mb-3 flex items-center justify-between';
+          container.className = 'flex flex-col p-3 bg-gray-50 rounded-lg mb-2';
           
-          // Left side with icon and info
-          const leftDiv = document.createElement('div');
-          leftDiv.className = 'flex items-center';
+          // Info section
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'flex items-center justify-between mb-2';
+          
+          const infoLeft = document.createElement('div');
+          infoLeft.className = 'flex items-center space-x-3';
           
           // Icon
           const iconDiv = document.createElement('div');
-          iconDiv.className = 'flex-shrink-0 mr-3';
-          iconDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>';
+          iconDiv.className = 'flex-shrink-0';
+          iconDiv.innerHTML = '<svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>';
           
           // File info
-          const infoDiv = document.createElement('div');
-          infoDiv.className = 'flex-1';
+          const textInfo = document.createElement('div');
+          textInfo.innerHTML = `
+            <h4 class="text-sm font-medium text-gray-900">${file.name}</h4>
+            <p class="text-xs text-gray-500">${formatFileSize(file.size)}</p>
+          `;
           
-          const fileName = document.createElement('div');
-          fileName.className = 'font-medium';
-          fileName.textContent = file.name;
+          infoLeft.appendChild(iconDiv);
+          infoLeft.appendChild(textInfo);
+          infoDiv.appendChild(infoLeft);
           
-          const fileSize = document.createElement('div');
-          fileSize.className = 'text-xs text-gray-500';
-          fileSize.textContent = formatFileSize(file.size);
+          // Audio player
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          audio.className = 'w-full';
           
-          infoDiv.appendChild(fileName);
-          infoDiv.appendChild(fileSize);
+          const source = document.createElement('source');
+          source.src = URL.createObjectURL(file);
+          source.type = file.type;
           
-          leftDiv.appendChild(iconDiv);
-          leftDiv.appendChild(infoDiv);
-          
-          // Right side with remove button
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.className = 'text-danger hover:text-danger-dark focus:outline-none';
-          removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
-          
-          // Add click event to remove this file
-          removeBtn.addEventListener('click', function() {
-            // Remove this file from the input
-            // We need to create a new FileList since it's read-only
-            const dt = new DataTransfer();
-            const files = audioInput.files;
-            
-            for (let j = 0; j < files.length; j++) {
-              // Skip the file we want to remove
-              if (j !== i) {
-                dt.items.add(files[j]);
-              }
-            }
-            
-            // Set the new FileList to the input
-            audioInput.files = dt.files;
-            
-            // Remove the container from the preview
-            container.remove();
-            
-            // If all files are removed, clear the preview
-            if (audioInput.files.length === 0) {
-              audioPreview.innerHTML = '';
-            }
-          });
+          audio.appendChild(source);
           
           // Add components to container
-          container.appendChild(leftDiv);
-          container.appendChild(removeBtn);
+          container.appendChild(infoDiv);
+          container.appendChild(audio);
           
           // Add container to preview area
           audioPreview.appendChild(container);
@@ -565,21 +508,21 @@ function initTagsMultiSelect() {
   tagsSelects.forEach(select => {
     // Create a container for our custom dropdown
     const container = document.createElement('div');
-    container.className = 'custom-multiselect-container relative';
+    container.className = 'relative';
     
     // Create the input for searching
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.className = 'form-control w-full pr-8';
+    searchInput.className = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50';
     searchInput.placeholder = 'Search and select tags...';
     
     // Create dropdown for options
     const dropdown = document.createElement('div');
-    dropdown.className = 'custom-multiselect-dropdown absolute w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto hidden';
+    dropdown.className = 'absolute w-full bg-white mt-1 border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto hidden';
     
     // Create selected items container
     const selectedContainer = document.createElement('div');
-    selectedContainer.className = 'custom-multiselect-selected flex flex-wrap gap-1 mt-2';
+    selectedContainer.className = 'flex flex-wrap gap-2 mt-2';
     
     // Add the components to the container
     container.appendChild(searchInput);
@@ -595,9 +538,20 @@ function initTagsMultiSelect() {
     const options = Array.from(select.options);
     options.forEach(option => {
       const optionElement = document.createElement('div');
-      optionElement.className = 'custom-multiselect-option p-2 hover:bg-gray-100 cursor-pointer';
+      optionElement.className = 'p-2 hover:bg-gray-100 cursor-pointer flex items-center';
       optionElement.dataset.value = option.value;
-      optionElement.textContent = option.textContent;
+      
+      // Add checkbox
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'mr-2 rounded border-gray-300 text-primary focus:ring-primary';
+      checkbox.checked = option.selected;
+      optionElement.appendChild(checkbox);
+      
+      // Add label
+      const label = document.createElement('span');
+      label.textContent = option.textContent;
+      optionElement.appendChild(label);
       
       // If the option is selected, add it to the selected container
       if (option.selected) {
@@ -605,11 +559,15 @@ function initTagsMultiSelect() {
       }
       
       // Add click event to select/deselect
-      optionElement.addEventListener('click', () => {
-        const optIndex = Array.from(select.options).findIndex(opt => opt.value === option.value);
-        select.options[optIndex].selected = !select.options[optIndex].selected;
+      optionElement.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+          checkbox.checked = !checkbox.checked;
+        }
         
-        if (select.options[optIndex].selected) {
+        const optIndex = Array.from(select.options).findIndex(opt => opt.value === option.value);
+        select.options[optIndex].selected = checkbox.checked;
+        
+        if (checkbox.checked) {
           addSelectedTag(option.value, option.textContent);
         } else {
           removeSelectedTag(option.value);
@@ -625,15 +583,12 @@ function initTagsMultiSelect() {
     
     // Function to add a tag to the selected container
     function addSelectedTag(value, text) {
-      const tag = document.createElement('div');
-      tag.className = 'custom-multiselect-tag bg-primary-100 text-primary-800 px-2 py-1 rounded-md text-sm flex items-center';
-      tag.dataset.value = value;
-      
-      const tagText = document.createElement('span');
-      tagText.textContent = text;
+      const tag = document.createElement('span');
+      tag.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800';
+      tag.textContent = text;
       
       const removeBtn = document.createElement('button');
-      removeBtn.className = 'ml-1 text-primary-600 hover:text-primary-800';
+      removeBtn.className = 'ml-1 text-primary-600 hover:text-primary-800 focus:outline-none';
       removeBtn.innerHTML = '×';
       removeBtn.type = 'button';
       removeBtn.addEventListener('click', (e) => {
@@ -644,19 +599,24 @@ function initTagsMultiSelect() {
         const optIndex = Array.from(select.options).findIndex(opt => opt.value === value);
         select.options[optIndex].selected = false;
         
+        // Update checkbox
+        const checkbox = dropdown.querySelector(`[data-value="${value}"] input[type="checkbox"]`);
+        if (checkbox) {
+          checkbox.checked = false;
+        }
+        
         // Trigger change event
         const event = new Event('change', { bubbles: true });
         select.dispatchEvent(event);
       });
       
-      tag.appendChild(tagText);
       tag.appendChild(removeBtn);
       selectedContainer.appendChild(tag);
     }
     
     // Function to remove a tag from the selected container
     function removeSelectedTag(value) {
-      const tag = selectedContainer.querySelector(`.custom-multiselect-tag[data-value="${value}"]`);
+      const tag = selectedContainer.querySelector(`[data-value="${value}"]`);
       if (tag) {
         tag.remove();
       }
@@ -667,24 +627,26 @@ function initTagsMultiSelect() {
       dropdown.classList.remove('hidden');
     });
     
-    // Filter options based on search input
-    searchInput.addEventListener('input', () => {
-      const searchValue = searchInput.value.toLowerCase();
-      Array.from(dropdown.children).forEach(option => {
-        const optionText = option.textContent.toLowerCase();
-        if (optionText.includes(searchValue)) {
-          option.classList.remove('hidden');
-        } else {
-          option.classList.add('hidden');
-        }
-      });
-    });
-    
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target)) {
         dropdown.classList.add('hidden');
       }
+    });
+    
+    // Filter options based on search input
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      const options = dropdown.querySelectorAll('[data-value]');
+      
+      options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          option.style.display = '';
+        } else {
+          option.style.display = 'none';
+        }
+      });
     });
   });
 }
@@ -696,6 +658,3 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize multiselect for tags
   initTagsMultiSelect();
 });
-
-
-

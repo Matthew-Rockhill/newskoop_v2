@@ -6,14 +6,13 @@
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  <button type="submit" form="task-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-    Save Changes
+  <button type="submit" form="task-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="save" %}
+    <span class="ml-2">Save Changes</span>
   </button>
-  
-  <a href="{% url 'newsroom:task_detail' task_id=task.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
+  <a href="{% url 'newsroom:task_detail' task.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="arrow-left" %}
+    <span class="ml-2">Back to Task</span>
   </a>
 </div>
 {% endblock %}
@@ -22,9 +21,9 @@
 <form id="task-form" method="post" class="space-y-6">
   {% csrf_token %}
   
-  <div class="grid grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column (2/3 width): Task Details -->
-    <div class="col-span-2 space-y-6">
+    <div class="lg:col-span-2 space-y-6">
       <!-- Task Content Section -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center">
@@ -87,7 +86,7 @@
     </div>
     
     <!-- Right Column (1/3 width): Assignment Details -->
-    <div class="col-span-1 space-y-6">
+    <div class="lg:col-span-1 space-y-6">
       <!-- Assignment Section -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center">

@@ -16,7 +16,15 @@ logger = logging.getLogger(__name__)
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('accounts:dashboard')
+        # Redirect based on user role
+        if request.user.user_type == CustomUser.UserType.STAFF:
+            if request.user.staff_role in ['SUPERADMIN', 'ADMIN']:
+                return redirect('accounts:dashboard')
+            else:
+                return redirect('newsroom:dashboard')
+        else:
+            return redirect('accounts:dashboard')
+            
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         email = form.cleaned_data['email']
@@ -28,7 +36,14 @@ def login_view(request):
             else:
                 auth_login(request, user)
                 messages.success(request, 'Login successful.')
-                return redirect('accounts:dashboard')
+                # Redirect based on user role
+                if user.user_type == CustomUser.UserType.STAFF:
+                    if user.staff_role in ['SUPERADMIN', 'ADMIN']:
+                        return redirect('accounts:dashboard')
+                    else:
+                        return redirect('newsroom:dashboard')
+                else:
+                    return redirect('accounts:dashboard')
         else:
             messages.error(request, 'Invalid email or password.')
     return render(request, 'accounts/login.html', {'form': form})
@@ -56,79 +71,81 @@ def dashboard_view(request):
     
     # For staff users, show more detailed statistics
     if request.user.user_type == CustomUser.UserType.STAFF:
-        # Calculate current active users
-        current_active_users = CustomUser.objects.filter(is_active=True).count()
-        
-        # Calculate active users last month (users who existed and were active 30 days ago)
-        last_month_active_users = CustomUser.objects.filter(
-            date_joined__lte=last_month_end,
-            is_active=True
-        ).count()
-        
-        # Calculate percentage change for users
-        if last_month_active_users > 0:
-            user_change_percentage = ((current_active_users - last_month_active_users) / last_month_active_users) * 100
-        else:
-            user_change_percentage = 100  # If there were no users last month, consider it 100% growth
-        
-        # Calculate current active stations
-        current_active_stations = RadioStation.objects.filter(is_active=True).count()
-        
-        # Calculate active stations last month
-        last_month_active_stations = RadioStation.objects.filter(
-            created_at__lte=last_month_end,
-            is_active=True
-        ).count()
-        
-        # Calculate percentage change for stations
-        if last_month_active_stations > 0:
-            station_change_percentage = ((current_active_stations - last_month_active_stations) / last_month_active_stations) * 100
-        else:
-            station_change_percentage = 100  # If there were no stations last month, consider it 100% growth
+        # Only show admin stats for editors and above
+        if request.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']:
+            # Calculate current active users
+            current_active_users = CustomUser.objects.filter(is_active=True).count()
             
-        # Format the percentage strings with + or - sign
-        user_change_str = f"{'+' if user_change_percentage >= 0 else ''}{user_change_percentage:.1f}%"
-        station_change_str = f"{'+' if station_change_percentage >= 0 else ''}{station_change_percentage:.1f}%"
-        
-        # Populate stats dictionary
-        stats = {
-            'active_users': current_active_users,
-            'active_stations': current_active_stations,
-            'user_change': user_change_str,
-            'station_change': station_change_str,
-        }
-        
-        # Gather recent activity data - this would normally come from an activity log model
-        # For now we'll create sample activities based on recent user and station activity
-        
-        # Get recent user creations/updates
-        recent_users = CustomUser.objects.order_by('-date_joined')[:3]
-        for user in recent_users:
-            if user.date_joined:
-                # Format timesince to be more readable
-                from django.utils.timesince import timesince
-                time_ago = timesince(user.date_joined) + " ago"
+            # Calculate active users last month (users who existed and were active 30 days ago)
+            last_month_active_users = CustomUser.objects.filter(
+                date_joined__lte=last_month_end,
+                is_active=True
+            ).count()
+            
+            # Calculate percentage change for users
+            if last_month_active_users > 0:
+                user_change_percentage = ((current_active_users - last_month_active_users) / last_month_active_users) * 100
+            else:
+                user_change_percentage = 100  # If there were no users last month, consider it 100% growth
+            
+            # Calculate current active stations
+            current_active_stations = RadioStation.objects.filter(is_active=True).count()
+            
+            # Calculate active stations last month
+            last_month_active_stations = RadioStation.objects.filter(
+                created_at__lte=last_month_end,
+                is_active=True
+            ).count()
+            
+            # Calculate percentage change for stations
+            if last_month_active_stations > 0:
+                station_change_percentage = ((current_active_stations - last_month_active_stations) / last_month_active_stations) * 100
+            else:
+                station_change_percentage = 100  # If there were no stations last month, consider it 100% growth
                 
-                activities.append({
-                    'icon': 'user' if user.user_type == 'STAFF' else 'radio',
-                    'icon_bg': 'primary',
-                    'title': f"{user.get_full_name()} account created",
-                    'subtitle': f"{time_ago} • {'Staff User' if user.user_type == 'STAFF' else 'Radio User'}"
-                })
-        
-        # Get recent station creations/updates
-        recent_stations = RadioStation.objects.order_by('-created_at')[:2]
-        for station in recent_stations:
-            if station.created_at:
-                from django.utils.timesince import timesince
-                time_ago = timesince(station.created_at) + " ago"
-                
-                activities.append({
-                    'icon': 'radio',
-                    'icon_bg': 'success',
-                    'title': f"Radio station added: \"{station.name}\"",
-                    'subtitle': f"{time_ago} • {station.get_province_display()}"
-                })
+            # Format the percentage strings with + or - sign
+            user_change_str = f"{'+' if user_change_percentage >= 0 else ''}{user_change_percentage:.1f}%"
+            station_change_str = f"{'+' if station_change_percentage >= 0 else ''}{station_change_percentage:.1f}%"
+            
+            # Populate stats dictionary
+            stats = {
+                'active_users': current_active_users,
+                'active_stations': current_active_stations,
+                'user_change': user_change_str,
+                'station_change': station_change_str,
+            }
+            
+            # Gather recent activity data - this would normally come from an activity log model
+            # For now we'll create sample activities based on recent user and station activity
+            
+            # Get recent user creations/updates
+            recent_users = CustomUser.objects.order_by('-date_joined')[:3]
+            for user in recent_users:
+                if user.date_joined:
+                    # Format timesince to be more readable
+                    from django.utils.timesince import timesince
+                    time_ago = timesince(user.date_joined) + " ago"
+                    
+                    activities.append({
+                        'icon': 'user' if user.user_type == 'STAFF' else 'radio',
+                        'icon_bg': 'primary',
+                        'title': f"{user.get_full_name()} account created",
+                        'subtitle': f"{time_ago} • {'Staff User' if user.user_type == 'STAFF' else 'Radio User'}"
+                    })
+            
+            # Get recent station creations/updates
+            recent_stations = RadioStation.objects.order_by('-created_at')[:2]
+            for station in recent_stations:
+                if station.created_at:
+                    from django.utils.timesince import timesince
+                    time_ago = timesince(station.created_at) + " ago"
+                    
+                    activities.append({
+                        'icon': 'radio',
+                        'icon_bg': 'success',
+                        'title': f"Radio station added: \"{station.name}\"",
+                        'subtitle': f"{time_ago} • {station.get_province_display()}"
+                    })
     
     else:
         # For radio users, show more limited statistics
@@ -183,7 +200,8 @@ def dashboard_view(request):
     
     return render(request, 'accounts/dashboard.html', {
         'stats': stats,
-        'activities': activities
+        'activities': activities,
+        'show_admin_sections': request.user.staff_role in ['EDITOR', 'SUB_EDITOR', 'SUPERADMIN', 'ADMIN']
     })
 
 @login_required

@@ -20,7 +20,7 @@
               <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Administration</h3>
             </li>
             
-            {% include "components/patterns/sidebar_item.html" with url="accounts:dashboard" label="Admin" icon="dashboard" active_url="dashboard" %}
+            {% include "components/patterns/sidebar_item.html" with url="accounts:dashboard" label="Admin Dashboard" icon="dashboard" active_url="dashboard" %}
             {% include "components/patterns/sidebar_item.html" with url="accounts:station_list" label="Radio Stations" icon="radio" active_url="station" %}
             {% include "components/patterns/sidebar_item.html" with url="accounts:user_list" label="Users" icon="users" active_url="user" %}
           {% endif %}
@@ -30,23 +30,27 @@
             <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Newsroom</h3>
           </li>
           
-          {% include "components/patterns/sidebar_item.html" with url="newsroom:dashboard" label="Newsroom" icon="content" active_url="dashboard" %}
-          {% include "components/patterns/sidebar_item.html" with url="newsroom:story_list" label="Stories" icon="file-text" active_url="story_list" %}
+          {% include "components/patterns/sidebar_item.html" with url="newsroom:dashboard" label="Dashboard" icon="content" active_url="dashboard" %}
+          
+          <!-- Story Management -->
+          {% if user.staff_role in 'INTERN,JOURNALIST,EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
+            {% include "components/patterns/sidebar_item.html" with url="newsroom:story_list" label="Stories" icon="file-text" active_url="story_list" %}
+          {% endif %}
           
           <!-- Categories - Only for Editors, Sub-editors, and administrative roles -->
-          {% if user.staff_role == 'SUPERADMIN' or user.staff_role == 'ADMIN' or user.staff_role == 'EDITOR' or user.staff_role == 'SUB_EDITOR' %}
+          {% if user.staff_role in 'EDITOR,SUB_EDITOR,SUPERADMIN,ADMIN' %}
             {% include "components/patterns/sidebar_item.html" with url="newsroom:category_list" label="Categories" icon="filter" active_url="category_list" %}
           {% endif %}
           
           <!-- Tasks - Based on role -->
-          {% if user.staff_role == 'SUPERADMIN' or user.staff_role == 'ADMIN' or user.staff_role == 'EDITOR' %}
+          {% if user.staff_role in 'SUPERADMIN,ADMIN,EDITOR' %}
             {% include "components/patterns/sidebar_item.html" with url="newsroom:task_list" label="All Tasks" icon="check" active_url="task_list" %}
-          {% elif user.staff_role == 'SUB_EDITOR' or user.staff_role == 'JOURNALIST' or user.staff_role == 'INTERN' %}
+          {% elif user.staff_role in 'SUB_EDITOR,JOURNALIST,INTERN' %}
             {% include "components/patterns/sidebar_item.html" with url="newsroom:task_list" label="My Tasks" icon="check" active_url="task_list" %}
           {% endif %}
 
           <!-- Tags - Only for Sub-editors, Editors, and administrative roles -->
-          {% if user.staff_role == 'SUB_EDITOR' or user.staff_role == 'EDITOR' or user.staff_role == 'SUPERADMIN' or user.staff_role == 'ADMIN' %}
+          {% if user.staff_role in 'SUB_EDITOR,EDITOR,SUPERADMIN,ADMIN' %}
             {% include "components/patterns/sidebar_item.html" with url="newsroom:tag_list" label="Tags" icon="tag" active_url="tag_list" %}
           {% endif %}
           

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static tailwind_tags %}
+{% load static %}
 
 {% block title %}Edit Story - {{ story.title }} - Newskoop{% endblock %}
 {% block page_title %}Edit Story{% endblock %}
@@ -7,45 +7,81 @@
 {% block extra_css %}
 <!-- Include Quill stylesheet -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+  /* Set default font size for Quill editor content */
+  .ql-editor {
+    font-size: 1rem; /* 16px, matches Tailwind's text-base */
+    line-height: 1.5; /* Matches Tailwind's leading-normal */
+  }
+  
+  /* Ensure toolbar text is also properly sized */
+  .ql-toolbar {
+    font-size: 1rem;
+  }
+</style>
 {% endblock %}
 
 {% block page_actions %}
-{% include "components/page_actions.html" with actions=actions %}
-
-{# Hidden form for submit to review action #}
-<form id="submit-review-form" method="post" action="{% url 'newsroom:story_edit' story_id=story.id %}" class="hidden">
-  {% csrf_token %}
-  <input type="hidden" name="status" value="REVIEW">
-  <input type="hidden" name="title" value="{{ form.title.value|default:'' }}">
-  <input type="hidden" name="content" value="{{ form.content.value|default:'' }}">
-  
-  {% if form.category %}
-    <input type="hidden" name="category" value="{{ form.category.value|default:'' }}">
-  {% endif %}
-  
-  {% if form.religion_classification %}
-    <input type="hidden" name="religion_classification" value="{{ form.religion_classification.value|default:'' }}">
-  {% endif %}
-  
-  <input type="hidden" name="language" value="{{ form.language.value|default:'' }}">
-</form>
+<div class="flex space-x-3">
+  <!-- Add form="story-form" to link this button to the form -->
+  {% include "components/ui/buttons.html" with type="primary" text="Save Changes" icon="save" is_submit=True form="story-form" %}
+  {% include "components/ui/buttons.html" with type="secondary" text="Cancel" icon="arrow-left" url="newsroom:story_detail" story_id=story.id %}
+</div>
 {% endblock %}
 
 {% block content %}
 <form id="story-form" method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="grid grid-cols-3 gap-6">
-    <!-- Left Column (2/3 width): Story Content & Audio Clips -->
+    <!-- Left Column (2/3 width): Story Content -->
     <div class="col-span-2 space-y-6">
       <!-- Story Content Section -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-            {% include "components/ui/icons.html" with name="content" %}
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+                {% include "components/ui/icons.html" with name="content" %}
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-800">Story Content</h2>
+                <p class="text-sm text-gray-500">Edit the main content for this story</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-4">
+              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
+              {% if story.published_at %}
+                <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
+              {% endif %}
+            </div>
           </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Story Content</h2>
-            <p class="text-sm text-gray-500">Edit the main content for this story</p>
+          <div class="mt-4 flex items-center justify-between text-sm text-gray-500">
+            <div class="flex items-center space-x-4">
+              <span>
+                {% include "components/ui/icons.html" with name="user" class="h-4 w-4 inline mr-1" %}
+                By {{ story.author.get_full_name }}
+              </span>
+              <span>
+                {% include "components/ui/icons.html" with name="clock" class="h-4 w-4 inline mr-1" %}
+                Last updated: {{ story.updated_at|date:"M d, Y" }}
+              </span>
+            </div>
+            {% if story.view_count or story.download_count %}
+            <div class="flex items-center space-x-4">
+              {% if story.view_count %}
+              <span>
+                {% include "components/ui/icons.html" with name="eye" class="h-4 w-4 inline mr-1" %}
+                {{ story.view_count }} views
+              </span>
+              {% endif %}
+              {% if story.download_count %}
+              <span>
+                {% include "components/ui/icons.html" with name="download" class="h-4 w-4 inline mr-1" %}
+                {{ story.download_count }} downloads
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
           </div>
         </div>
         
@@ -70,62 +106,11 @@
           </div>
         </div>
       </div>
-      
-      <!-- Audio Clips Section -->
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
-            {% include "components/ui/icons.html" with name="radio" %}
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
-            <p class="text-sm text-gray-500">Manage audio files for this story</p>
-          </div>
-        </div>
-        
-        <div class="p-6">
-          <p class="mb-3 text-sm text-gray-600">Select additional audio files to attach (existing clips are shown below).</p>
-          <div class="flex items-center">
-            <input type="file" id="audio_files" name="audio_files" multiple accept="audio/*" class="hidden">
-            <button type="button" id="add-audio-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-              {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
-              Add Audio Clips
-            </button>
-          </div>
-          <div id="audio-preview" class="mt-4"></div>
-          <div class="text-xs text-gray-500 mt-2">
-            Supported formats: MP3, WAV, M4A, OGG (max 20MB per file)
-          </div>
-          
-          <!-- Existing Audio Clips -->
-          {% if story.audio_clips.exists %}
-            <div class="mt-6 border-t border-gray-200 pt-4">
-              <h3 class="font-medium text-gray-700 mb-3">Existing Audio Clips</h3>
-              <div class="space-y-3">
-                {% for clip in story.audio_clips.all %}
-                  <div class="border rounded-md p-3 flex items-center justify-between">
-                    <div class="flex items-center">
-                      {% include "components/ui/icons.html" with name="radio" class="h-5 w-5 text-gray-400 mr-2" %}
-                      <div>
-                        <div class="font-medium">{{ clip.title }}</div>
-                        <div class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</div>
-                      </div>
-                    </div>
-                    <a href="{% url 'newsroom:story_audio_delete' story_id=story.id audio_id=clip.id %}" class="text-danger hover:text-danger-600 text-sm inline-flex items-center" onclick="return confirm('Are you sure you want to delete this audio clip?');">
-                      {% include "components/ui/icons.html" with name="trash" class="h-5 w-5 mr-1" %}
-                      Delete
-                    </a>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
     </div>
     
-    <!-- Right Column (1/3 width): Category & Metadata -->
+    <!-- Right Column (1/3 width): Story Details & Audio Clips -->
     <div class="col-span-1 space-y-6">
+      <!-- Story Details -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center">
           <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
@@ -169,7 +154,7 @@
             {% endif %}
           </div>
           {% endif %}
-                              
+          
           {% if form.religion_classification %}
           <div class="mb-4">
             <label for="{{ form.religion_classification.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Religion</label>
@@ -202,95 +187,80 @@
           </div>
         </div>
       </div>
-      
-      <!-- Story Status Card -->
+
+      <!-- Audio Clips Section -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center">
-          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-info-50 flex items-center justify-center text-info mr-4">
-            {% include "components/ui/icons.html" with name="info" %}
+          <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+            {% include "components/ui/icons.html" with name="radio" %}
           </div>
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">Story Status</h2>
-            <p class="text-sm text-gray-500">Current publication status</p>
+            <h2 class="text-lg font-semibold text-gray-800">Audio Clips</h2>
+            <p class="text-sm text-gray-500">Attach audio files to your story</p>
           </div>
         </div>
         
         <div class="p-6">
+          <!-- Existing Audio Clips -->
+          {% if story.audio_clips.exists %}
           <div class="mb-4">
-            <div class="flex items-center space-x-2">
-              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-              {% if story.published_at %}
-                <span class="text-sm text-gray-500">Published on {{ story.published_at|date:"M d, Y" }}</span>
-              {% endif %}
-            </div>
-          </div>
-          
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Created by:</span>
-              <span class="font-medium">{{ story.author.get_full_name }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Created on:</span>
-              <span>{{ story.created_at|date:"M d, Y" }}</span>
-            </div>
-            {% if story.editor %}
-            <div class="flex justify-between">
-              <span class="text-gray-500">Edited by:</span>
-              <span>{{ story.editor.get_full_name }}</span>
-            </div>
-            {% endif %}
-            <div class="flex justify-between">
-              <span class="text-gray-500">Last updated:</span>
-              <span>{{ story.updated_at|date:"M d, Y" }}</span>
-            </div>
-            {% if story.view_count %}
-            <div class="flex justify-between">
-              <span class="text-gray-500">Views:</span>
-              <span>{{ story.view_count }}</span>
-            </div>
-            {% endif %}
-            {% if story.download_count %}
-            <div class="flex justify-between">
-              <span class="text-gray-500">Downloads:</span>
-              <span>{{ story.download_count }}</span>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      
-      <!-- Revision History Card -->
-      {% if story.revisions.exists %}
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-800">Revision History</h2>
-        </div>
-        <div class="p-6">
-          <div class="space-y-2 max-h-64 overflow-y-auto">
-            {% for revision in story.revisions.all|dictsortreversed:"revision_number" %}
-              <div class="border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
-                <div class="flex items-center justify-between">
-                  <a href="{% url 'newsroom:story_revision' story_id=story.id revision_id=revision.id %}" class="text-primary hover:underline">
-                    Revision #{{ revision.revision_number }}
-                  </a>
-                  <span class="text-xs text-gray-500">{{ revision.created_at|date:"M d, Y" }}</span>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Current Audio Clips</h3>
+            <div class="space-y-3">
+              {% for clip in story.audio_clips.all %}
+                <div class="flex flex-col p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                      <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-medium text-gray-900">{{ clip.title }}</h4>
+                        <p class="text-xs text-gray-500">Uploaded by {{ clip.uploaded_by.get_full_name }}</p>
+                      </div>
+                    </div>
+                    <form method="post" action="{% url 'newsroom:story_audio_delete' story.id clip.id %}" class="ml-4">
+                      {% csrf_token %}
+                      <button type="submit" class="text-gray-400 hover:text-danger focus:outline-none">
+                        {% include "components/ui/icons.html" with name="trash" class="h-5 w-5" %}
+                      </button>
+                    </form>
+                  </div>
+                  <audio controls class="w-full">
+                    <source src="{{ clip.audio_file.url }}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                  </audio>
                 </div>
-                <div class="text-xs text-gray-500">By {{ revision.created_by.get_full_name }}</div>
-              </div>
-            {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          
+          <!-- Add New Audio Clips -->
+          <div class="mt-4">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Add New Audio Clips</h3>
+            <div class="flex items-center">
+              <input type="file" id="audio_files" name="audio_files" multiple accept="audio/*" class="hidden">
+              <button type="button" id="add-audio-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% include "components/ui/icons.html" with name="plus" class="mr-2" %}
+                Add Audio Clips
+              </button>
+            </div>
+            <div id="audio-preview" class="mt-4 space-y-3"></div>
+            <div class="text-xs text-gray-500 mt-2">
+              Supported formats: MP3, WAV, M4A, OGG (max 20MB per file)
+            </div>
           </div>
         </div>
       </div>
-      {% endif %}
     </div>
   </div>
+  <!-- Remove duplicate buttons here as well -->
 </form>
 {% endblock %}
 
 {% block extra_js %}
 <!-- Include Quill script -->
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-<!-- Include story edit script -->
-<script src="{% static 'js/story-edit.js' %}"></script>
 {% endblock %}

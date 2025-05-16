@@ -6,15 +6,8 @@
 
 {% block page_actions %}
 <div class="flex space-x-3">
-  <button type="submit" form="tags-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-    Save Tags
-  </button>
-  
-  <a href="{% url 'newsroom:story_detail' story_id=story.id %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Back to Story
-  </a>
+  {% include "components/ui/buttons.html" with type="primary" text="Save Tags" icon="save" is_submit=True %}
+  {% include "components/ui/buttons.html" with type="secondary" text="Back to Story" icon="arrow-left" url="newsroom:story_detail" story_id=story.id %}
 </div>
 {% endblock %}
 
@@ -51,18 +44,13 @@
               <div class="text-danger text-sm mb-2">{{ form.tags.errors|first }}</div>
             {% endif %}
             
-            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 max-h-96 overflow-y-auto">
+            <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
               {% if form.tags.field.queryset.exists %}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select name="{{ form.tags.name }}" multiple class="tags-select hidden">
                   {% for tag_choice in form.tags %}
-                    <div class="flex items-center">
-                      {{ tag_choice.tag }}
-                      <label for="{{ tag_choice.id_for_label }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
-                        {{ tag_choice.choice_label }}
-                      </label>
-                    </div>
+                    {{ tag_choice.tag }}
                   {% endfor %}
-                </div>
+                </select>
               {% else %}
                 <div class="text-sm text-gray-500 text-center py-4">
                   No tags available. <a href="{% url 'newsroom:tag_create' %}" class="text-primary hover:underline">Create your first tag</a>.
@@ -87,35 +75,43 @@
         </form>
       </div>
     </div>
-  </div>
-  
-  <!-- Right Column (1/3 width) - Story Info -->
-  <div class="col-span-1 space-y-6">
-    <!-- Story Details Card -->
+    
+    <!-- Popular Tags -->
+    {% if popular_tags %}
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Story Details</h2>
+        <h3 class="text-lg font-semibold text-gray-800">Popular Tags</h3>
+        <p class="text-sm text-gray-500">Frequently used tags that might be relevant</p>
       </div>
       
       <div class="p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">{{ story.title }}</h3>
-        
+        <div class="flex flex-wrap gap-2">
+          {% for tag in popular_tags %}
+            <button type="button" 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    onclick="addTag('{{ tag.id }}', '{{ tag.name }}')">
+              {{ tag.name }}
+              <span class="ml-1 text-gray-500">({{ tag.usage_count }})</span>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Right Column (1/3 width) - Story Info -->
+  <div class="col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Story Information</h3>
+      </div>
+      
+      <div class="p-6">
         <dl class="divide-y divide-gray-200">
           <div class="py-3 flex justify-between">
-            <dt class="text-sm font-medium text-gray-500">Status</dt>
-            <dd class="text-sm">
-              {% include "components/ui/status_badges.html" with status=story.status|lower text=story.get_status_display %}
-            </dd>
-          </div>
-          
-          <div class="py-3 flex justify-between">
-            <dt class="text-sm font-medium text-gray-500">Category</dt>
-            <dd class="text-sm text-gray-900">{{ story.category.name }}</dd>
-          </div>
-          
-          <div class="py-3 flex justify-between">
-            <dt class="text-sm font-medium text-gray-500">Language</dt>
-            <dd class="text-sm text-gray-900">{{ story.get_language_display }}</dd>
+            <dt class="text-sm font-medium text-gray-500">Title</dt>
+            <dd class="text-sm text-gray-900">{{ story.title }}</dd>
           </div>
           
           <div class="py-3 flex justify-between">
@@ -124,8 +120,8 @@
           </div>
           
           <div class="py-3 flex justify-between">
-            <dt class="text-sm font-medium text-gray-500">Created</dt>
-            <dd class="text-sm text-gray-900">{{ story.created_at|date:"F j, Y" }}</dd>
+            <dt class="text-sm font-medium text-gray-500">Status</dt>
+            <dd class="text-sm text-gray-900">{{ story.get_status_display }}</dd>
           </div>
           
           <div class="py-3 flex justify-between">
@@ -149,4 +145,18 @@
     </div>
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+function addTag(id, name) {
+  const select = document.querySelector('.tags-select');
+  const option = select.querySelector(`option[value="${id}"]`);
+  if (option) {
+    option.selected = true;
+    const event = new Event('change', { bubbles: true });
+    select.dispatchEvent(event);
+  }
+}
+</script>
+{% endblock %}
 {% endblock %}

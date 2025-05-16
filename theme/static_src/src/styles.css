@@ -20,7 +20,9 @@
   h3 { @apply text-lg; }
   h4 { @apply text-base; }
   
-  a {
-    @apply text-primary hover:text-primary-dark transition-colors;
+  /* Restrict link hover color to prose content only */
+  .prose a:hover {
+    --tw-text-opacity: 1;
+    color: rgb(90 144 18 / var(--tw-text-opacity, 1));
   }
 }

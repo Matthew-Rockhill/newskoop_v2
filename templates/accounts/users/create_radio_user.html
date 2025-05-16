@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}Add Radio User - Newskoop{% endblock %}
-{% block page_title %}Add Radio User{% endblock %}
+{% load actions %}
+
+{% block title %}Create Radio User - Newskoop{% endblock %}
+{% block page_title %}Create Radio User{% endblock %}
+
 {% block page_actions %}
 <div class="flex space-x-3">
-  <button type="submit" form="user-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="save" class="mr-2" %}
-    Create User
-  </button>
+  {% get_user_actions None user as user_actions %}
+  {% include "components/page_actions.html" with actions=user_actions %}
+  
   <a href="{% url 'accounts:user_list' %}?user_type=RADIO" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
-    Cancel
+    Back to List
   </a>
 </div>
 {% endblock %}

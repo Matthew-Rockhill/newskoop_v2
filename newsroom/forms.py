@@ -96,10 +96,6 @@ class StoryForm(forms.ModelForm):
     """Form for creating and editing stories"""
     content = QuillFormField(required=True)
     
-class StoryForm(forms.ModelForm):
-    """Form for creating and editing stories"""
-    content = QuillFormField(required=True)
-    
     class Meta:
         model = Story
         fields = ['title', 'content', 'category', 'religion_classification', 'language', 'tags']
@@ -143,6 +139,25 @@ class StoryForm(forms.ModelForm):
         if not content or content.strip() == '':
             raise forms.ValidationError("Content is required")
         return content
+    
+    def clean_tags(self):
+        """Validate tags selection"""
+        tags = self.cleaned_data.get('tags', [])
+        
+        # Validate tag count
+        if len(tags) > 10:
+            raise forms.ValidationError("You can select a maximum of 10 tags per story")
+        
+        # Validate tag combinations
+        tag_names = [tag.name.lower() for tag in tags]
+        
+        # Check for duplicate concepts (e.g., "election" and "elections")
+        for i, tag1 in enumerate(tag_names):
+            for tag2 in tag_names[i+1:]:
+                if tag1 in tag2 or tag2 in tag1:
+                    raise forms.ValidationError(f"Tags '{tag1}' and '{tag2}' are too similar. Please choose one.")
+        
+        return tags
     
     def clean(self):
         cleaned_data = super().clean()
@@ -231,13 +246,13 @@ class TaskForm(forms.ModelForm):
         model = Task
         fields = ['title', 'description', 'task_type', 'priority', 'assigned_to', 'related_story', 'due_date']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'task_type': forms.Select(attrs={'class': 'form-control'}),
-            'priority': forms.Select(attrs={'class': 'form-control'}),
-            'assigned_to': forms.Select(attrs={'class': 'form-control'}),
-            'related_story': forms.Select(attrs={'class': 'form-control'}),
-            'due_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'title': forms.TextInput(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50'}),
+            'description': forms.Textarea(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50', 'rows': 3}),
+            'task_type': forms.Select(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50'}),
+            'priority': forms.Select(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50'}),
+            'assigned_to': forms.Select(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50'}),
+            'related_story': forms.Select(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50'}),
+            'due_date': forms.DateTimeInput(attrs={'class': 'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary-100 focus:ring-opacity-50', 'type': 'datetime-local'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -377,5 +392,32 @@ class StoryTagsForm(forms.Form):
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all().order_by('name'),
         widget=forms.CheckboxSelectMultiple,
-        required=False
+        required=False,
+        help_text="Select tags that best describe this story's content"
     )
+    
+    def __init__(self, *args, **kwargs):
+        self.story = kwargs.pop('story', None)
+        super().__init__(*args, **kwargs)
+        
+        # Add validation for story status
+        if self.story and self.story.status == 'PUBLISHED':
+            self.fields['tags'].help_text += " (Note: Changes to published stories will be logged)"
+    
+    def clean_tags(self):
+        tags = self.cleaned_data['tags']
+        
+        # Validate tag count
+        if len(tags) > 10:
+            raise forms.ValidationError("You can select a maximum of 10 tags per story")
+        
+        # Validate tag combinations
+        tag_names = [tag.name.lower() for tag in tags]
+        
+        # Check for duplicate concepts (e.g., "election" and "elections")
+        for i, tag1 in enumerate(tag_names):
+            for tag2 in tag_names[i+1:]:
+                if tag1 in tag2 or tag2 in tag1:
+                    raise forms.ValidationError(f"Tags '{tag1}' and '{tag2}' are too similar. Please choose one.")
+        
+        return tags

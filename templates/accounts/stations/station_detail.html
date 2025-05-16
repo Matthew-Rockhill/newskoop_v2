@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+{% load actions %}
+
 {% block title %}{{ station.name }} - Newskoop{% endblock %}
 {% block page_title %}Station Details{% endblock %}
+
 {% block page_actions %}
 <div class="flex space-x-3">
-  <a href="{% url 'accounts:station_edit' station_id=station.id %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-    {% include "components/ui/icons.html" with name="edit" class="mr-2" %}
-    Edit Station
-  </a>
+  {% get_station_actions station user as station_actions %}
+  {% include "components/page_actions.html" with actions=station_actions %}
+  
   <a href="{% url 'accounts:station_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
     {% include "components/ui/icons.html" with name="arrow-left" class="mr-2" %}
     Back to List
@@ -212,13 +214,9 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               {% if user.is_primary_contact %}
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary">
-                  Primary
-                </span>
+                {% include "components/ui/status_badges.html" with status="active" text="Primary" %}
               {% else %}
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  No
-                </span>
+                {% include "components/ui/status_badges.html" with status="inactive" text="No" %}
               {% endif %}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">

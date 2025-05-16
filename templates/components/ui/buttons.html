@@ -1,43 +1,54 @@
 {% comment %}
-  Button Components for Newskoop
-  
-  Usage examples:
-  
-  Primary button:
-  {% include "components/ui/buttons.html" with type="primary" text="Save Changes" %}
-  
-  Outline button:
-  {% include "components/ui/buttons.html" with type="outline" text="Cancel" %}
-  
-  Danger button:
-  {% include "components/ui/buttons.html" with type="danger" text="Delete" %}
-  
-  Button with icon:
-  {% include "components/ui/buttons.html" with type="primary" text="Save" icon="save" %}
-  
-  Button with custom classes:
-  {% include "components/ui/buttons.html" with type="primary" text="Custom" extra_classes="w-full" %}
-  
-  Button sizes:
-  {% include "components/ui/buttons.html" with type="primary" text="Small" size="sm" %}
-  {% include "components/ui/buttons.html" with type="primary" text="Large" size="lg" %}
-  
-  Submit button (for forms):
-  {% include "components/ui/buttons.html" with type="primary" text="Submit" is_submit=True %}
-  
-  Button with URL:
-  {% include "components/ui/buttons.html" with type="primary" text="View Profile" url="accounts:profile" %}
+Button Components for Newskoop
+Usage examples:
+Primary button:
+{% include "components/ui/buttons.html" with type="primary" text="Save Changes" %}
+Secondary button:
+{% include "components/ui/buttons.html" with type="secondary" text="Cancel" %}
+Danger button:
+{% include "components/ui/buttons.html" with type="danger" text="Delete" %}
+Button with icon:
+{% include "components/ui/buttons.html" with type="primary" text="Save" icon="save" %}
+Button with custom classes:
+{% include "components/ui/buttons.html" with type="primary" text="Custom" extra_classes="w-full" %}
+Button sizes:
+{% include "components/ui/buttons.html" with type="primary" text="Small" size="sm" %}
+{% include "components/ui/buttons.html" with type="primary" text="Large" size="lg" %}
+Submit button (for forms):
+{% include "components/ui/buttons.html" with type="primary" text="Submit" is_submit=True %}
+Submit button linked to form by ID:
+{% include "components/ui/buttons.html" with type="primary" text="Submit" is_submit=True form="form-id" %}
+Button with URL:
+{% include "components/ui/buttons.html" with type="primary" text="View Profile" url="accounts:profile" %}
+Button with URL parameters:
+{% include "components/ui/buttons.html" with type="primary" text="Edit Story" url="newsroom:story_edit" story_id=story.id %}
 {% endcomment %}
-
 {% if is_submit %}
-<button type="submit" class="btn btn-{{ type|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {% if icon %}inline-flex items-center{% endif %} {{ extra_classes|default:'' }}">
-{% else %}
-<a href="{% if url %}{% if url|slice:':1' == '#' %}{{ url }}{% else %}{% url url %}{% endif %}{% else %}#{% endif %}" class="btn btn-{{ type|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {% if icon %}inline-flex items-center{% endif %} {{ extra_classes|default:'' }}">
+<button type="submit" {% if form %}form="{{ form }}"{% endif %} class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm
+{% if type == 'primary' %}text-white bg-primary hover:bg-primary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+{% elif type == 'secondary' %}text-primary bg-white hover:bg-primary-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+{% elif type == 'danger' %}text-white bg-danger hover:bg-danger-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger
 {% endif %}
-  {% if icon %}
-    {% include "components/ui/icons.html" with name=icon class="mr-1" %}
-  {% endif %}
-  {{ text }}
+{% if size == 'sm' %}px-3 py-1.5 text-xs
+{% elif size == 'lg' %}px-6 py-3 text-base
+{% endif %}
+{{ extra_classes|default:'' }}">
+{% else %}
+<a href="{% if url %}{% if url|slice:':1' == '#' %}{{ url }}{% else %}{% if story_id %}{% url url story_id=story_id %}{% elif task_id %}{% url url task_id=task_id %}{% else %}{% url url %}{% endif %}{% endif %}{% else %}#{% endif %}" 
+class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm
+{% if type == 'primary' %}text-white bg-primary hover:bg-primary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+{% elif type == 'secondary' %}text-primary bg-white hover:bg-primary-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+{% elif type == 'danger' %}text-white bg-danger hover:bg-danger-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger
+{% endif %}
+{% if size == 'sm' %}px-3 py-1.5 text-xs
+{% elif size == 'lg' %}px-6 py-3 text-base
+{% endif %}
+{{ extra_classes|default:'' }}">
+{% endif %}
+{% if icon %}
+{% include "components/ui/icons.html" with name=icon class="mr-1" %}
+{% endif %}
+{{ text }}
 {% if is_submit %}
 </button>
 {% else %}

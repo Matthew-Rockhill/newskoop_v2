@@ -1,86 +1,98 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load actions %}
+
 {% block title %}My Profile - Newskoop{% endblock %}
 {% block page_title %}My Profile{% endblock %}
+
 {% block page_actions %}
-<button type="submit" form="profile-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-  {% include "components/ui/icons.html" with name="save" class="mr-1" %}
-  Save Changes
-</button>
+<div class="flex space-x-3">
+  <button type="submit" form="profile-form" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="save" %}
+    <span class="ml-2">Save Changes</span>
+  </button>
+  <a href="{% url 'accounts:change_password' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+    {% include "components/ui/icons.html" with name="lock" %}
+    <span class="ml-2">Change Password</span>
+  </a>
+</div>
 {% endblock %}
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
   <!-- Left column - User profile -->
   <div class="md:col-span-1">
-    <div class="bg-primary-50 rounded-lg p-6 text-center">
-      <div class="w-20 h-20 rounded-full bg-white text-primary flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="user" %}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">Account Information</h2>
+          <p class="text-sm text-gray-500">Your account details</p>
+        </div>
       </div>
       
-      <h2 class="text-xl font-bold text-gray-800">{{ user.get_full_name }}</h2>
-      <p class="text-gray-600 mb-4">{{ user.email }}</p>
-      
-      <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.is_active %}bg-success-light text-success{% else %}bg-gray-100 text-gray-600{% endif %} mb-6">
-        <span class="inline-block w-2 h-2 rounded-full {% if user.is_active %}bg-success{% else %}bg-gray-400{% endif %} mr-1"></span>
-        {% if user.is_active %}Active Account{% else %}Inactive Account{% endif %}
-      </div>
-      
-      <div class="border-t border-primary-100 pt-4 pb-2">
-        <h3 class="font-semibold text-left mb-3">Account Information</h3>
+      <div class="p-6">
+        <div class="text-center mb-6">
+          <div class="w-20 h-20 rounded-full bg-primary-50 text-primary flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+          </div>
+          
+          <h2 class="text-xl font-bold text-gray-800">{{ user.get_full_name }}</h2>
+          <p class="text-gray-600 mb-4">{{ user.email }}</p>
+          
+          <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.is_active %}bg-success-light text-success{% else %}bg-gray-100 text-gray-600{% endif %}">
+            <span class="inline-block w-2 h-2 rounded-full {% if user.is_active %}bg-success{% else %}bg-gray-400{% endif %} mr-1"></span>
+            {% if user.is_active %}Active Account{% else %}Inactive Account{% endif %}
+          </div>
+        </div>
         
-        <div class="space-y-2 text-left">
-          <div class="flex justify-between items-center py-1">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center py-2 border-b border-gray-100">
             <span class="text-gray-600">Account Type</span>
             <span class="font-medium">{{ user.get_user_type_display }}</span>
           </div>
           
           {% if user.user_type == 'STAFF' %}
-            <div class="flex justify-between items-center py-1">
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
               <span class="text-gray-600">Staff Role</span>
               <span class="font-medium">{{ user.get_staff_role_display }}</span>
             </div>
           {% elif user.user_type == 'RADIO' and user.radio_station %}
-            <div class="flex justify-between items-center py-1">
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
               <span class="text-gray-600">Radio Station</span>
               <span class="font-medium">{{ user.radio_station.name }}</span>
             </div>
-            <div class="flex justify-between items-center py-1">
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
               <span class="text-gray-600">Primary Contact</span>
               <span class="font-medium">{% if user.is_primary_contact %}Yes{% else %}No{% endif %}</span>
             </div>
           {% endif %}
           
-          <div class="flex justify-between items-center py-1">
+          <div class="flex justify-between items-center py-2">
             <span class="text-gray-600">Date Joined</span>
             <span class="font-medium">{{ user.date_joined|date:"M j, Y" }}</span>
           </div>
         </div>
-      </div>
-      
-      <div class="mt-6">
-        <a href="{% url 'accounts:change_password' %}" class="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-          {% include "components/ui/icons.html" with name="lock" class="mr-1" %}
-          Change Password
-        </a>
       </div>
     </div>
   </div>
   
   <!-- Right column - Edit profile form -->
   <div class="md:col-span-2">
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center mb-6">
-        <div class="rounded-full bg-primary-100 p-2 mr-3">
-          {% include "components/ui/icons.html" with name="user" size=24 class="text-primary" %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center">
+        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary mr-4">
+          {% include "components/ui/icons.html" with name="user" %}
         </div>
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">Personal Information</h2>
-          <p class="text-gray-600">Update your personal details and contact information</p>
+          <h2 class="text-lg font-semibold text-gray-800">Personal Information</h2>
+          <p class="text-sm text-gray-500">Update your personal details and contact information</p>
         </div>
       </div>
       
-      <form id="profile-form" action="{% url 'accounts:profile' %}" method="post" class="space-y-6">
+      <form id="profile-form" action="{% url 'accounts:profile' %}" method="post" class="p-6 space-y-6">
         {% csrf_token %}
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -143,12 +155,12 @@
         </div>
       </form>
       
-      <div class="bg-primary-50 mt-8 p-4 rounded-md">
-        <div class="flex">
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <div class="flex items-center">
           <div class="flex-shrink-0">
             {% include "components/ui/icons.html" with name="info" class="text-primary" %}
           </div>
-          <div class="ml-3">
+          <div class="ml-3 flex-1">
             <h3 class="text-sm font-medium text-primary">Profile Completeness</h3>
             <div class="mt-2">
               <div class="bg-white rounded-full h-2.5 overflow-hidden">
@@ -164,7 +176,7 @@
                   {% endif %}
                 {% endwith %}
               </div>
-              <p class="text-sm mt-1">Complete your profile information to improve your experience.</p>
+              <p class="text-sm mt-1 text-gray-600">Complete your profile information to improve your experience.</p>
             </div>
           </div>
         </div>
